@@ -238,7 +238,7 @@ def koc_ve_rotasyon_etkisi_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu, ev_
         pass
     durum_metni = " | ".join(ozetler) if ozetler else "Kritik bir hamle veya seri yok"
     return durum_metni, etki_puani, kritik_alarm
-   def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_eksik=0, dep_eksik=0, state="pre", ev_skor=0, dep_skor=0):
+def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_eksik=0, dep_eksik=0, state="pre", ev_skor=0, dep_skor=0):
     try:
         ev_p = [int(x) for x in ev_rec.split("-")]
         dep_p = [int(x) for x in dep_rec.split("-")]
