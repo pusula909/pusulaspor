@@ -750,8 +750,9 @@ else:
             satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records").pop(0)
             from canli_saha import canli_saha_ve_anlatim_ciz
             try:
-            canli_saha_ve_anlatim_ciz(spor, yol, satir["ID"], satir["Ev Sahibi"], satir["Deplasman"], satir["EvSkorInt"], satir["DepSkorInt"], satir["State"], satir["Dakika     / Ceyrek"],url_basi, basliklar)
-            pass
+                canli_saha_ve_anlatim_ciz(spor, yol, satir["ID"], satir["Ev Sahibi"], satir["Deplasman"], satir["EvSkorInt"], satir["DepSkorInt"], satir["State"], satir["Dakika / Ceyrek"], url_basi, basliklar)
+            except Exception:
+                pass
             ev_kadro, dep_kadro, ev_eksikler, dep_eksikler, kaynak = ai_kadro_ve_eksik_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor)
             detayli_tahmin_satirlari, _, _ = coklu_tahmin_motoru(satir["Ev Sahibi"], satir["Deplasman"], satir["Ev Form"], satir["Dep Form"], spor, lig, len(ev_eksikler), len(dep_eksikler), satir["State"], satir["EvSkorInt"], satir["DepSkorInt"])
             st.markdown(f"*Durum:* {satir['Dakika / Ceyrek']}  |  *Periyot / IY Detayi:* {satir['IY / Ceyrek Skorlari']}")
