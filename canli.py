@@ -7,8 +7,8 @@ def el_get(t):
         r=requests.get(f"https://euroleague.net{t[:4]}",timeout=8)
         for i in ET.fromstring(r.content).findall(".//item"):
             if datetime.strptime(i.findtext("date","").strip(),"%b %d, %Y").strftime("%Y%m%d")==t:
-                hs,as=i.findtext("homescore","0") or "0",i.findtext("awayscore","0") or "0"
-                st="post" if i.findtext("played")=="true" else ("in" if int(hs)>0 or int(as_)>0 else "pre")
+                hs,dep_s=i.findtext("homescore","0") or "0",i.findtext("awayscore","0") or "0"
+                st="post" if i.findtext("played")=="true" else ("in" if int(hs)>0 or int(dep_s)>0 else "pre")
                 ev.append({"id":i.findtext("gamecode",""),"status":{"type":{"state":st,"shortDetail":i.findtext("startime","")}},"competitions":[{"competitors":[{"homeAway":"home","team":{"id":"1","displayName":i.findtext("hometeam","")},"score":hs,"records":[{"summary":"0-0"}]},{"homeAway":"away","team":{"id":"2","displayName":i.findtext("awayteam","")},"score":as_,"records":[{"summary":"0-0"}]}]}]})
     except: pass
     return {"events":ev}
