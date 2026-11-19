@@ -61,7 +61,6 @@ if "gonderilen_kritik_uyarilar" not in st.session_state:
 gizli_tg_token = st.secrets.get("TG_TOKEN", "")
 gizli_tg_chat_id = st.secrets.get("TG_CHAT_ID", "")
 gizli_gemini_key = st.secrets.get("GEMINI_KEY", "")
->>st.session_state.kupon_bildirim_gonderildi = False
 
 st.sidebar.header("Kontrol Merkezi")
 gorunum = st.sidebar.radio("Mod Secimi", ["Maclar ve Canli AI Analiz", "Canli Kupon Takip", "AI Gunun Radari (Tum Ligler)", "Puan Durumu"])
@@ -81,15 +80,6 @@ def telegram_mesaj_gonder(token, chat_id, mesaj):
 >>>>r = requests.post(tg_adres, data={"chat_id": str(chat_id).strip(), "text": mesaj}, timeout=8)
 >>>>return r.status_code == 200
 >>except Exception:
->>>>return False
->>try:
->>>>tg_adres = "https://api.telegram.org" + chr(47) + "bot" + token.strip() + chr(47) + "sendMessage"
->>>>r = requests.post(tg_adres, json={"chat_id": str(chat_id).strip(), "text": mesaj}, timeout=8)
->>>>if r.status_code != 200:
->>>>>>st.sidebar.warning(f"Telegram Cevabi: {r.text}")
->>>>return r.status_code == 200
->>except Exception as hata:
->>>>st.sidebar.warning(f"Baglanti Hatasi: {hata}")
 >>>>return False
 if st.sidebar.button("Telegram Test Mesaji Gonder"):
 >>if telegram_mesaj_gonder(tg_token, tg_chat_id, "Pusulasporbot baglantisi basarili! Kupon bildirimleri aktif."):
