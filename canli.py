@@ -1,5 +1,18 @@
 kod = """
 import streamlit as st
+import xml.etree.ElementTree as ET
+def el_get(t):
+    ev=[]
+    try:
+        r=requests.get(f"https://euroleague.net{t[:4]}",timeout=8)
+        for i in ET.fromstring(r.content).findall(".//item"):
+            if datetime.strptime(i.findtext("date","").strip(),"%b %d, %Y").strftime("%Y%m%d")==t:
+                hs,as=i.findtext("homescore","0") or "0",i.findtext("awayscore","0") or "0"
+                st="post" if i.findtext("played")=="true" else ("in" if int(hs)>0 or int(as_)>0 else "pre")
+                ev.append({"id":i.findtext("gamecode",""),"status":{"type":{"state":st,"shortDetail":i.findtext("startime","")}},"competitions":[{"competitors":[{"homeAway":"home","team":{"id":"1","displayName":i.findtext("hometeam","")},"score":hs,"records":[{"summary":"0-0"}]},{"homeAway":"away","team":{"id":"2","displayName":i.findtext("awayteam","")},"score":as_,"records":[{"summary":"0-0"}]}]}]})
+    except: pass
+    return {"events":ev}
+
 import requests
 import pandas as pd
 import time
@@ -47,7 +60,7 @@ TUM_LIGLER = {
 >>},
 >>"Basketbol": {
 >>>>"NBA": "basketball/nba",
->>>>"EuroLeague": "basketball/euroleague",
+>>>>"EuroLeague": "euroleague_resmi",
 >>>>"NCAA Basketbol": "basketball/mens-college-basketball"
 >>}
 }
@@ -616,7 +629,7 @@ elif gorunum == "AI Gunun Radari (Tum Ligler)":
 >>>>st.download_button("Gunun Radar Raporunu Excel Indir", data=excel_dosyasi_olustur(radar_df), file_name=f"AI_Radar_{tarih}.xlsx")
 
 else:
->>r = requests.get(f"{url_basi}{yol}/scoreboard?dates={tarih}", headers=basliklar).json()
+>>r = (_el_get(tarih) if yol=="euroleague_resmi" else requests.get(f"{url_basi}{yol}/scoreboard?dates={tarih}", headers=basliklar).json())
 >>maclar = []
 >>banko_havuzu = []
 >>for ev in r.get("events", []):
