@@ -58,7 +58,8 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
         st.markdown("**Canli Mac Anlatimi (Son Olaylar)**")
         if olaylar:
             for o in reversed(olaylar[-5:]):
-                st.caption(o)        else:
+                st.caption(o)
+        else:
             st.caption("Canli akis verisi bekleniyor veya mac henuz baslamadi.")
         if istatistikler:
             st.markdown("**Canli Mac Istatistikleri**")

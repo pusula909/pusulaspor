@@ -45,7 +45,7 @@ def _el_get(t):
                             st_code = "in"
                             detay = str(sfe.get("status", {}).get("description", "Canli"))
                             gc = str(sfe.get("id", gc))
-                 except Exception:
+                except Exception:
                     pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
                 dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
