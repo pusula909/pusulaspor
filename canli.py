@@ -531,8 +531,7 @@ if gorunum == "Canli Kupon Takip":
         for idx, item in enumerate(st.session_state.kupon_listesi):
             ev_s, dep_s, state_k, detay_k = 0, 0, "pre", "Baslamadi"
             try:
-                s_res = requests.get(f"{url_basi}{item['yol']}/summary?event={item['id']}", headers=basliklar, timeout=5).json()
-                header_comp = s_res.get("header", {}).get("competitions", [{}])[0]
+                s_res = {"header": next((x for x in _el_get(tarih).get("events", list()) if str(x.get("id")) == str(item["id"])), {})} if item["yol"] == "euroleague_resmi" else requests.get(f"{url_basi}{item['yol']}/summary?event={item['id']}", headers=basliklar, timeout=5).json()                header_comp = s_res.get("header", {}).get("competitions", [{}])[0]
                 state_k = header_comp.get("status", {}).get("type", {}).get("state", "pre")
                 detay_k = header_comp.get("status", {}).get("type", {}).get("shortDetail", "")
                 for t in header_comp.get("competitors", []):
