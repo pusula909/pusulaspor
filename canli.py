@@ -34,17 +34,18 @@ def _el_get(t):
                 except Exception:
                     pass
                 try:
-                    if "_tsdb_el" not in locals():
-                        _tsdb_el = requests.get("https://www.thesportsdb.com/api/v1/json/3/eventsday.php", params={"d": f"{t[:4]}-{t[4:6]}-{t[6:8]}", "s": "Basketball"}, timeout=5).json().get("events", list()) or list()
-                    for ev2 in _tsdb_el:
-                        if h_ad.lower()[:5] in str(ev2.get("strHomeTeam", "")).lower() or a_ad.lower()[:5] in str(ev2.get("strAwayTeam", "")).lower():
-                            if ev2.get("intHomeScore") is not None:
-                                hs = str(ev2.get("intHomeScore"))
-                                ds = str(ev2.get("intAwayScore"))
-                                st_txt = str(ev2.get("strStatus", "")).lower()
-                                st_code = "post" if "ft" in st_txt or "finish" in st_txt else "in"
-                                detay = str(ev2.get("strStatus", "Canli"))
-                except Exception:
+                    if "_sf_live" not in locals():
+                        _sf_live = requests.get("https://api.sofascore.com/api/v1/sport/basketball/events/live", headers={"User-Agent": "Mozilla/5.0"}, timeout=5).json().get("events", list())
+                    for sfe in _sf_live:
+                        h_nm = str(sfe.get("homeTeam", {}).get("name", "")).lower()
+                        a_nm = str(sfe.get("awayTeam", {}).get("name", "")).lower()
+                        if h_ad.lower()[:5] in h_nm or a_ad.lower()[:5] in a_nm:
+                            hs = str(sfe.get("homeScore", {}).get("current", hs))
+                            ds = str(sfe.get("awayScore", {}).get("current", ds))
+                            st_code = "in"
+                            detay = str(sfe.get("status", {}).get("description", "Canli"))
+                            gc = str(sfe.get("id", gc))
+                 except Exception:
                     pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
                 dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"

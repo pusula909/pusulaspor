@@ -3,31 +3,27 @@ import requests
 
 def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, dep_skor, state, durum_detay, url_basi, basliklar):
     st.subheader("Canli Mac Merkezi | 2D Saha Radari & Anlik Anlatim")
-    if state == "pre":
-        son_olay = "Mac Baslamasi Bekleniyor"
-    elif state == "post":
-        son_olay = "Mac Sona Erdi"
-    else:
-        son_olay = f"Canli Oyun Devam Ediyor ({durum_detay})"
-
-    olaylar = list()
-    istatistikler = list()
+    if state == "pre": son_olay = "Mac Baslamasi Bekleniyor"
+    elif state == "post": son_olay = "Mac Sona Erdi"
+    else: son_olay = f"Canli Oyun Devam Ediyor ({durum_detay})"
+    olaylar, istatistikler = list(), list()
     x_pos, y_pos = 50, 50
-
     if lig_yolu == "euroleague_resmi" and mac_id:
         try:
-            h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-            pb = requests.get("https://euroleague.net", params={"gamecode": str(mac_id), "seasoncode": "E2026"}, headers=h, timeout=5).json()
-            plays_el = pb.get("ActualQuarter", list()) or pb.get("FourthQuarter", list()) or pb.get("ThirdQuarter", list()) or pb.get("SecondQuarter", list()) or pb.get("FirstQuarter", list())
-            for p in plays_el[-8:]:
-                txt = p.get("PLAYINFO", "")
-                pl = p.get("PLAYER", "")
-                clk = p.get("MARKERTIME", "")
-                if txt:
-                    olaylar.append(f"{clk} - {pl} {txt}".strip())
+            h = {"User-Agent": "Mozilla/5.0"}
+            st_r = requests.get("https://api.sofascore.com/api/v1/event/"+str(mac_id)+"/statistics", headers=h, timeout=4).json()
+            for grp in st_r.get("statistics", list())[:1].get("groups", list()):
+                for itm in grp.get("statisticsItems", list())[:3]:
+                    istatistikler.append({"Istatistik": itm.get("name", ""), ev_ad: str(itm.get("home", "-")), dep_ad: str(itm.get("away", "-"))})
+            inc_r = requests.get("https://api.sofascore.com/api/v1/event/"+str(mac_id)+"/incidents", headers=h, timeout=4).json()
+            for inc in inc_r.get("incidents", list())[:8]:
+                tm = inc.get("time", "")
+                tx = inc.get("text", inc.get("incidentType", ""))
+                if tx: olaylar.append(f"Dakika {tm}' - {tx}")
             if olaylar:
+                olaylar.reverse()
                 son_olay = olaylar[-1]
-                x_pos = 78 if int(ev_skor) >= int(dep_skor) else 22
+            x_pos = 78 if int(ev_skor) >= int(dep_skor) else 22
         except Exception:
             pass
     elif lig_yolu != "euroleague_resmi" and mac_id:
@@ -37,14 +33,11 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
                 txt = p.get("text", "")
                 clk = p.get("clock", {}).get("displayValue", "")
                 per = p.get("period", {}).get("number", "")
-                if txt:
-                    olaylar.append(f"P{per} ({clk}) - {txt}")
+                if txt: olaylar.append(f"P{per} ({clk}) - {txt}")
             if olaylar:
                 son_olay = olaylar[-1]
-                if ev_ad.lower() in son_olay.lower():
-                    x_pos = 78
-                elif dep_ad.lower() in son_olay.lower():
-                    x_pos = 22
+                if ev_ad.lower() in son_olay.lower(): x_pos = 78
+                elif dep_ad.lower() in son_olay.lower(): x_pos = 22
             box = s_veri.get("boxscore", {}).get("teams", list())
             if len(box) >= 2:
                 s1 = {x.get("label", x.get("name", "")): x.get("displayValue", "0") for x in box[0].get("statistics", list())}
@@ -53,7 +46,6 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
                     istatistikler.append({"Istatistik": k, ev_ad: s1.get(k, "-"), dep_ad: s2.get(k, "-")})
         except Exception:
             pass
-
     c1, c2 = st.columns([1.3, 1])
     with c1:
         if spor == "Futbol":
@@ -62,14 +54,12 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
             svg = f'<svg viewBox="0 0 400 240" style="width:100%;border-radius:12px;background:#d97706;border:3px solid #78350f"><rect x="10" y="10" width="380" height="220" fill="#f59e0b" stroke="#fff" stroke-width="2"/><line x1="200" y1="10" x2="200" y2="230" stroke="#fff" stroke-width="2"/><circle cx="200" cy="120" r="28" fill="none" stroke="#fff" stroke-width="2"/><path d="M 10 40 Q 110 120 10 200" fill="none" stroke="#fff" stroke-width="2"/><path d="M 390 40 Q 290 120 390 200" fill="none" stroke="#fff" stroke-width="2"/><circle cx="{x_pos*3.6+20}" cy="120" r="10" fill="#dc2626" stroke="#fff" stroke-width="2"/><text x="200" y="28" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">{ev_ad} {ev_skor} - {dep_skor} {dep_ad}</text></svg>'
         st.markdown(svg, unsafe_allow_html=True)
         st.info(f"Son Aksiyon: {son_olay}")
-
     with c2:
-        st.markdown("*Canli Mac Anlatimi (Son Olaylar)*")
+        st.markdown("**Canli Mac Anlatimi (Son Olaylar)**")
         if olaylar:
             for o in reversed(olaylar[-5:]):
-                st.caption(o)
-        else:
+                st.caption(o)        else:
             st.caption("Canli akis verisi bekleniyor veya mac henuz baslamadi.")
         if istatistikler:
-            st.markdown("*Canli Mac Istatistikleri*")
+            st.markdown("**Canli Mac Istatistikleri**")
             st.dataframe(istatistikler, use_container_width=True, hide_index=True)
