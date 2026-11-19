@@ -4,9 +4,9 @@ from datetime import datetime, timedelta, timezone
 def _el_get(t):
     ev = list()
     try:
-        h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Origin": "https://www.euroleaguebasketball.net", "Referer": "https://www.euroleaguebasketball.net/"}
-        r = requests.get("https://api-live.euroleague.net/v1/schedules", params={"seasonCode": "E2026"}, headers=h, timeout=8)
-        items = ET.fromstring(requests.get("https://api-live.euroleague.net/v1/schedules?seasonCode=E2026", headers=h, timeout=8).content).findall(".//item")
+        h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Accept": "application/json, text/xml"}
+        r = requests.get("https://api-live.euroleague.net/v1/schedules?seasonCode=E2026", headers=h, timeout=8)
+        items = ET.fromstring(r.content).findall(".//item")
         win_map, loss_map = {}, {}
         for x in items:
             if x.findtext("played") == "true":
@@ -14,6 +14,13 @@ def _el_get(t):
                 s1, s2 = int(x.findtext("homescore", "0") or 0), int(x.findtext("awayscore", "0") or 0)
                 if s1 > s2: win_map[t1] = win_map.get(t1, 0) + 1; loss_map[t2] = loss_map.get(t2, 0) + 1
                 else: win_map[t2] = win_map.get(t2, 0) + 1; loss_map[t1] = loss_map.get(t1, 0) + 1
+        live_v2 = {}
+        try:
+            r2 = requests.get("https://api-live.euroleague.net/v2/competitions/E/seasons/E2026/games?limit=400", headers=h, timeout=6).json()
+            for g in r2.get("data", list()):
+                live_v2[str(g.get("code", ""))] = g
+        except Exception:
+            pass
         suan_tr = datetime.now(timezone(timedelta(hours=3))).replace(tzinfo=None)
         for i in items:
             d_raw = i.findtext("date", "").strip()
@@ -26,30 +33,30 @@ def _el_get(t):
                 gc = i.findtext("gamecode", "").strip()
                 st_code = "post" if i.findtext("played") == "true" else "pre"
                 detay = s_time
-                try:
-                    m_saat = datetime.strptime(f"{d_raw} {s_time}", "%b %d, %Y %H:%M") + timedelta(hours=2)
-                    if st_code == "pre" and m_saat <= suan_tr <= m_saat + timedelta(hours=3):
-                        st_code = "in"
-                        detay = "Canli Oynaniyor"
-                except Exception:
-                    pass
-                try:
-                    if "_sf_live" not in locals():
-                        _sf_live = requests.get("https://api.sofascore.com/api/v1/sport/basketball/events/live", headers={"User-Agent": "Mozilla/5.0"}, timeout=5).json().get("events", list())
-                    for sfe in _sf_live:
-                        h_nm = str(sfe.get("homeTeam", {}).get("name", "")).lower()
-                        a_nm = str(sfe.get("awayTeam", {}).get("name", "")).lower()
-                        if h_ad.lower()[:5] in h_nm or a_ad.lower()[:5] in a_nm:
-                            hs = str(sfe.get("homeScore", {}).get("current", hs))
-                            ds = str(sfe.get("awayScore", {}).get("current", ds))
+                if gc in live_v2:
+                    gd = live_v2[gc]
+                    loc = gd.get("local", {})
+                    road = gd.get("road", {})
+                    if loc.get("score") is not None:
+                        hs = str(loc.get("score", hs))
+                        ds = str(road.get("score", ds))
+                        gst = str(gd.get("gameStatus", "")).lower()
+                        if "live" in gst or "being" in gst or (int(hs) > 0 and "result" not in gst and "played" not in gst):
                             st_code = "in"
-                            detay = str(sfe.get("status", {}).get("description", "Canli"))
-                            gc = str(sfe.get("id", gc))
-                except Exception:
-                    pass
+                            detay = f"Canli (Q{gd.get('quarter', '')})"
+                        elif "result" in gst or "played" in gst:
+                            st_code = "post"
+                elif st_code == "pre":
+                    try:
+                        m_saat = datetime.strptime(f"{d_raw} {s_time}", "%b %d, %Y %H:%M") + timedelta(hours=2)
+                        if m_saat <= suan_tr <= m_saat + timedelta(hours=3):
+                            st_code = "in"
+                            detay = "Canli Oynaniyor"
+                    except Exception:
+                        pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
                 dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
-                ev.append({"id": gc, "status": {"type": {"state": st_code, "shortDetail": detay}}, "competitions": [{"competitors": [{"homeAway": "home", "team": {"id": "1", "displayName": h_ad}, "score":  hs, "records": [{"summary": ev_r}]}, {"homeAway": "away", "team": {"id": "2", "displayName": a_ad}, "score": ds, "records": [{"summary": dep_r}]}]}]})
+                ev.append({"id": gc, "status": {"type": {"state": st_code, "shortDetail": detay}}, "competitions": [{"competitors": [{"homeAway": "home", "team": {"id": "1", "displayName": h_ad}, "score": hs, "records": [{"summary": ev_r}]}, {"homeAway": "away", "team": {"id": "2", "displayName": a_ad}, "score": ds, "records": [{"summary": dep_r}]}]}]})
     except Exception:
         pass
     return {"events": ev}

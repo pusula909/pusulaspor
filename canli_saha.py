@@ -10,20 +10,17 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
     x_pos, y_pos = 50, 50
     if lig_yolu == "euroleague_resmi" and mac_id:
         try:
-            h = {"User-Agent": "Mozilla/5.0"}
-            st_r = requests.get("https://api.sofascore.com/api/v1/event/"+str(mac_id)+"/statistics", headers=h, timeout=4).json()
-            for grp in st_r.get("statistics", list())[:1].get("groups", list()):
-                for itm in grp.get("statisticsItems", list())[:3]:
-                    istatistikler.append({"Istatistik": itm.get("name", ""), ev_ad: str(itm.get("home", "-")), dep_ad: str(itm.get("away", "-"))})
-            inc_r = requests.get("https://api.sofascore.com/api/v1/event/"+str(mac_id)+"/incidents", headers=h, timeout=4).json()
-            for inc in inc_r.get("incidents", list())[:8]:
-                tm = inc.get("time", "")
-                tx = inc.get("text", inc.get("incidentType", ""))
-                if tx: olaylar.append(f"Dakika {tm}' - {tx}")
+            h = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+            pb = requests.get(f"https://api-live.euroleague.net/v2/competitions/E/seasons/E2026/games/{mac_id}/playbyplay", headers=h, timeout=5).json()
+            for q in ["firstQuarter", "secondQuarter", "thirdQuarter", "fourthQuarter", "extraTime"]:
+                for p in pb.get(q, list())[:-8]:
+                    txt = p.get("playInfo", "")
+                    pl = p.get("player", "")
+                    clk = p.get("markerTime", "")
+                    if txt: olaylar.append(f"{clk} - {pl} {txt}".strip())
             if olaylar:
-                olaylar.reverse()
                 son_olay = olaylar[-1]
-            x_pos = 78 if int(ev_skor) >= int(dep_skor) else 22
+                x_pos = 78 if int(ev_skor) >= int(dep_skor) else 22
         except Exception:
             pass
     elif lig_yolu != "euroleague_resmi" and mac_id:
@@ -49,7 +46,7 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
     c1, c2 = st.columns([1.3, 1])
     with c1:
         if spor == "Futbol":
-            svg = f'<svg viewBox="0 0 400 240" style="width:100%;border-radius:12px;background:#15803d;border:3px solid #fff"><rect x="10" y="10" width="380" height="220" fill="none" stroke="#fff" stroke-width="2"/><line x1="200" y1="10" x2="200" y2="230" stroke="#fff" stroke-width="2"/><circle cx="200" cy="120" r="32" fill="none" stroke="#fff" stroke-width="2"/><rect x="10" y="65" width="55" height="110" fill="none" stroke="#fff" stroke-width="2"/><rect x="335" y="65" width="55" height="110" fill="none" stroke="#fff" stroke-width="2"/><circle cx="{x_pos*3.6+20}" cy="{y_pos*2+20}" r="9" fill="#facc15" stroke="#000" stroke-width="2"/><text x="200" y="28" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">{ev_ad} {ev_skor} - {dep_skor} {dep_ad}</text></svg>'
+            svg = f'<svg viewBox="0 0 400 240" style="width:100%;border-radius:12px;background:#15803d;border:3px solid #fff"><rect x="10" y="10" width="380" height="220" fill="none" stroke="#fff" stroke-width="2"/><line x1="200" y1="10" x2="200" y2="230" stroke="#fff" stroke-width="2"/><circle cx="200" cy="120" r="32" fill="none" stroke="#fff" stroke-width="2"/><rect x="10" y="65" width="55" height="110" fill="none" stroke="#fff" stroke-width="2"/><rect x="335" y="65" width="55" height="110" fill="none" stroke-width="2"/><circle cx="{x_pos*3.6+20}" cy="{y_pos*2+20}" r="9" fill="#facc15" stroke="#000" stroke-width="2"/><text x="200" y="28" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">{ev_ad} {ev_skor} - {dep_skor} {dep_ad}</text></svg>'
         else:
             svg = f'<svg viewBox="0 0 400 240" style="width:100%;border-radius:12px;background:#d97706;border:3px solid #78350f"><rect x="10" y="10" width="380" height="220" fill="#f59e0b" stroke="#fff" stroke-width="2"/><line x1="200" y1="10" x2="200" y2="230" stroke="#fff" stroke-width="2"/><circle cx="200" cy="120" r="28" fill="none" stroke="#fff" stroke-width="2"/><path d="M 10 40 Q 110 120 10 200" fill="none" stroke="#fff" stroke-width="2"/><path d="M 390 40 Q 290 120 390 200" fill="none" stroke="#fff" stroke-width="2"/><circle cx="{x_pos*3.6+20}" cy="120" r="10" fill="#dc2626" stroke="#fff" stroke-width="2"/><text x="200" y="28" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">{ev_ad} {ev_skor} - {dep_skor} {dep_ad}</text></svg>'
         st.markdown(svg, unsafe_allow_html=True)
