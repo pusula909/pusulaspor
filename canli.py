@@ -484,7 +484,7 @@ if gorunum == "Canli Kupon Takip":
     
     k_maclar_veri = []
     try:
-resp = _el_get(tarih) if k_yol == "euroleague_resmi" else requests.get(f"{url_basi}{k_yol}/scoreboard?dates={tarih}", headers=basliklar, timeout=6).json()        
+        resp = _el_get(tarih) if k_yol == "euroleague_resmi" else requests.get(f"{url_basi}{k_yol}/scoreboard?dates={tarih}", headers=basliklar, timeout=6).json()        
         for ev in resp.get("events", []):
             comp = ev.get("competitions", [{}])[0]
             takimlar = comp.get("competitors", [])
