@@ -31,17 +31,21 @@ def _el_get(t):
                 hs = i.findtext("homescore", "0") or "0"
                 ds = i.findtext("awayscore", "0") or "0"
                 st_code = "post" if i.findtext("played") == "true" else ("in" if int(hs) > 0 or int(ds) > 0 else "pre")
-                gc = i.findtext("gamecode", "").strip()
                 try:
-                    lr = requests.get("https://live.euroleague.net/api/Boxscore?gamecode="+str(gc)+"&seasoncode=E"+str(t[:4]), timeout=4).json()
-                    by_q = lr.get("byQuarter", list())
-                    if len(by_q) >= 2:
-                        s1 = sum(int(by_q[0].get(k, 0) or 0) for k in ["Quarter1","Quarter2","Quarter3","Quarter4","Extra1"])
-                        s2 = sum(int(by_q[1].get(k, 0) or 0) for k in ["Quarter1","Quarter2","Quarter3","Quarter4","Extra1"])
-                        if s1 > 0 or s2 > 0:
-                            hs, ds = str(s1), str(s2)
-                            st_code = "in" if lr.get("Live", True) else "post"
-                            i.find("startime").text = "Canli"
+                    if "_el_live" not in locals():
+                        _el_live = {}
+                        lr = requests.get("https://feeds.incrowdsports.com/provider/euroleague/v1/games?seasonCode=E"+str(t[:4])+"&phaseTypeCode=RS", timeout=5).json()
+                        for g in lr.get("data", list()):
+                            _el_live[str(g.get("code", ""))] = g
+                    gc = i.findtext("gamecode", "").strip()
+                    if gc in _el_live:
+                        gd = _el_live[gc]
+                        st = gd.get("status", "")
+                        if st in ["live", "result"]:
+                            hs = str(gd.get("home", {}).get("score", hs))
+                            ds = str(gd.get("away", {}).get("score", ds))
+                            st_code = "in" if st == "live" else "post"
+                            i.find("startime").text = f"Q{gd.get('quarter', '')} {gd.get('minute', '')}'".strip()
                 except Exception:
                     pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
