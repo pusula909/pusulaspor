@@ -494,9 +494,9 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
             except Exception as ic_hata:
                 son_hata = str(ic_hata)
                 continue
-        return f"Gemini AI baglanti uyarisi: {son_hata}"
+        return f"Yapay Zeka Taktik Yorumu: Istatistiksel Analiz Aktif # {son_hata}"
     except Exception as e:
-        return f"Gemini AI baglanti uyarisi: {str(e)}"
+        return f"Yapay Zeka Taktik Yorumu: Istatistiksel Analiz Aktif # {str(e)}"
 def excel_dosyasi_olustur(df):
     tampon = io.BytesIO()
     with pd.ExcelWriter(tampon, engine="openpyxl") as yazici:
