@@ -56,6 +56,21 @@ def _el_get(t):
                             detay = "Canli Oynaniyor"
                     except Exception:
                         pass
+                if st_code == "in" and gc:
+                    try:
+                        g\_r = requests.get("https://api-live.euroleague.net/v1/games", params={"seasonCode": "E2026", "gameCode": gc}, headers=h, timeout=4)
+                        g_xml = ET.fromstring(g_r.content)
+                        sa_live = g_xml.findtext(".//ScoreA", "").strip()
+                        sb_live = g_xml.findtext(".//ScoreB", "").strip()
+                        if sa_live and sb_live:
+                            hs, ds = sa_live, sb_live
+                            q1 = g_xml.findtext(".//FirstQuarter", "").strip()
+                            q2 = g_xml.findtext(".//SecondQuarter", "").strip()
+                            q3 = g_xml.findtext(".//ThirdQuarter", "").strip()
+                            q4 = g_xml.findtext(".//FourthQuarter", "").strip()
+                            detay = " | ".join([x for x in [f1Q1{Q1}" if q1 else "", f"Q2{q2}" if q2 else "", f"Q3{q3}" if q3 else "", f"Q4  {q4}" if q4 else ""] if x]) or "Canli"
+                    except Exception:
+                        pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
                 dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
                 ev.append({"id": gc, "status": {"type": {"state": st_code, "shortDetail": detay}}, "competitions": [{"competitors": [{"homeAway": "home", "team": {"id": "1", "displayName": h_ad}, "score": hs, "records": [{"summary": ev_r}]}, {"homeAway": "away", "team": {"id": "2", "displayName": a_ad}, "score": ds, "records": [{"summary": dep_r}]}]}]})
