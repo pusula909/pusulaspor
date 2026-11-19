@@ -34,7 +34,7 @@ def _el_get(t):
                 try:
                     if "_el_live" not in locals():
                         _el_live = {}
-                        lr = requests.get("https://feeds.incrowdsports.com/provider/euroleague/v1/games?seasonCode=E"+str(t[:4])+"&phaseTypeCode=RS", timeout=5).json()
+                        lr = requests.get("https://feeds.incrowdsports.com/provider/euroleague/v1/games", params={"seasonCode": "E" + str(t[:4]), "phaseTypeCode": "RS"}, timeout=5).json()
                         for g in lr.get("data", list()):
                             _el_live[str(g.get("code", ""))] = g
                     gc = i.findtext("gamecode", "").strip()
@@ -45,7 +45,7 @@ def _el_get(t):
                             hs = str(gd.get("home", {}).get("score", hs))
                             ds = str(gd.get("away", {}).get("score", ds))
                             st_code = "in" if st == "live" else "post"
-                            i.find("startime").text = f"Q{gd.get('quarter', '')} {gd.get('minute', '')}'".strip()
+                            i.find("startime").text = f"Q{gd.get('Quarter', '')} {gd.get('Minute', '')}'".strip()
                 except Exception:
                     pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
