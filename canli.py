@@ -55,6 +55,12 @@ gemini_api_key = st.sidebar.text_input("Gemini API Anahtari (Opsiyonel)", value=
 if "kupon_listesi" not in st.session_state:
 >>st.session_state.kupon_listesi = []
 if "kupon_bildirim_gonderildi" not in st.session_state:
+if "gonderilen_kritik_uyarilar" not in st.session_state:
+>>st.session_state.gonderilen_kritik_uyarilar = []
+
+gizli_tg_token = st.secrets.get("TG_TOKEN", "")
+gizli_tg_chat_id = st.secrets.get("TG_CHAT_ID", "")
+gizli_gemini_key = st.secrets.get("GEMINI_KEY", "")
 >>st.session_state.kupon_bildirim_gonderildi = False
 
 st.sidebar.header("Kontrol Merkezi")
@@ -64,10 +70,17 @@ tarih = tarih_obj.strftime("%Y%m%d")
 
 st.sidebar.divider()
 st.sidebar.subheader("Telegram Bildirim Ayari")
-tg_token = st.sidebar.text_input("Telegram Bot Token", value="9237960702:AAHZTFSLvuir25NPo33QxsCWuVm9YRiN7rI", type="password", help="BotFather'dan aldiginiz token")
-tg_chat_id = st.sidebar.text_input("Telegram Chat ID", value="1873528065", help="userinfobot'tan aldiginiz ID")
+tg_token = st.sidebar.text_input("Telegram Bot Token", value=gizli_tg_token, type="password")
+tg_chat_id = st.sidebar.text_input("Telegram Chat ID", value=gizli_tg_chat_id)
+
 def telegram_mesaj_gonder(token, chat_id, mesaj):
 >>if not token or not chat_id:
+>>>>return False
+>>try:
+>>>>tg_adres = "https://telegram.org" + chr(47) + "bot" + token.strip() + chr(47) + "sendMessage"
+>>>>r = requests.post(tg_adres, data={"chat_id": str(chat_id).strip(), "text": mesaj}, timeout=8)
+>>>>return r.status_code == 200
+>>except Exception:
 >>>>return False
 >>try:
 >>>>tg_adres = "https://api.telegram.org" + chr(47) + "bot" + token.strip() + chr(47) + "sendMessage"
@@ -131,10 +144,11 @@ def h2h_ve_form_getir(lig_yolu, mac_id, ev_ad, dep_ad):
 >>except Exception:
 >>>>pass
 >>return h2h_listesi[:5]
-@st.cache_data(ttl=25)
+@st.cache_data(ttl=15)
 def koc_ve_rotasyon_etkisi_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu, ev_ad, dep_ad):
 >>ozetler = []
 >>etki_puani = 0.0
+>>kritik_alarm = ""
 >>try:
 >>>>s_veri = requests.get(f"{url_basi}{lig_yolu}/summary?event={mac_id}", headers=basliklar, timeout=6).json()
 >>>>if spor_turu == "Basketbol":
@@ -163,22 +177,25 @@ def koc_ve_rotasyon_etkisi_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu, ev_
 >>>>>>>>seri_farki = ev_son_sayi - dep_son_sayi
 >>>>>>>>if son_hamle:
 >>>>>>>>>>ozetler.append(f"Son Hamle: {son_hamle}")
->>>>>>>>if abs(seri_farki) >= 4:
+>>>>>>>>if abs(seri_farki) >= 6:
 >>>>>>>>>>onde_olan = ev_ad if seri_farki > 0 else dep_ad
 >>>>>>>>>>ozetler.append(f"Hamle Sonrasi Seri: {onde_olan} ({ev_son_sayi}-{dep_son_sayi})")
 >>>>>>>>>>etki_puani = max(-0.08, min(0.08, seri_farki * 0.01))
+>>>>>>>>>>kritik_alarm = f"BASKETBOL KRITIK SERI: {ev_ad} vs {dep_ad} macinda {son_hamle} sonrasi {onde_olan} {ev_son_sayi}-{dep_son_sayi} seri yakaladi!"
 >>>>elif spor_turu == "Futbol":
 >>>>>>olaylar = s_veri.get("keyEvents", [])
->>>>>>degisiklikler = [o for o in olaylar if "Substitution" in o.get("type", {}).get("text", "")]
->>>>>>if degisiklikler:
->>>>>>>>son_deg = degisiklikler[-1]
->>>>>>>>dk = son_deg.get("clock", {}).get("displayValue", "")
->>>>>>>>ozetler.append(f"Son Degisiklik ({dk}): {son_deg.get('text', '')}")
+>>>>>>if olaylar:
+>>>>>>>>son_olay = olaylar[-1]
+>>>>>>>>tip = son_olay.get("type", {}).get("text", "")
+>>>>>>>>dk = son_olay.get("clock", {}).get("displayValue", "")
+>>>>>>>>metin = son_olay.get("text", "")
+>>>>>>>>ozetler.append(f"Son Olay ({dk}): {tip} - {metin}")
+>>>>>>>>if any(k in tip for k in ["Goal", "Penalty", "Red Card", "Substitution"]):
+>>>>>>>>>>kritik_alarm = f"FUTBOL KRITIK AN ({dk}): {ev_ad} vs {dep_ad} -> {tip}: {metin}"
 >>except Exception:
 >>>>pass
->>durum_metni = " | ".join(ozetler) if ozetler else "Kritik bir oyuncu degisikligi veya mola serisi yok"
->>return durum_metni, etki_puani
-
+>>durum_metni = " | ".join(ozetler) if ozetler else "Kritik bir hamle veya seri yok"
+>>return durum_metni, etki_puani, kritik_alarm
 def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_eksik=0, dep_eksik=0, state="pre", ev_skor=0, dep_skor=0):
 >>try:
 >>>>ev_p = [int(x) for x in ev_rec.split("-")]
@@ -521,7 +538,16 @@ if gorunum == "Canli Kupon Takip":
 >>>>>>>>>>>>tekil_olasilik = 0.35
 >>>>>>else:
 >>>>>>>>hepsi_bitti_ve_tuttu = False
->>>>>>
+>>>>>>if state_k == "in":
+>>>>>>>>_, _, k_alarm = koc_ve_rotasyon_etkisi_getir(item["yol"], item["id"], "", "", item["spor"], item["ev"], item["dep"])
+>>>>>>>>skor_anahtari = f"{item['id']}{ev_s}{dep_s}"
+>>>>>>>>if (ev_s + dep_s) > 0 and skor_anahtari not in st.session_state.gonderilen_kritik_uyarilar:
+>>>>>>>>>>st.session_state.gonderilen_kritik_uyarilar.append(skor_anahtari)
+>>>>>>>>>>if item["spor"] == "Futbol":
+>>>>>>>>>>>>telegram_mesaj_gonder(tg_token, tg_chat_id, f"GOL! {item['ev']} {ev_s} - {dep_s} {item['dep']} ({detay_k}) | Oynanan: {t}")
+>>>>>>>>if k_alarm and k_alarm not in st.session_state.gonderilen_kritik_uyarilar:
+>>>>>>>>>>st.session_state.gonderilen_kritik_uyarilar.append(k_alarm)
+>>>>>>>>>>telegram_mesaj_gonder(tg_token, tg_chat_id, f"KRITIK AN: {k_alarm} | Oynanan: {t}")
 >>>>>>genel_ihtimal *= tekil_olasilik
 >>>>>>kupon_tablosu.append({
 >>>>>>>>"Mac": f"{item['ev']} vs {item['dep']}",
@@ -679,7 +705,7 @@ else:
 >>>>>>>>>>>>st.success(f"*Gemini AI Taktik ve Kadro Yorumu:* {ai_yorum}")
 >>>>>>h2h_verisi = h2h_ve_form_getir(yol, satir["ID"], satir["Ev Sahibi"], satir["Deplasman"])
 >>>>>>ev_kadro, dep_kadro, ev_eksikler, dep_eksikler, kaynak = ai_kadro_ve_eksik_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor)
->>>>>>koc_etkisi_metni, momentum_etkisi = koc_ve_rotasyon_etkisi_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor, satir["Ev Sahibi"], satir["Deplasman"])
+>>>>>>koc_etkisi_metni, momentum_etkisi, _ = koc_ve_rotasyon_etkisi_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor, satir["Ev Sahibi"], satir["Deplasman"]
 >>>>>>detayli_tahmin_satirlari, _, _ = coklu_tahmin_motoru(satir["Ev Sahibi"], satir["Deplasman"], satir["Ev Form"], satir["Dep Form"], spor, lig, len(ev_eksikler), len(dep_eksikler), satir["State"], satir["EvSkorInt"], satir["DepSkorInt"])
 >>>>>>st.markdown(f"Durum: {satir['Dakika / Ceyrek']}  |  Periyot / IY Detayi: {satir['IY / Ceyrek Skorlari']}")
 >>>>>>if satir["State"] == "in":
