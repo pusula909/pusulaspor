@@ -11,7 +11,7 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
     if lig_yolu == "euroleague_resmi" and mac_id:
         try:
             h = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
-            pb = requests.get(f"https://api-live.euroleague.net/v2/competitions/E/seasons/E2026/games/{mac_id}/playbyplay", headers=h, timeout=5).json()
+            pb = requests.get(f"https://api-live.euroleague.net/v2/competitions/E/seasons/E2026/games/{str(mac_id).split("")[-1]}/playbyplay", headers=h, timeout=5).json()
             for q in ["firstQuarter", "secondQuarter", "thirdQuarter", "fourthQuarter", "extraTime"]:
                 for p in pb.get(q, list())[:-8]:
                     txt = p.get("playInfo", "")

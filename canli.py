@@ -30,7 +30,7 @@ def _el_get(t):
                 h_ad, a_ad = i.findtext("hometeam", "").strip(), i.findtext("awayteam", "").strip()
                 hs, ds = i.findtext("homescore", "0") or "0", i.findtext("awayscore", "0") or "0"
                 s_time = i.findtext("startime", "23:00").strip()
-                gc = i.findtext("gamecode", "").strip()
+                gc = i.findtext("gamecode", "").strip().split("")[-1]
                 st_code = "post" if i.findtext("played") == "true" else "pre"
                 detay = s_time
                 if gc in live_v2:
