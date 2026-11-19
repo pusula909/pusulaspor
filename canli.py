@@ -33,12 +33,15 @@ def _el_get(t):
                 st_code = "post" if i.findtext("played") == "true" else ("in" if int(hs) > 0 or int(ds) > 0 else "pre")
                 gc = i.findtext("gamecode", "").strip()
                 try:
-                    lr = requests.get("https://live.euroleague.net/api/Header?gamecode="+str(gc)+"&seasoncode=E"+str(t[:4]), timeout=3).json()
-                    if lr.get("Live") or int(lr.get("ScoreA", 0) or 0) > 0 or int(lr.get("ScoreB", 0) or 0) > 0:
-                        hs = str(lr.get("ScoreA", hs))
-                        ds = str(lr.get("ScoreB", ds))
-                        st_code = "in" if lr.get("Live") else "post"
-                        i.find("startime").text = f"Q{lr.get('Quarter', '')} {lr.get('Minute', '')}'".strip()
+                    lr = requests.get("https://live.euroleague.net/api/Boxscore?gamecode="+str(gc)+"&seasoncode=E"+str(t[:4]), timeout=4).json()
+                    by_q = lr.get("byQuarter", list())
+                    if len(by_q) >= 2:
+                        s1 = sum(int(by_q[0].get(k, 0) or 0) for k in ["Quarter1","Quarter2","Quarter3","Quarter4","Extra1"])
+                        s2 = sum(int(by_q[1].get(k, 0) or 0) for k in ["Quarter1","Quarter2","Quarter3","Quarter4","Extra1"])
+                        if s1 > 0 or s2 > 0:
+                            hs, ds = str(s1), str(s2)
+                            st_code = "in" if lr.get("Live", True) else "post"
+                            i.find("startime").text = "Canli"
                 except Exception:
                     pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
