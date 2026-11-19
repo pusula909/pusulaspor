@@ -68,7 +68,7 @@ def _el_get(t):
                             q2 = g_xml.findtext(".//SecondQuarter", "").strip()
                             q3 = g_xml.findtext(".//ThirdQuarter", "").strip()
                             q4 = g_xml.findtext(".//FourthQuarter", "").strip()
-                            detay = " | ".join([x for x in [f1Q1{Q1}" if q1 else "", f"Q2{q2}" if q2 else "", f"Q3{q3}" if q3 else "", f"Q4  {q4}" if q4 else ""] if x]) or "Canli"
+                            detay = "Canli"
                     except Exception:
                         pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
