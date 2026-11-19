@@ -21,8 +21,8 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
             if olaylar:
                 son_olay = olaylar[-1]
                 x_pos = 78 if int(ev_skor) >= int(dep_skor) else 22
-        except Exception:
-            pass
+        except Exception as err:
+            st.error(f"HATA SEBEBI: {err}")
     elif lig_yolu != "euroleague_resmi" and mac_id:
         try:
             s_veri = requests.get(f"{url_basi}{lig_yolu}/summary?event={mac_id}", headers=basliklar, timeout=6).json()
@@ -41,8 +41,8 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
                 s2 = {x.get("label", x.get("name", "")): x.get("displayValue", "0") for x in box[1].get("statistics", list())}
                 for k in list(s1.keys())[:6]:
                     istatistikler.append({"Istatistik": k, ev_ad: s1.get(k, "-"), dep_ad: s2.get(k, "-")})
-        except Exception:
-            pass
+        except Exception as err:
+            st.error(f"HATA SEBEBI: {err}")
     c1, c2 = st.columns([1.3, 1])
     with c1:
         if spor == "Futbol":
@@ -57,7 +57,7 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
             for o in reversed(olaylar[-5:]):
                 st.caption(o)
         else:
-            st.caption("Canli akis verisi bekleniyor veya mac henuz baslamadi.")
+            st.caption(f"ID:{mac_id} - YANIT:{str(locals().get('pb','YOK'))[:200]}")
         if istatistikler:
             st.markdown("**Canli Mac Istatistikleri**")
             st.dataframe(istatistikler, use_container_width=True, hide_index=True)
