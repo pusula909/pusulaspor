@@ -34,12 +34,16 @@ def _el_get(t):
                 except Exception:
                     pass
                 try:
-                    lr = requests.get("https://live.euroleague.net/api/Header", params={"gamecode": str(gc), "seasoncode": "E2026"}, headers=h, timeout=4).json()
-                    if lr.get("Live") or int(lr.get("ScoreA", 0) or 0) > 0 or int(lr.get("ScoreB", 0) or 0) > 0:
-                        hs = str(lr.get("ScoreA", hs))
-                        ds = str(lr.get("ScoreB", ds))
-                        st_code = "in" if lr.get("Live") else "post"
-                        detay = f"Q{lr.get('Quarter', '')} {lr.get('Minute', '')}'".strip()
+                    if "_tsdb_el" not in locals():
+                        _tsdb_el = requests.get("https://www.thesportsdb.com/api/v1/json/3/eventsday.php", params={"d": f"{t[:4]}-{t[4:6]}-{t[6:8]}", "s": "Basketball"}, timeout=5).json().get("events", list()) or list()
+                    for ev2 in _tsdb_el:
+                        if h_ad.lower()[:5] in str(ev2.get("strHomeTeam", "")).lower() or a_ad.lower()[:5] in str(ev2.get("strAwayTeam", "")).lower():
+                            if ev2.get("intHomeScore") is not None:
+                                hs = str(ev2.get("intHomeScore"))
+                                ds = str(ev2.get("intAwayScore"))
+                                st_txt = str(ev2.get("strStatus", "")).lower()
+                                st_code = "post" if "ft" in st_txt or "finish" in st_txt else "in"
+                                detay = str(ev2.get("strStatus", "Canli"))
                 except Exception:
                     pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
