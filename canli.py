@@ -16,7 +16,7 @@ def _el_get(t):
                 else: win_map[t2] = win_map.get(t2, 0) + 1; loss_map[t1] = loss_map.get(t1, 0) + 1
         live_v2 = {}
         try:
-            r2 = requests.get("https://api-live.euroleague.net/v2/competitions/E/seasons/E2026/games?limit=400", headers=h, timeout=6).json()
+            r2 = requests.get("https://api-live.euroleague.net/v2/competitions/E/seasons/E2026/games?limit=400&phaseTypeCode=RS", headers=h, timeout=6).json()
             for g in r2.get("data", list()):
                 live_v2[str(g.get("code", ""))] = g
         except Exception:
