@@ -58,16 +58,12 @@ def _el_get(t):
                         pass
                 if st_code == "in" and gc:
                     try:
-                        gr = requests.get("https://api-live.euroleague.net/v1/games", params={"seasonCode": "E2026", "gameCode": gc}, headers=h, timeout=4)
-                        g_xml = ET.fromstring(g_r.content)
-                        sa_live = g_xml.findtext(".//ScoreA", "").strip()
-                        sb_live = g_xml.findtext(".//ScoreB", "").strip()
-                        if sa_live and sb_live:
-                            hs, ds = sa_live, sb_live
-                            q1 = g_xml.findtext(".//FirstQuarter", "").strip()
-                            q2 = g_xml.findtext(".//SecondQuarter", "").strip()
-                            q3 = g_xml.findtext(".//ThirdQuarter", "").strip()
-                            q4 = g_xml.findtext(".//FourthQuarter", "").strip()
+                        gr = requests.get("https://api-live.euroleague.net/v1/games?seasonCode=E2026&gameCode=" + str(gc), headers=h, timeout=5)
+                        g_xml = ET.fromstring(gr.content)
+                        sa1 = g_xml.findtext(".//TotalPointsA", g_xml.findtext(".//ScoreA", "")).strip()
+                        sb1 = g_xml.findtext(".//TotalPointsB", g_xml.findtext(".//ScoreB", "")).strip()
+                        if sa1 and sb1:
+                            hs, ds = sa1, sb1
                             detay = "Canli"
                     except Exception:
                         pass
@@ -778,7 +774,7 @@ else:
             satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records").pop(0)
             from canli_saha import canli_saha_ve_anlatim_ciz
             try:
-                canli_saha_ve_anlatim_ciz(spor, yol, satir["ID"], satir["Ev Sahibi"], satir["Deplasman"], satir["EvSkorInt"], satir["DepSkorInt"], satir["State"], satir["Dakika / Ceyrek"], url_basi, basliklar)
+                # canli_saha_ve_anlatim_ciz(spor, yol, satir["ID"], satir["Ev Sahibi"], satir["Deplasman"], satir["EvSkorInt"], satir["DepSkorInt"], satir["State"], satir["Dakika / Ceyrek"], url_basi, basliklar)
             except Exception:
                 pass
             ev_kadro, dep_kadro, ev_eksikler, dep_eksikler, kaynak = ai_kadro_ve_eksik_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor)
