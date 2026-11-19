@@ -1,65 +1,47 @@
 import xml.etree.ElementTree as ET
-import xml.etree.ElementTree as ET
 
 def _el_get(t):
     ev = list()
     try:
-        r = requests.get("https://" + "api-live.euroleague.net/v1/schedules?seasonCode=E" + str(t[:4]), timeout=8)
+        h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Accept": "application/json, text/xml"}
+        r = requests.get("https://api-live.euroleague.net/v1/schedules", params={"seasonCode": "E" + str(t[:4])}, headers=h, timeout=8)
         items = ET.fromstring(r.content).findall(".//item")
-        win_map = {}
-        loss_map = {}
+        win_map, loss_map = {}, {}
         for x in items:
             if x.findtext("played") == "true":
-                h = x.findtext("hometeam", "").strip()
-                a = x.findtext("awayteam", "").strip()
-                hs = int(x.findtext("homescore", "0") or 0)
-                ds = int(x.findtext("awayscore", "0") or 0)
-                if hs > ds:
-                    win_map[h] = win_map.get(h, 0) + 1
-                    loss_map[a] = loss_map.get(a, 0) + 1
-                else:
-                    win_map[a] = win_map.get(a, 0) + 1
-                    loss_map[h] = loss_map.get(h, 0) + 1
-
+                t1, t2 = x.findtext("hometeam", "").strip(), x.findtext("awayteam", "").strip()
+                s1, s2 = int(x.findtext("homescore", "0") or 0), int(x.findtext("awayscore", "0") or 0)
+                if s1 > s2: win_map[t1] = win_map.get(t1, 0) + 1; loss_map[t2] = loss_map.get(t2, 0) + 1
+                else: win_map[t2] = win_map.get(t2, 0) + 1; loss_map[t1] = loss_map.get(t1, 0) + 1
+        live_map = {}
+        try:
+            lr = requests.get("https://feeds.incrowdsports.com/provider/euroleague/v2/games", params={"seasonCode": "E" + str(t[:4])}, headers=h, timeout=5).json()
+            for g in lr.get("data", list()):
+                live_map[str(g.get("code", ""))] = g
+        except Exception:
+            pass
         for i in items:
             d_raw = i.findtext("date", "").strip()
-            if not d_raw:
-                continue
+            if not d_raw: continue
             if datetime.strptime(d_raw, "%b %d, %Y").strftime("%Y%m%d") == t:
-                h_ad = i.findtext("hometeam", "").strip()
-                a_ad = i.findtext("awayteam", "").strip()
-                hs = i.findtext("homescore", "0") or "0"
-                ds = i.findtext("awayscore", "0") or "0"
-                st_code = "post" if i.findtext("played") == "true" else ("in" if int(hs) > 0 or int(ds) > 0 else "pre")
-                try:
-                    if "_el_live" not in locals():
-                        _el_live = {}
-                        lr = requests.get("https://feeds.incrowdsports.com/provider/euroleague/v1/games", params={"seasonCode": "E" + str(t[:4]), "phaseTypeCode": "RS"}, timeout=5).json()
-                        for g in lr.get("data", list()):
-                            _el_live[str(g.get("code", ""))] = g
-                    gc = i.findtext("gamecode", "").strip()
-                    if gc in _el_live:
-                        gd = _el_live[gc]
-                        st = gd.get("status", "")
-                        if st in ["live", "result"]:
-                            hs = str(gd.get("home", {}).get("score", hs))
-                            ds = str(gd.get("away", {}).get("score", ds))
-                            st_code = "in" if st == "live" else "post"
-                            i.find("startime").text = f"Q{gd.get('Quarter', '')} {gd.get('Minute', '')}'".strip()
-                except Exception:
-                    pass
+                h_ad, a_ad = i.findtext("hometeam", "").strip(), i.findtext("awayteam", "").strip()
+                hs, ds = i.findtext("homescore", "0") or "0", i.findtext("awayscore", "0") or "0"
+                st_code = "post" if i.findtext("played") == "true" else "pre"
+                detay = i.findtext("startime", "")
+                gc = i.findtext("gamecode", "").strip()
+                if gc in live_map:
+                    gd = live_map[gc]
+                    gst = str(gd.get("gameStatus", gd.get("status", ""))).lower()
+                    hs = str(gd.get("home", {}).get("score", hs))
+                    ds = str(gd.get("away", {}).get("score", ds))
+                    if "live" in gst or "being" in gst or (int(hs) > 0 and st_code == "pre"):
+                        st_code = "in"
+                        detay = f"Q{gd.get('q', gd.get("quarter", ""))} Canli"
+                    elif "result" in gst or "final" in gst:
+                        st_code = "post"
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
                 dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
-                ev.append({
-                    "id": i.findtext("gamecode", ""),
-                    "status": {"type": {"state": st_code, "shortDetail": i.findtext("startime", "")}},
-                    "competitions": [{
-                        "competitors": [
-                            {"homeAway": "home", "team": {"id": "1", "displayName": h_ad}, "score": hs, "records": [{"summary": ev_r}]},
-                            {"homeAway": "away", "team": {"id": "2", "displayName": a_ad}, "score": ds, "records": [{"summary": dep_r}]}
-                        ]
-                    }]
-                })
+                ev.append({"id": gc, "status": {"type": {"state": st_code, "shortDetail": detay}}, "competitions": [{"competitors": [{"homeAway": "home", "team": {"id": "1", "displayName":  h_ad}, "score": hs, "records": [{"summary": ev_r}]}, {"homeAway": "away", "team": {"id": "2", "displayName": a_ad}, "score": ds, "records": [{"summary": dep_r}]}]}]})
     except Exception:
         pass
     return {"events": ev}
