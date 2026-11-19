@@ -238,7 +238,7 @@ def koc_ve_rotasyon_etkisi_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu, ev_
         pass
     durum_metni = " | ".join(ozetler) if ozetler else "Kritik bir hamle veya seri yok"
     return durum_metni, etki_puani, kritik_alarm
-    def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_eksik=0, dep_eksik=0, state="pre", ev_skor=0, dep_skor=0):
+   def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_eksik=0, dep_eksik=0, state="pre", ev_skor=0, dep_skor=0):
     try:
         ev_p = [int(x) for x in ev_rec.split("-")]
         dep_p = [int(x) for x in dep_rec.split("-")]
@@ -325,8 +325,7 @@ def excel_dosyasi_olustur(df):
     with pd.ExcelWriter(tampon, engine="openpyxl") as yazici:
         df.to_excel(yazici, index=False, sheet_name="AI_Analiz")
     return tampon.getvalue()
-
-if gorunum == "Canli Kupon Takip":
+    if gorunum == "Canli Kupon Takip":
     st.subheader("Canli Kombine Kupon Olusturucu & Anlik Takip")
     c1, c2, c3 = st.columns(3)
     k_spor = c1.selectbox("Spor", ["Basketbol", "Futbol"], key="k_spor")
@@ -396,3 +395,94 @@ elif gorunum == "AI Gunun Radari (Tum Ligler)":
                         continue
                     ev_t = next((t for t in t_list if t["homeAway"] == "home"), t_list[0])
                     dep_t = next((t for t in t_list if t["homeAway"] == "away"), t_list[1])
+                    ev_ad, dep_ad = ev_t["team"]["displayName"], dep_t["team"]["displayName"]
+                    ev_r = ev_t.get("records", [{"summary": "0-0"}])[0].get("summary", "0-0")
+                    dep_r = dep_t.get("records", [{"summary": "0-0"}])[0].get("summary", "0-0")
+                    st_code = ev["status"]["type"]["state"]
+                    _, _, en_iyi = coklu_tahmin_motoru(ev_ad, dep_ad, ev_r, dep_r, s_adi, l_adi, 0, 0, st_code, int(ev_t.get("score", 0)), int(dep_t.get("score", 0)))
+                    tum_radar.append({"Spor": s_adi, "Lig": l_adi, "Mac": f"{ev_ad} vs {dep_ad}", "Durum": ev["status"]["type"]["shortDetail"], "AI En Guclu Tahmin": en_iyi["AI Tahmin Secenegi"], "Guven": f"%{en_iyi['GuvenInt']}", "GuvenInt": en_iyi["GuvenInt"]})
+        st.session_state.radar_sonuclari = sorted(tum_radar, key=lambda x: x["GuvenInt"], reverse=True)
+    if st.session_state.radar_sonuclari:
+        radar_df = pd.DataFrame(st.session_state.radar_sonuclari).drop(columns=["GuvenInt"])
+        st.success(f"Toplam {len(radar_df)} mac tarandi ve guven sirasina gore listelendi!")
+        st.dataframe(radar_df, use_container_width=True, hide_index=True)
+        st.download_button("Gunun Radar Raporunu Excel Indir", data=excel_dosyasi_olustur(radar_df), file_name=f"AI_Radar_{tarih}.xlsx")
+
+else:
+    r = lig_verisi_getir(yol, tarih, tarih_tireli)
+    maclar = list()
+    banko_havuzu = list()
+    for ev in r.get("events", list()):
+        mac_id = ev.get("id", "")
+        comp = ev.get("competitions", [{}])[0]
+        takim_listesi = comp.get("competitors", list())
+        if len(takim_listesi) < 2:
+            continue
+        ev_t = next((t for t in takim_listesi if t["homeAway"] == "home"), takim_listesi[0])
+        dep_t = next((t for t in takim_listesi if t["homeAway"] == "away"), takim_listesi[1])
+        ev_ad, dep_ad = ev_t["team"]["displayName"], dep_t["team"]["displayName"]
+        ev_id, dep_id = ev_t["team"].get("id", ""), dep_t["team"].get("id", "")
+        ev_rec = ev_t.get("records", [{"summary": "0-0"}])[0].get("summary", "0-0")
+        dep_rec = dep_t.get("records", [{"summary": "0-0"}])[0].get("summary", "0-0")
+        state = ev["status"]["type"]["state"]
+        durum_detay = ev["status"]["type"]["shortDetail"]
+        ev_s_int = int(ev_t.get("score", 0))
+        dep_s_int = int(dep_t.get("score", 0))
+        if state == "in":
+            durum_gosterim = f"CANLI ({durum_detay})"
+            skor_gosterim = f"{ev_s_int} - {dep_s_int}"
+            st.session_state.eski_skorlar[mac_id] = skor_gosterim
+        elif state == "post":
+            durum_gosterim = f"BITTI ({durum_detay})"
+            skor_gosterim = f"{ev_s_int} - {dep_s_int}"
+        else:
+            durum_gosterim = durum_detay
+            skor_gosterim = "vs"
+        periyot_bilgisi = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
+        _, ozet, en_iyi_tahmin = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor, lig, 0, 0, state, ev_s_int, dep_s_int)
+        banko_havuzu.append({"Mac": f"{ev_ad} - {dep_ad}", "Secenek": en_iyi_tahmin["AI Tahmin Secenegi"], "Guven": en_iyi_tahmin["GuvenInt"]})
+        fav = bool(favori and (favori in ev_ad.lower() or favori in dep_ad.lower()))
+        maclar.append({"ID": mac_id, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad} ({skor_gosterim})", "Fav": fav, "Dakika / Ceyrek": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Deplasman": dep_ad, "IY / Ceyrek Skorlari": periyot_bilgisi, "Ev Form": ev_rec, "Dep Form": dep_rec, "Hizli AI Ozet": ozet})
+
+    if maclar:
+        st.subheader(f"{lig} | Gunun En Yuksek Guvenli AI Tahminleri")
+        sirali_bankolar = sorted(banko_havuzu, key=lambda x: x["Guven"], reverse=True)[:3]
+        b_kolonlar = st.columns(len(sirali_bankolar))
+        for idx, b_item in enumerate(sirali_bankolar):
+            b_kolonlar[idx].metric(label=b_item["Mac"], value=b_item["Secenek"], delta=f"Guven: %{b_item['Guven']}")
+        st.divider()
+        st.subheader(f"{lig} | Canli Skor, IY / Ceyrek Detaylari ve AI Analiz")
+        df_ham = pd.DataFrame(maclar).sort_values(by="Fav", ascending=False)
+        if durum_filtre == "Sadece Canli Maclar":
+            df_ham = df_ham[df_ham["State"] == "in"]
+        elif durum_filtre == "Oynanacak Maclar":
+            df_ham = df_ham[df_ham["State"] == "pre"]
+        elif durum_filtre == "Biten Maclar":
+            df_ham = df_ham[df_ham["State"] == "post"]
+        if df_ham.empty:
+            st.info("Secilen durum filtresine uygun mac su an bulunmuyor.")
+        else:
+            gizlenecek = ["ID", "EvID", "DepID", "State", "EvSkorInt", "DepSkorInt", "MacSecim", "Fav"]
+            gosterilecek_tablo = df_ham.drop(columns=gizlenecek)
+            st.dataframe(gosterilecek_tablo, use_container_width=True, hide_index=True)
+            st.download_button("Bu Ligin Analiz Tablosunu Excel Indir", data=excel_dosyasi_olustur(gosterilecek_tablo), file_name=f"{lig}_{tarih}.xlsx")
+            st.divider()
+            st.subheader("Secilen Mac Icin Detayli AI Tahmin, H2H Form ve Kadro Analizi")
+            secilen_mac = st.selectbox("Incelenecek maci secin:", df_ham["MacSecim"].tolist())
+            satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records")[0]
+            ev_kadro, dep_kadro, ev_eksikler, dep_eksikler, kaynak = ai_kadro_ve_eksik_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor)
+            detayli_tahmin_satirlari, _, _ = coklu_tahmin_motoru(satir["Ev Sahibi"], satir["Deplasman"], satir["Ev Form"], satir["Dep Form"], spor, lig, len(ev_eksikler), len(dep_eksikler), satir["State"], satir["EvSkorInt"], satir["DepSkorInt"])
+            st.markdown(f"Durum: {satir['Dakika / Ceyrek']}  |  Periyot / IY Detayi: {satir['IY / Ceyrek Skorlari']}")
+            df_goster = pd.DataFrame(detayli_tahmin_satirlari).drop(columns=["GuvenInt"])
+            st.dataframe(df_goster, use_container_width=True, hide_index=True)
+            if gemini_api_key:
+                with st.spinner("Gercek Yapay Zeka (Gemini) maci ve kadrolari yorumluyor..."):
+                    ai_yorum = gemini_taktik_yorumu_uret(gemini_api_key, spor, lig, satir["Ev Sahibi"], satir["Deplasman"], satir["Ev Form"], satir["Dep Form"], ", ".join(ev_eksikler), ", ".join(dep_eksikler), satir["Dakika / Ceyrek"])
+                    if ai_yorum:
+                        st.info(ai_yorum)
+    else:
+        st.info("Bu tarihte mac bulunamadi. Sol menuden tarihi degistirin.")
+
+if otomatik_yenile:
+    time.sleep(15)
+    st.rerun()
