@@ -4,20 +4,28 @@ def _el_get(t):
     try:
         r=requests.get(f'https://api-live.euroleague.net/v1/schedules?seasonCode=E{t[:4]}',timeout=8)
         items=ET.fromstring(r.content).findall('.//item')
-        rec={}
+rec = {}
         for x in items:
-            if x.findtext('played')=='true':
-                h,a=x.findtext('hometeam',''),x.findtext('awayteam','')
-                hs,as_=int(x.findtext('homescore','0') or 0),int(x.findtext('awayscore','0') or 0)
-                rec.setdefault(h,[0,0]); rec.setdefault(a,[0,0])
-                rec[h][0 if hs>as_ else 1]+=1; rec[a][0 if as_>hs else 1]+=1
-        for i in items:
+            if x.findtext('played') == 'true':
+                h = x.findtext('hometeam', '').strip()
+                a = x.findtext('awayteam', '').strip()
+                hs = int(x.findtext('homescore', '0') or 0)
+                as_ = int(x.findtext('awayscore', '0') or 0)
+                if h not in rec: rec[h] = list((0, 0))
+                if a not in rec: rec[a] = list((0, 0))
+                if hs > as_:
+                    rec[h][0] += 1
+                    rec[a][1] += 1
+                else:
+                    rec[a][0] += 1
+                    rec[h][1] += 1       
             if datetime.strptime(i.findtext('date','').strip(),'%b %d, %Y').strftime('%Y%m%d')==t:
                 hs=i.findtext('homescore','0') or '0'
                 ds=i.findtext('awayscore','0') or '0'
                 st='post' if i.findtext('played')=='true' else ('in' if int(hs)>0 or int(ds)>0 else 'pre')
-                ev.append({'id':i.findtext('gamecode',''),'status':{'type':{'state':st,'shortDetail':i.findtext('startime','')}},'competitions':[{'competitors':[{'homeAway':'home','team':{'id':'1','displayName':i.findtext('hometeam','')},'score':hs,'records':[{'summary':f"{rec.get(i.findtext('hometeam',''),[0,0])[0]}-{rec.get(i.findtext('hometeam',''),[0,0])[1]}"}]},{'homeAway':'away','team':{'id':'2','displayName':i.findtext('awayteam','')},'score':ds,'records':[{'summary':f"{rec.get(i.findtext('awayteam',''),[0,0])[0]}-{rec.get(i.findtext('awayteam',''),[0,0])[1]}"}]}]}]})
-    except: pass
+                ev.append({'id':i.findtext('gamecode',''),'status':{'type':{'state':st,'shortDetail':i.findtext('startime','')}},'competitions':[{'competitors':[{'homeAway':'home','team':{'id':'1','displayName':i.findtext('hometeam','')},'score':hs,'records':[{'summary':f"{rec.get(i.findtext('hometeam',''),[0,0])[0]}-{rec.get(i.findtext('hometeam',''),[0,0])[1]}"}]},{'homeAway':'away','team':{'id':'2','displayName':i.findtext('awayteam','')},'score':ds,'records':[{'summary':f"{rec.get(i.findtext('awayteam',''),[0,0])[0]}-ev_r = f"{rec.get(i.findtext('hometeam','').strip(), (0,0))[0]}-{rec.get(i.findtext('hometeam','').strip(), (0,0))[1]}"
+                dep_r = f"{rec.get(i.findtext('awayteam','').strip(), (0,0))[0]}-{rec.get(i.findtext('awayteam','').strip(), (0,0))[1]}"
+                ev.append({'id':i.findtext('gamecode',''),'status':{'type':{'state':st,'shortDetail':i.findtext('startime','')}},'competitions':[{'competitors':[{'homeAway':'home','team':{'id':'1','displayName':i.findtext('hometeam','')},'score':hs,'records':[{'summary':ev_r}]},{'homeAway':'away','team':{'id':'2','displayName':i.findtext('awayteam','')},'score':ds,'records':[{'summary':dep_r}]}]}]})    except: pass
     return {'events':ev}
 import streamlit as st
 import xml.etree.ElementTree as ET
