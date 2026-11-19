@@ -1,28 +1,33 @@
 import streamlit as st
 import requests
+import xml.etree.ElementTree as ET
 
-def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, dep_skor, state, durum_detay, url_basi, basliklar):
+def canli_saha_ve_anlatim_ciz,spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, dep_skor, state, durum_detay, url_basi, basliklar):
     st.subheader("Canli Mac Merkezi | 2D Saha Radari & Anlik Anlatim")
     if state == "pre": son_olay = "Mac Baslamasi Bekleniyor"
     elif state == "post": son_olay = "Mac Sona Erdi"
     else: son_olay = f"Canli Oyun Devam Ediyor ({durum_detay})"
     olaylar, istatistikler = list(), list()
     x_pos, y_pos = 50, 50
-    if lig_yolu == "euroleague_resmi" and mac_id:
+    gc_clean = str(mac_id).replace("E2026_", "")
+    if lig_yolu == "euroleague_resmi" and gc_clean:
         try:
-            h = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
-            pb = requests.get(f"https://api-live.euroleague.net/v2/competitions/E/seasons/E2026/games/{str(mac_id).replace("E2026_", "")}/playbyplay", headers=h, timeout=5).json()
-            for q in ["firstQuarter", "secondQuarter", "thirdQuarter", "fourthQuarter", "extraTime"]:
-                for p in pb.get(q, list())[:-8]:
-                    txt = p.get("playInfo", "")
-                    pl = p.get("player", "")
-                    clk = p.get("markerTime", "")
-                    if txt: olaylar.append(f"{clk} - {pl} {txt}".strip())
+            h = {"User-Agent": "Mozilla/5.0"}
+            r = requests.get("https://api-live.euroleague.net/v1/games", params={"seasonCode": "E2026", "gameCode": gc_clean}, headers=h, timeout=5)
+            root = ET.fromstring(r.content)
+            for q in ["FirstQuarter", "SecondQuarter", "ThirdQuarter", "FourthQuarter", "ExtraTime"]:
+                qv = root.findtext(f".//{q}", "").strip()
+                if qv: olaylar.append(f"{q}: {qv}")
+            for pl in root.findall(".//Player")[:6]:
+                nm = pl.findtext("PlayerName", "").strip()
+                pt = pl.findtext("Points", "0").strip()
+                if nm and int(pt or 0) > 0:
+                    olaylar.append(f"{nm}: {pt} Sayi")
             if olaylar:
                 son_olay = olaylar[-1]
                 x_pos = 78 if int(ev_skor) >= int(dep_skor) else 22
-        except Exception as err:
-            st.error(f"HATA SEBEBI: {err}")
+        except Exception:
+            pass
     elif lig_yolu != "euroleague_resmi" and mac_id:
         try:
             s_veri = requests.get(f"{url_basi}{lig_yolu}/summary?event={mac_id}", headers=basliklar, timeout=6).json()
@@ -41,8 +46,8 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
                 s2 = {x.get("label", x.get("name", "")): x.get("displayValue", "0") for x in box[1].get("statistics", list())}
                 for k in list(s1.keys())[:6]:
                     istatistikler.append({"Istatistik": k, ev_ad: s1.get(k, "-"), dep_ad: s2.get(k, "-")})
-        except Exception as err:
-            st.error(f"HATA SEBEBI: {err}")
+        except Exception:
+            pass
     c1, c2 = st.columns([1.3, 1])
     with c1:
         if spor == "Futbol":
@@ -57,7 +62,7 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
             for o in reversed(olaylar[-5:]):
                 st.caption(o)
         else:
-            st.caption(f"ID:{mac_id} - YANIT:{str(locals().get('pb','YOK'))[:200]}")
+            st.caption("Canli akis verisi bekleniyor veya mac henuz baslamadi.")
         if istatistikler:
             st.markdown("**Canli Mac Istatistikleri**")
             st.dataframe(istatistikler, use_container_width=True, hide_index=True)

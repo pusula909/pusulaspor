@@ -16,9 +16,11 @@ def _el_get(t):
                 else: win_map[t2] = win_map.get(t2, 0) + 1; loss_map[t1] = loss_map.get(t1, 0) + 1
         live_v2 = {}
         try:
-            r2 = requests.get("https://api-live.euroleague.net/v2/competitions/E/seasons/E2026/games?limit=400&phaseTypeCode=RS", headers=h, timeout=6).json()
-            for g in r2.get("data", list()):
-                live_v2[str(g.get("code", ""))] = g
+            r2 = requests.get("https://api-live.euroleague.net/v1/results?seasonCode=E2026", headers=h, timeout=6)
+            for g2 in ET.fromstring(r2.content).findall(".//game"):
+                code2 = g2.findtext("gamecode", "").strip().replace("E2026_", "")
+                if code2:
+                    live_v2[code2] = {"homescore": g2.findtext("homescore", "0"), "awayscore": g2.findtext("awayscore", "0"), "played": g2.findtext("played", "false")}
         except Exception:
             pass
         suan_tr = datetime.now(timezone(timedelta(hours=3))).replace(tzinfo=None)
@@ -35,7 +37,7 @@ def _el_get(t):
                 detay = s_time
                 if gc in live_v2:
                     gd = live_v2[gc]
-                    loc = gd.get("local", {})
+                    hs = str(gd.get("homescore", hs)); ds = str(gd.get("awayscore", ds)); st_code = "post" if gd.get("played") == "true" else "in"; detay = "Canli / Tamamlandi"
                     road = gd.get("road", {})
                     if loc.get("score") is not None:
                         hs = str(loc.get("score", hs))
