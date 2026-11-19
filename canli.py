@@ -742,6 +742,12 @@ else:
             st.dataframe(gosterilecek_tablo, use_container_width=True, hide_index=True)
             st.download_button("Bu Ligin Analiz Tablosunu Excel Indir", data=excel_dosyasi_olustur(gosterilecek_tablo), file_name=f"{lig}_{tarih}.xlsx")
             st.divider()
+            from canli_saha import canli_saha_ve_anlatim_ciz
+            try:
+                _r_ilk = df_ham.iloc
+                canli_saha_ve_anlatim_ciz(spor, yol, _r_ilk["ID"], _r_ilk["Ev Sahibi"], _r_ilk["Deplasman"], _r_ilk["EvSkorInt"], _r_ilk["DepSkorInt"], _r_ilk["State"], _r_ilk["Dakika / Ceyrek"], url_basi, basliklar)
+            except Exception:
+                pass
             st.subheader("Secilen Mac Icin Detayli AI Tahmin, H2H Form ve Kadro Analizi")
             secilen_mac = st.selectbox("Incelenecek maci secin:", df_ham["MacSecim"].tolist())
             satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records").pop(0)
