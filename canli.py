@@ -742,15 +742,16 @@ else:
             st.dataframe(gosterilecek_tablo, use_container_width=True, hide_index=True)
             st.download_button("Bu Ligin Analiz Tablosunu Excel Indir", data=excel_dosyasi_olustur(gosterilecek_tablo), file_name=f"{lig}_{tarih}.xlsx")
             st.divider()
-            from canli_saha import canli_saha_ve_anlatim_ciz
-            try:
-                _r_ilk = df_ham.iloc
-                canli_saha_ve_anlatim_ciz(spor, yol, _r_ilk["ID"], _r_ilk["Ev Sahibi"], _r_ilk["Deplasman"], _r_ilk["EvSkorInt"], _r_ilk["DepSkorInt"], _r_ilk["State"], _r_ilk["Dakika / Ceyrek"], url_basi, basliklar)
-            except Exception:
-                pass
             st.subheader("Secilen Mac Icin Detayli AI Tahmin, H2H Form ve Kadro Analizi")
             secilen_mac = st.selectbox("Incelenecek maci secin:", df_ham["MacSecim"].tolist())
             satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records").pop(0)
+            st.subheader("Secilen Mac Icin Detayli AI Tahmin, H2H Form ve Kadro Analizi")
+            secilen_mac = st.selectbox("Incelenecek maci secin:", df_ham["MacSecim"].tolist())
+            satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records").pop(0)
+            from canli_saha import canli_saha_ve_anlatim_ciz
+            try:
+            canli_saha_ve_anlatim_ciz(spor, yol, satir["ID"], satir["Ev Sahibi"], satir["Deplasman"], satir["EvSkorInt"], satir["DepSkorInt"], satir["State"], satir["Dakika     / Ceyrek"],url_basi, basliklar)
+            pass
             ev_kadro, dep_kadro, ev_eksikler, dep_eksikler, kaynak = ai_kadro_ve_eksik_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor)
             detayli_tahmin_satirlari, _, _ = coklu_tahmin_motoru(satir["Ev Sahibi"], satir["Deplasman"], satir["Ev Form"], satir["Dep Form"], spor, lig, len(ev_eksikler), len(dep_eksikler), satir["State"], satir["EvSkorInt"], satir["DepSkorInt"])
             st.markdown(f"*Durum:* {satir['Dakika / Ceyrek']}  |  *Periyot / IY Detayi:* {satir['IY / Ceyrek Skorlari']}")
