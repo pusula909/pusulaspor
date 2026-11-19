@@ -508,7 +508,7 @@ if gorunum == "Canli Kupon Takip":
         else:
             secenekler = ["MS 1", "MS 2", "Toplam UST (El Ile Barem)", "Toplam ALT (El Ile Barem)", "Ev Sahibi UST", "Ev Sahibi ALT", "Deplasman UST", "Deplasman ALT"]
             secilen_tip = t_col1.selectbox("Tahmin Tipi", secenekler, key="k_tahmin")
-            ozel_b = t_col2.number_input("Barem Sayisi Gir (Ornek: 164.5)", min_value=100.5, max_value=280.5, value=165.5, step=1.0, key="k_barem_b")
+            ozel_b = t_col2.number_input("Barem Sayisi Gir (Ornek: 164.5)", min_value=30.5, max_value=280.5, value=165.5, step=1.0, key="k_barem_b")
         on_ek = "Ev" if "Ev Sahibi" in secilen_tip else ("Dep" if "Deplasman" in secilen_tip else "Toplam"); oynanan_tahmin = f"{on_ek} {ozel_b} {'UST' if 'UST' in secilen_tip else 'ALT'}" if any(x in secilen_tip for x in ["Ozel", "El Ile", "Ev Sahibi", "Deplasman"]) else secilen_tip
         if st.button("Kupona Ekle"):
             st.session_state.kupon_listesi.append({
