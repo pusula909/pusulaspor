@@ -57,7 +57,7 @@ if "kupon_listesi" not in st.session_state:
 if "kupon_bildirim_gonderildi" not in st.session_state:
 if "gonderilen_kritik_uyarilar" not in st.session_state:
 >>st.session_state.gonderilen_kritik_uyarilar = []
-
+>>st.session_state.kupon_bildirim_gonderildi = False
 gizli_tg_token = st.secrets.get("TG_TOKEN", "")
 gizli_tg_chat_id = st.secrets.get("TG_CHAT_ID", "")
 gizli_gemini_key = st.secrets.get("GEMINI_KEY", "")
@@ -76,7 +76,7 @@ def telegram_mesaj_gonder(token, chat_id, mesaj):
 >>if not token or not chat_id:
 >>>>return False
 >>try:
->>>>tg_adres = "https://telegram.org" + chr(47) + "bot" + token.strip() + chr(47) + "sendMessage"
+>>>>tg_adres = https://telegram.org + chr(47) + "bot" + token.strip() + chr(47) + "sendMessage"
 >>>>r = requests.post(tg_adres, data={"chat_id": str(chat_id).strip(), "text": mesaj}, timeout=8)
 >>>>return r.status_code == 200
 >>except Exception:
