@@ -58,7 +58,7 @@ def _el_get(t):
                         pass
                 if st_code == "in" and gc:
                     try:
-                        g\_r = requests.get("https://api-live.euroleague.net/v1/games", params={"seasonCode": "E2026", "gameCode": gc}, headers=h, timeout=4)
+                        gr = requests.get("https://api-live.euroleague.net/v1/games", params={"seasonCode": "E2026", "gameCode": gc}, headers=h, timeout=4)
                         g_xml = ET.fromstring(g_r.content)
                         sa_live = g_xml.findtext(".//ScoreA", "").strip()
                         sb_live = g_xml.findtext(".//ScoreB", "").strip()
