@@ -1,32 +1,51 @@
 import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET
+
 def _el_get(t):
-    ev=list()
+    ev = list()
     try:
-        r=requests.get(f'https://api-live.euroleague.net/v1/schedules?seasonCode=E{t[:4]}',timeout=8)
-        items=ET.fromstring(r.content).findall('.//item')
-rec = {}
+        r = requests.get("https://" + "api-live.euroleague.net/v1/schedules?seasonCode=E" + str(t[:4]), timeout=8)
+        items = ET.fromstring(r.content).findall(".//item")
+        win_map = {}
+        loss_map = {}
         for x in items:
-            if x.findtext('played') == 'true':
-                h = x.findtext('hometeam', '').strip()
-                a = x.findtext('awayteam', '').strip()
-                hs = int(x.findtext('homescore', '0') or 0)
-                as_ = int(x.findtext('awayscore', '0') or 0)
-                if h not in rec: rec[h] = list((0, 0))
-                if a not in rec: rec[a] = list((0, 0))
-                if hs > as_:
-                    rec[h][0] += 1
-                    rec[a][1] += 1
+            if x.findtext("played") == "true":
+                h = x.findtext("hometeam", "").strip()
+                a = x.findtext("awayteam", "").strip()
+                hs = int(x.findtext("homescore", "0") or 0)
+                ds = int(x.findtext("awayscore", "0") or 0)
+                if hs > ds:
+                    win_map[h] = win_map.get(h, 0) + 1
+                    loss_map[a] = loss_map.get(a, 0) + 1
                 else:
-                    rec[a][0] += 1
-                    rec[h][1] += 1       
-            if datetime.strptime(i.findtext('date','').strip(),'%b %d, %Y').strftime('%Y%m%d')==t:
-                hs=i.findtext('homescore','0') or '0'
-                ds=i.findtext('awayscore','0') or '0'
-                st='post' if i.findtext('played')=='true' else ('in' if int(hs)>0 or int(ds)>0 else 'pre')
-                ev.append({'id':i.findtext('gamecode',''),'status':{'type':{'state':st,'shortDetail':i.findtext('startime','')}},'competitions':[{'competitors':[{'homeAway':'home','team':{'id':'1','displayName':i.findtext('hometeam','')},'score':hs,'records':[{'summary':f"{rec.get(i.findtext('hometeam',''),[0,0])[0]}-{rec.get(i.findtext('hometeam',''),[0,0])[1]}"}]},{'homeAway':'away','team':{'id':'2','displayName':i.findtext('awayteam','')},'score':ds,'records':[{'summary':f"{rec.get(i.findtext('awayteam',''),[0,0])[0]}-ev_r = f"{rec.get(i.findtext('hometeam','').strip(), (0,0))[0]}-{rec.get(i.findtext('hometeam','').strip(), (0,0))[1]}"
-                dep_r = f"{rec.get(i.findtext('awayteam','').strip(), (0,0))[0]}-{rec.get(i.findtext('awayteam','').strip(), (0,0))[1]}"
-                ev.append({'id':i.findtext('gamecode',''),'status':{'type':{'state':st,'shortDetail':i.findtext('startime','')}},'competitions':[{'competitors':[{'homeAway':'home','team':{'id':'1','displayName':i.findtext('hometeam','')},'score':hs,'records':[{'summary':ev_r}]},{'homeAway':'away','team':{'id':'2','displayName':i.findtext('awayteam','')},'score':ds,'records':[{'summary':dep_r}]}]}]})    except: pass
-    return {'events':ev}
+                    win_map[a] = win_map.get(a, 0) + 1
+                    loss_map[h] = loss_map.get(h, 0) + 1
+
+        for i in items:
+            d_raw = i.findtext("date", "").strip()
+            if not d_raw:
+                continue
+            if datetime.strptime(d_raw, "%b %d, %Y").strftime("%Y%m%d") == t:
+                h_ad = i.findtext("hometeam", "").strip()
+                a_ad = i.findtext("awayteam", "").strip()
+                hs = i.findtext("homescore", "0") or "0"
+                ds = i.findtext("awayscore", "0") or "0"
+                st_code = "post" if i.findtext("played") == "true" else ("in" if int(hs) > 0 or int(ds) > 0 else "pre")
+                ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
+                dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
+                ev.append({
+                    "id": i.findtext("gamecode", ""),
+                    "status": {"type": {"state": st_code, "shortDetail": i.findtext("startime", "")}},
+                    "competitions": [{
+                        "competitors": [
+                            {"homeAway": "home", "team": {"id": "1", "displayName": h_ad}, "score": hs, "records": [{"summary": ev_r}]},
+                            {"homeAway": "away", "team": {"id": "2", "displayName": a_ad}, "score": ds, "records": [{"summary": dep_r}]}
+                        ]
+                    }]
+                })
+    except Exception:
+        pass
+    return {"events": ev}
 import streamlit as st
 import xml.etree.ElementTree as ET
 def el_get(t):
