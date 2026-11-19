@@ -511,7 +511,7 @@ if gorunum == "Canli Kupon Takip":
             ozel_b = t_col2.number_input("Barem Sayisi Gir (Ornek: 164.5)", min_value=100.5, max_value=280.5, value=165.5, step=1.0, key="k_barem_b")
         oynanan_tahmin = f"Toplam {ozel_b} {'UST' if 'UST' in secilen_tip else 'ALT'}" if "Ozel" in secilen_tip or "El Ile" in secilen_tip else secilen_tip
         if st.button("Kupona Ekle"):
-            st.session_state.kupon_listesi.a	ppend({
+            st.session_state.kupon_listesi.append({
                 "id": secilen_k_obj["id"],
                 "yol": secilen_k_obj["yol"],
                 "spor": secilen_k_obj["spor"],
