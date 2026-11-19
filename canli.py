@@ -31,6 +31,16 @@ def _el_get(t):
                 hs = i.findtext("homescore", "0") or "0"
                 ds = i.findtext("awayscore", "0") or "0"
                 st_code = "post" if i.findtext("played") == "true" else ("in" if int(hs) > 0 or int(ds) > 0 else "pre")
+                gc = i.findtext("gamecode", "").strip()
+                try:
+                    lr = requests.get("https://live.euroleague.net/api/Header?gamecode="+str(gc)+"&seasoncode=E"+str(t[:4]), timeout=3).json()
+                    if lr.get("Live") or int(lr.get("ScoreA", 0) or 0) > 0 or int(lr.get("ScoreB", 0) or 0) > 0:
+                        hs = str(lr.get("ScoreA", hs))
+                        ds = str(lr.get("ScoreB", ds))
+                        st_code = "in" if lr.get("Live") else "post"
+                        i.find("startime").text = f"Q{lr.get('Quarter', '')} {lr.get('Minute', '')}'".strip()
+                except Exception:
+                    pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
                 dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
                 ev.append({
