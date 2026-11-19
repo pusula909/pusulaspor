@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 def _el_get(t):
     ev=list()
     try:
-        r=requests.get(f'https://euroleague.net{t[:4]}',timeout=8)
+        r=requests.get(f'https://api-live.euroleague.net/v1/schedules?seasonCode=E{t[:4]}',timeout=8)
         for i in ET.fromstring(r.content).findall('.//item'):
             if datetime.strptime(i.findtext('date','').strip(),'%b %d, %Y').strftime('%Y%m%d')==t:
                 hs=i.findtext('homescore','0') or '0'
@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 def el_get(t):
     ev=[]
     try:
-        r=requests.get(f"https://euroleague.net{t[:4]}",timeout=8)
+        r=requests.get(f"https://api-live.euroleague.net/v1/schedules?seasonCode=E{t[:4]}",timeout=8)
         for i in ET.fromstring(r.content).findall(".//item"):
             if datetime.strptime(i.findtext("date","").strip(),"%b %d, %Y").strftime("%Y%m%d")==t:
                 hs,dep_s=i.findtext("homescore","0") or "0",i.findtext("awayscore","0") or "0"
