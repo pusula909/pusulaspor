@@ -334,11 +334,11 @@ def excel_dosyasi_olustur(df):
     k_maclar_veri = list()
     resp = lig_verisi_getir(k_yol, tarih, tarih_tireli)
     for ev in resp.get("events", list()):
-        comp = ev.get("competitions", [{}])[0]
+        comp = ev.get("competitions", [{}])
         takimlar = comp.get("competitors", list())
         if len(takimlar) >= 2:
-            ev_t = next((t for t in takimlar if t.get("homeAway") == "home"), takimlar[0])
-            dep_t = next((t for t in takimlar if t.get("homeAway") == "away"), takimlar[1])
+            ev_t = next((t for t in takimlar if t.get("homeAway") == "home"), takimlar)
+            dep_t = next((t for t in takimlar if t.get("homeAway") == "away"), takimlar)
             ev_ad, dep_ad = ev_t.get("team", {}).get("displayName", "Ev"), dep_t.get("team", {}).get("displayName", "Dep")
             k_maclar_veri.append({"id": ev.get("id"), "yol": k_yol, "spor": k_spor, "ev": ev_ad, "dep": dep_ad, "etiket": f"{ev_ad} vs {dep_ad}"})
     if k_maclar_veri:
@@ -375,8 +375,7 @@ elif gorunum == "Puan Durumu":
                 st.download_button("Puan Durumunu Excel Olarak Indir", data=excel_dosyasi_olustur(puan_df), file_name=f"{lig}_Puan_Durumu.xlsx")
         except Exception:
             st.info("Bu lig icin su an puan durumu tablosu yok.")
-
-elif gorunum == "AI Gunun Radari (Tum Ligler)":
+            elif gorunum == "AI Gunun Radari (Tum Ligler)":
     st.subheader(f"AI Gunun Radari | {tarih_obj.strftime('%d.%m.%Y')} Tum Ligler Taramasi")
     if st.button("Tum Ligleri Simdi Tara ve En Guclu Tahminleri Bul", type="primary"):
         tum_radar = list()
@@ -389,15 +388,15 @@ elif gorunum == "AI Gunun Radari (Tum Ligler)":
                 ilerleme.progress(min(1.0, sayac / toplam_islem))
                 resp = lig_verisi_getir(l_yolu, tarih, tarih_tireli)
                 for ev in resp.get("events", list()):
-                    comp = ev.get("competitions", [{}])[0]
+                    comp = ev.get("competitions", [{}])
                     t_list = comp.get("competitors", list())
                     if len(t_list) < 2:
                         continue
-                    ev_t = next((t for t in t_list if t["homeAway"] == "home"), t_list[0])
-                    dep_t = next((t for t in t_list if t["homeAway"] == "away"), t_list[1])
+                    ev_t = next((t for t in t_list if t["homeAway"] == "home"), t_list)
+                    dep_t = next((t for t in t_list if t["homeAway"] == "away"), t_list)
                     ev_ad, dep_ad = ev_t["team"]["displayName"], dep_t["team"]["displayName"]
-                    ev_r = ev_t.get("records", [{"summary": "0-0"}])[0].get("summary", "0-0")
-                    dep_r = dep_t.get("records", [{"summary": "0-0"}])[0].get("summary", "0-0")
+                    ev_r = ev_t.get("records", [{"summary": "0-0"}]).get("summary", "0-0")
+                    dep_r = dep_t.get("records", [{"summary": "0-0"}]).get("summary", "0-0")
                     st_code = ev["status"]["type"]["state"]
                     _, _, en_iyi = coklu_tahmin_motoru(ev_ad, dep_ad, ev_r, dep_r, s_adi, l_adi, 0, 0, st_code, int(ev_t.get("score", 0)), int(dep_t.get("score", 0)))
                     tum_radar.append({"Spor": s_adi, "Lig": l_adi, "Mac": f"{ev_ad} vs {dep_ad}", "Durum": ev["status"]["type"]["shortDetail"], "AI En Guclu Tahmin": en_iyi["AI Tahmin Secenegi"], "Guven": f"%{en_iyi['GuvenInt']}", "GuvenInt": en_iyi["GuvenInt"]})
@@ -414,16 +413,16 @@ else:
     banko_havuzu = list()
     for ev in r.get("events", list()):
         mac_id = ev.get("id", "")
-        comp = ev.get("competitions", [{}])[0]
+        comp = ev.get("competitions", [{}])
         takim_listesi = comp.get("competitors", list())
         if len(takim_listesi) < 2:
             continue
-        ev_t = next((t for t in takim_listesi if t["homeAway"] == "home"), takim_listesi[0])
-        dep_t = next((t for t in takim_listesi if t["homeAway"] == "away"), takim_listesi[1])
+        ev_t = next((t for t in takim_listesi if t["homeAway"] == "home"), takim_listesi)
+        dep_t = next((t for t in takim_listesi if t["homeAway"] == "away"), takim_listesi)
         ev_ad, dep_ad = ev_t["team"]["displayName"], dep_t["team"]["displayName"]
         ev_id, dep_id = ev_t["team"].get("id", ""), dep_t["team"].get("id", "")
-        ev_rec = ev_t.get("records", [{"summary": "0-0"}])[0].get("summary", "0-0")
-        dep_rec = dep_t.get("records", [{"summary": "0-0"}])[0].get("summary", "0-0")
+        ev_rec = ev_t.get("records", [{"summary": "0-0"}]).get("summary", "0-0")
+        dep_rec = dep_t.get("records", [{"summary": "0-0"}]).get("summary", "0-0")
         state = ev["status"]["type"]["state"]
         durum_detay = ev["status"]["type"]["shortDetail"]
         ev_s_int = int(ev_t.get("score", 0))
@@ -469,14 +468,14 @@ else:
             st.divider()
             st.subheader("Secilen Mac Icin Detayli AI Tahmin, H2H Form ve Kadro Analizi")
             secilen_mac = st.selectbox("Incelenecek maci secin:", df_ham["MacSecim"].tolist())
-            satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records")[0]
+            satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records")
             ev_kadro, dep_kadro, ev_eksikler, dep_eksikler, kaynak = ai_kadro_ve_eksik_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor)
             detayli_tahmin_satirlari, _, _ = coklu_tahmin_motoru(satir["Ev Sahibi"], satir["Deplasman"], satir["Ev Form"], satir["Dep Form"], spor, lig, len(ev_eksikler), len(dep_eksikler), satir["State"], satir["EvSkorInt"], satir["DepSkorInt"])
             st.markdown(f"Durum: {satir['Dakika / Ceyrek']}  |  Periyot / IY Detayi: {satir['IY / Ceyrek Skorlari']}")
             df_goster = pd.DataFrame(detayli_tahmin_satirlari).drop(columns=["GuvenInt"])
             st.dataframe(df_goster, use_container_width=True, hide_index=True)
             if gemini_api_key:
-                with st.spinner("Gercek Yapay Zeka (Gemini) maci ve kadrolari yorumluyor..."):
+                with st.spinner("Gercek Yapay Zeka (Gemini) maci yorumluyor..."):
                     ai_yorum = gemini_taktik_yorumu_uret(gemini_api_key, spor, lig, satir["Ev Sahibi"], satir["Deplasman"], satir["Ev Form"], satir["Dep Form"], ", ".join(ev_eksikler), ", ".join(dep_eksikler), satir["Dakika / Ceyrek"])
                     if ai_yorum:
                         st.info(ai_yorum)
