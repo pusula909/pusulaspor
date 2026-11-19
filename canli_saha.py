@@ -3,7 +3,12 @@ import requests
 
 def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, dep_skor, state, durum_detay, url_basi, basliklar):
     st.subheader("Canli Mac Merkezi | 2D Saha Radari & Anlik Anlatim")
-    son_olay = "Mac Baslamasi Bekleniyor" if state == "pre" else ("Mac Sona Erdi" if state ==,"post" else f"Canli Oyun Devam Ediyor ({durum_detay})")
+    if state == "pre":
+        son_olay = "Mac Baslamasi Bekleniyor"
+    elif state == "post":
+        son_olay = "Mac Sona Erdi"
+    else:
+        son_olay = f"Canli Oyun Devam Ediyor ({durum_detay})"
     olaylar = list()
     istatistikler = list()
     x_pos, y_pos = 50, 50
@@ -33,15 +38,14 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
         if spor == "Futbol":
             svg = f'<svg viewBox="0 0 400 240" style="width:100%;border-radius:12px;background:#15803d;border:3px solid #fff"><rect x="10" y="10" width="380" height="220" fill="none" stroke="#fff" stroke-width="2"/><line x1="200" y1="10" x2="200" y2="230" stroke="#fff" stroke-width="2"/><circle cx="200" cy="120" r="32" fill="none" stroke="#fff" stroke-width="2"/><rect x="10" y="65" width="55" height="110" fill="none" stroke="#fff" stroke-width="2"/><rect x="335" y="65" width="55" height="110" fill="none" stroke="#fff" stroke-width="2"/><circle cx="{x_pos*3.6+20}" cy="{y_pos*2+20}" r="9" fill="#facc15" stroke="#000" stroke-width="2"/><text x="200" y="28" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">{ev_ad} {ev_skor} - {dep_skor} {dep_ad}</text></svg>'
         else:
-            svg = f'<svg viewBox="0 0 400 240" style="width:100%;border-radius:12px;background:#d97706;border:3px solid #78350f"><rect x="10" y="10" width="380" height="220" fill="#f59e0b" stroke="#fff" stroke-width="2"/><line x1="200" y1="10" x2="200" y2="230" stroke="#fff" stroke-width="2"/><circle cx="200" y="120" r="28" fill="none" stroke="#fff" stroke-width="2"/><path d="M 10 40 Q 110 120 10 200" fill="none" stroke="#fff" stroke-width="2"/><path d="M 390 40 Q 290 120 390 200" fill="none" stroke="#fff" stroke-width="2"/><circle cx="{x_pos*3.6+20}" cy="120" r="10" fill="#dc2626" stroke="#fff" stroke-width="2"/><text x="200" y="28" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">{ev_ad} {ev_skor} - {dep_skor} {dep_ad}</text></svg>'
+            svg = f'<svg viewBox="0 0 400 240" style="width:100%;border-radius:12px;background:#d97706;border:3px solid #78350f"><rect x="10" y="10" width="380" height="220" fill="#f59e0b" stroke="#fff" stroke-width="2"/><line x1="200" y1="10" x2="200" y2="230" stroke="#fff" stroke-width="2"/><circle cx="200" cy="120" r="28" fill="none" stroke="#fff" stroke-width="2"/><path d="M 10 40 Q 110 120 10 200" fill="none" stroke="#fff" stroke-width="2"/><path d="M 390 40 Q 290 120 390 200" fill="none" stroke="#fff" stroke-width="2"/><circle cx="{x_pos*3.6+20}" cy="120" r="10" fill="#dc2626" stroke="#fff" stroke-width="2"/><text x="200" y="28" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">{ev_ad} {ev_skor} - {dep_skor} {dep_ad}</text></svg>'
         st.markdown(svg, unsafe_allow_html=True)
         st.info(f"Son Aksiyon: {son_olay}")
     with c2:
         st.markdown("**Canli Mac Anlatimi (Son Olaylar)**")
         if olaylar:
             for o in reversed(olaylar[-5:]):
-                st.caption(o)
-        else:
+                st.caption(o)        else:
             st.caption("Canli akis verisi bekleniyor veya mac henuz baslamadi.")
         if istatistikler:
             st.markdown("**Canli Mac Istatistikleri**")
