@@ -745,9 +745,6 @@ else:
             st.subheader("Secilen Mac Icin Detayli AI Tahmin, H2H Form ve Kadro Analizi")
             secilen_mac = st.selectbox("Incelenecek maci secin:", df_ham["MacSecim"].tolist())
             satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records").pop(0)
-            st.subheader("Secilen Mac Icin Detayli AI Tahmin, H2H Form ve Kadro Analizi")
-            secilen_mac = st.selectbox("Incelenecek maci secin:", df_ham["MacSecim"].tolist())
-            satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records").pop(0)
             from canli_saha import canli_saha_ve_anlatim_ciz
             try:
                 canli_saha_ve_anlatim_ciz(spor, yol, satir["ID"], satir["Ev Sahibi"], satir["Deplasman"], satir["EvSkorInt"], satir["DepSkorInt"], satir["State"], satir["Dakika / Ceyrek"], url_basi, basliklar)
