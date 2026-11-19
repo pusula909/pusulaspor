@@ -55,13 +55,12 @@ gemini_api_key = st.sidebar.text_input("Gemini API Anahtari (Opsiyonel)", value=
 if "kupon_listesi" not in st.session_state:
 >>st.session_state.kupon_listesi = []
 if "kupon_bildirim_gonderildi" not in st.session_state:
+>>st.session_state.kupon_bildirim_gonderildi = False
 if "gonderilen_kritik_uyarilar" not in st.session_state:
 >>st.session_state.gonderilen_kritik_uyarilar = []
->>st.session_state.kupon_bildirim_gonderildi = False
 gizli_tg_token = st.secrets.get("TG_TOKEN", "")
 gizli_tg_chat_id = st.secrets.get("TG_CHAT_ID", "")
 gizli_gemini_key = st.secrets.get("GEMINI_KEY", "")
-
 st.sidebar.header("Kontrol Merkezi")
 gorunum = st.sidebar.radio("Mod Secimi", ["Maclar ve Canli AI Analiz", "Canli Kupon Takip", "AI Gunun Radari (Tum Ligler)", "Puan Durumu"])
 tarih_obj = st.sidebar.date_input("Tarih", datetime.now())
