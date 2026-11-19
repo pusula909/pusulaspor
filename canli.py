@@ -694,7 +694,7 @@ else:
 >>>>>>>>>>>>st.success(f"*Gemini AI Taktik ve Kadro Yorumu:* {ai_yorum}")
 >>>>>>h2h_verisi = h2h_ve_form_getir(yol, satir["ID"], satir["Ev Sahibi"], satir["Deplasman"])
 >>>>>>ev_kadro, dep_kadro, ev_eksikler, dep_eksikler, kaynak = ai_kadro_ve_eksik_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor)
->>>>>>koc_etkisi_metni, momentum_etkisi, _ = koc_ve_rotasyon_etkisi_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor, satir["Ev Sahibi"], satir["Deplasman"]
+>>>>>>koc_etkisi_metni, momentum_etkisi, _ = koc_ve_rotasyon_etkisi_getir(yol, satir["ID"], satir["EvID"], satir["DepID"], spor, satir["Ev Sahibi"], satir["Deplasman"])
 >>>>>>detayli_tahmin_satirlari, _, _ = coklu_tahmin_motoru(satir["Ev Sahibi"], satir["Deplasman"], satir["Ev Form"], satir["Dep Form"], spor, lig, len(ev_eksikler), len(dep_eksikler), satir["State"], satir["EvSkorInt"], satir["DepSkorInt"])
 >>>>>>st.markdown(f"Durum: {satir['Dakika / Ceyrek']}  |  Periyot / IY Detayi: {satir['IY / Ceyrek Skorlari']}")
 >>>>>>if satir["State"] == "in":
