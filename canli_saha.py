@@ -17,11 +17,12 @@ def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, de
     if lig_yolu == "euroleague_resmi" and mac_id:
         try:
             h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-            pb = requests.get(f"https://incrowdsports.com{mac_id}/playbyplay", params={"seasonCode": "E2026"}, headers=h, timeout=5).json()
-            for p in pb.get("data", {}).get("plays", list())[-8:]:
-                txt = p.get("typeDescription", p.get("text", ""))
-                pl = p.get("playerName", "")
-                clk = p.get("clock", "")
+            pb = requests.get("https://euroleague.net", params={"gamecode": str(mac_id), "seasoncode": "E2026"}, headers=h, timeout=5).json()
+            plays_el = pb.get("ActualQuarter", list()) or pb.get("FourthQuarter", list()) or pb.get("ThirdQuarter", list()) or pb.get("SecondQuarter", list()) or pb.get("FirstQuarter", list())
+            for p in plays_el[-8:]:
+                txt = p.get("PLAYINFO", "")
+                pl = p.get("PLAYER", "")
+                clk = p.get("MARKERTIME", "")
                 if txt:
                     olaylar.append(f"{clk} - {pl} {txt}".strip())
             if olaylar:

@@ -34,15 +34,12 @@ def _el_get(t):
                 except Exception:
                     pass
                 try:
-                    lr = requests.get("https://feeds.incrowdsports.com/provider/euroleague/v2/games/"+str(gc)+"/playbyplay?seasonCode=E2026", headers=h, timeout=4).json()
-                    plays = lr.get("data", {}).get("plays", list())
-                    if plays:
-                        son_p = plays[-1]
-                        if son_p.get("coreScoreA") is not None:
-                            hs = str(son_p.get("coreScoreA", hs))
-                            ds = str(son_p.get("coreScoreB", ds))
-                            st_code = "in"
-                            detay = f"Q{son_p.get('period', '')} {son_p.get('clock', '')}".strip()
+                    lr = requests.get("https://live.euroleague.net/api/Header", params={"gamecode": str(gc), "seasoncode": "E2026"}, headers=h, timeout=4).json()
+                    if lr.get("Live") or int(lr.get("ScoreA", 0) or 0) > 0 or int(lr.get("ScoreB", 0) or 0) > 0:
+                        hs = str(lr.get("ScoreA", hs))
+                        ds = str(lr.get("ScoreB", ds))
+                        st_code = "in" if lr.get("Live") else "post"
+                        detay = f"Q{lr.get('Quarter', '')} {lr.get('Minute', '')}'".strip()
                 except Exception:
                     pass
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
