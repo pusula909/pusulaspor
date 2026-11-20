@@ -716,7 +716,12 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
         except Exception as e:
             son_hata = str(e)
 
-    groq_anahtar = str(st.secrets.get("GROQ_KEY", "")).strip()
+    groq_anahtar = ""
+    try:
+        groq_anahtar = str(st.secrets["GROQ_KEY"]).strip()
+    except Exception:
+        pass
+
     if groq_anahtar:
         try:
             g_url = "https://" + "api." + "groq.com" + "/openai/v1/chat/completions"
@@ -725,21 +730,21 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
                 headers={"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"},
                 json={
                     "model": "llama-3.3-70b-versatile",
-                    "messages": list(({"role": "user", "content": soru},)),
+                    "messages": [{"role": "user", "content": soru}],
                     "temperature": 0.4,
                 },
                 timeout=12,
             ).json()
-            secim = g_resp.get("choices", list())
-            if secim:
-                yanit_metin = secim.pop(0).get("message", {}).get("content", "").strip()
+            if "choices" in g_resp and len(g_resp["choices"]) > 0:
+                yanit_metin = g_resp["choices"][0]["message"]["content"].strip()
                 if yanit_metin:
                     return yanit_metin
+            elif "error" in g_resp:
+                son_hata = f"Groq Hatasi: {g_resp['error'].get('message', '')}"
         except Exception as ge:
-            son_hata = f"{son_hata} | Groq: {ge}"
+            son_hata = f"Groq Baglanti: {ge}"
 
-    return f"AI baglanti uyarisi: {son_hata}"
-def excel_dosyasi_olustur(df):
+    return f"AI baglanti uyarisi: {son_hata}"def excel_dosyasi_olustur(df):
     tampon = io.BytesIO()
     with pd.ExcelWriter(tampon, engine="openpyxl") as yazici:
         df.to_excel(yazici, index=False, sheet_name="AI_Analiz")
