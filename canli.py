@@ -693,7 +693,7 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
         f"1) Skor farki acildiysa kocun yildizlari kenara alip yedeklere donme (garbage time / rotasyon) ihtimalini hesapla.\n"
         f"2) Ilk yari anormal yuksek/dusuk tempo ciktiysa, ikinci yarida kocun savunma sertligi veya tempo kirma hamlesiyle baremin tersine donup donmeyecegini tart.\n"
         f"3) Sahadaki mevcut 5'leri, faul problemindeki kilit oyunculari, kartlari ve sakatliklari hesaba kat.\n"
-        f"4) Sadece 2026-2027 sezonu guncel kadrolarini kullan.\n\n"
+        f"4) SIKI KURAL: Hafizandaki eski sezon oyuncularini (ornegin Trae Young, John Collins, Dejounte Murray gibi eski takimlarina gitmis isimleri) ASLA yazma! Yalnızca verilen Kadro Havuzu ve Canli Saha listesindeki oyunculari kullan.\n\n"
         f"Ciktiyi Turkce olarak TAM OLARAK su 3 baslikta, net ve ikna edici yaz:\n"
         f"🎯 NOKTA ATISI ANA KARAR: (Tek bir net secenek ve kendi belirledigin mantikli barem)\n"
         f"🧠 KOC, ROTASYON VE OYUN OKUMASI: (Neden bu karari verdigini sahadaki oyuncular, koc hamlesi ve tempo kirilmasiyla acikla)\n"
