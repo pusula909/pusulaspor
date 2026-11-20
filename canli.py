@@ -492,7 +492,7 @@ def ai_kadro_ve_eksik_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu):
     kadro_limiti = 11 if spor_turu == "Futbol" else 5
     ev_sakatlar, dep_sakatlar = list(), list()
     ev_ilk_kadro, dep_ilk_kadro = list(), list()
-    kaynak_durumu = "Yapay Zeka Tahmini Kadro (Sakatlar Cikarildi)"
+    kaynak_durumu = "Resmi Kadro Havuzu (Sakatlar Cikarildi - Ilk 5 Mac Saati Aciklanir)"
     if lig_yolu == "euroleague_resmi":
         return ev_ilk_kadro, dep_ilk_kadro, ev_sakatlar, dep_sakatlar, "EuroLeague Resmi Veri Akisi"
     try:
@@ -1090,7 +1090,7 @@ else:
         st.dataframe(df_goster, use_container_width=True, hide_index=True)
         if gemini_api_key:
             with st.spinner("Gercek Yapay Zeka (Gemini) maci ve kadrolari yorumluyor..."):
-                zengin_durum = f"{satir['Dakika / Ceyrek']} | Taktik/Rotasyon Durumu: {koc_etkisi_metni}"
+                zengin_durum = f"{satir['Dakika / Ceyrek']} | Taktik: {koc_etkisi_metni} | Aktif Kadro Ornekleri: Ev({', '.join(ev_kadro)}), Dep({', '.join(dep_kadro)})"
                 ai_yorum = gemini_taktik_yorumu_uret(
                     gemini_api_key,
                     spor,
