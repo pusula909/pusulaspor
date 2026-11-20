@@ -570,7 +570,7 @@ if gorunum == "Canli Kupon Takip":
         secilen_k_etiket = c3.selectbox("Mac Sec", [m["etiket"] for m in k_maclar_veri], key="k_mac")
         secilen_k_obj = next(m for m in k_maclar_veri if m["etiket"] == secilen_k_etiket)
         t_col1, t_col2 = st.columns(2)
-      if k_spor == "Futbol":
+        if k_spor == "Futbol":
         secenekler = [
             "MS 1", "MS 0", "MS 2", 
             "1.5 UST", "2.5 UST", "2.5 ALT", 
