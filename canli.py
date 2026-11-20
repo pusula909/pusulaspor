@@ -242,12 +242,11 @@ def telegram_mesaj_gonder(token, chat_id, mesaj):
     if not token or not chat_id:
         return False
     try:
-        tg_adres = f"https://telegram.org{token.strip()}/sendMessage"
+        tg_adres = "https://telegram.org" + chr(47) + "bot" + token.strip() + chr(47) + "sendMessage"
         r = requests.post(tg_adres, data={"chat_id": str(chat_id).strip(), "text": mesaj}, timeout=8)
         return r.status_code == 200
     except Exception:
         return False
-
 
 if st.sidebar.button("Telegram Test Mesaji Gonder"):
     if telegram_mesaj_gonder(tg_token, tg_chat_id, "Pusulasporbot baglantisi basarili! Kupon bildirimleri aktif."):
