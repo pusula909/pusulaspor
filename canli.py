@@ -103,7 +103,7 @@ def _el_get(t):
                         st_code = "in"
                         detay = "Canli"
 
-                if st_code == "pre":
+                 if st_code == "pre":
                     try:
                         m_saat = datetime.strptime(f"{d_raw} {s_time}", "%b %d, %Y %H:%M") + timedelta(hours=2)
                         if m_saat <= suan_tr <= m_saat + timedelta(hours=3):
@@ -111,7 +111,6 @@ def _el_get(t):
                             detay = "Canli Oynaniyor"
                     except Exception:
                         pass
-
                  if st_code in ("in", "post") and gc:
                     try:
                         live_json_url = "https://live." + f"euroleague.net/api/Boxscore?gamecode={gc}&seasoncode={sezon_kodu}"
