@@ -264,6 +264,31 @@ favori = st.sidebar.text_input("Favori Takim", "").strip().lower()
 otomatik_yenile = st.sidebar.checkbox("Canli Otomatik Yenileme & Alarm (30 sn)", value=False)
 
 yol = TUM_LIGLER[spor][lig]
+def canli_firsat_etiketi_uret(spor_turu, state, detay_sure, ev_s, dep_s, ev_rec, dep_rec):
+    if state != "in":
+        return "-"
+    try:
+        ev_p = list(int(x) for x in ev_rec.split("-"))
+        dep_p = list(int(x) for x in dep_rec.split("-"))
+        ev_g = ev_p.pop(0) / (sum(ev_p) if sum(ev_p) > 0 else 1)
+        dep_g = dep_p.pop(0) / (sum(dep_p) if sum(dep_p) > 0 else 1)
+        top_s = ev_s + dep_s
+
+        if spor_turu == "Basketbol":
+            if ("Q2" in detay_sure or "Half" in detay_sure or "2C" in detay_sure) and top_s >= 92:
+                return "🔥 YUKSEK TEMPO (UST FIRSATI)"
+            if ev_g >= 0.65 and (dep_s - ev_s) >= 6:
+                return "🔥 FAVORI GERIDE (MS 1 FIRSATI)"
+            if dep_g >= 0.65 and (ev_s - dep_s) >= 6:
+                return "🔥 FAVORI GERIDE (MS 2 FIRSATI)"
+        else:
+            if ("45" in detay_sure or "Half" in detay_sure or "HT" in detay_sure) and top_s >= 2:
+                return "🔥 GOLLU TEMPO (2.5/3.5 UST)"
+            if ("45" in detay_sure or "HT" in detay_sure) and top_s == 0 and (ev_g >= 0.60 or dep_g >= 0.60):
+                return "🔥 IY 0-0 (2. YARI GOL FIRSATI)"
+    except Exception:
+        pass
+    return "Normal Akis"
 def periyot_ve_iy_cikar(ev_t, dep_t, spor_turu, state):
     if state == "pre":
         return "-"
@@ -1040,7 +1065,7 @@ else:
                 "Hizli AI Ozet": ozet_tahmin,
             }
         )
-
+"Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec),
     if maclar:
         en_iyi_kartlar = sorted(banko_havuzu, key=lambda x: x["guven_int"], reverse=True)[:3]
         if en_iyi_kartlar:
