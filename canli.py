@@ -1254,7 +1254,7 @@ else:
                     ", ".join(dep_eksikler),
                     zengin_durum,
                 )
-                if ai_yorum:
+            if ai_yorum:
                     st.success(f"Gemini AI Taktik ve Kadro Yorumu: {ai_yorum}")
         if h2h_verisi:
             st.info("*Son Kafa Kafaya (H2H) Maclar:* " + "  |  ".join(h2h_verisi))
