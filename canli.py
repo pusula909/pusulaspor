@@ -719,7 +719,7 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
                 continue
     except Exception as e:
         son_hata = str(e)
- groq_anahtar = str(st.secrets.get("GROQ_KEY", os.environ.get("GROQ_KEY", ""))).strip()
+    groq_anahtar = str(st.secrets.get("GROQ_KEY", os.environ.get("GROQ_KEY", ""))).strip()
  if groq_anahtar:
      try:
          g_url = "https://" + "api." + "groq.com" + "/openai/v1/chat/completions"
