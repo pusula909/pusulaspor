@@ -27,6 +27,7 @@ st.title("AI Pro Spor Veri Merkezi | Canli Analiz, Radar & Taktik Yorum")
 
 
 @st.cache_data(ttl=45, show_spinner=False)
+@st.cache_data(ttl=45, show_spinner=False)
 def _el_get(t):
     ev = list()
     try:
@@ -37,11 +38,12 @@ def _el_get(t):
         yil = int(t[:4])
         ay = int(t[4:6])
         sezon_kodu = f"E{yil if ay >= 8 else yil - 1}"
+        el_host = "https://api-live." + "euroleague.net/v1/"
 
         win_map, loss_map, results_map = {}, {}, {}
         try:
             r_res = requests.get(
-                f"https://euroleague.net{sezon_kodu}",
+                f"{el_host}results?seasonCode={sezon_kodu}",
                 headers=h,
                 timeout=8,
             )
@@ -67,7 +69,7 @@ def _el_get(t):
             pass
 
         r_sch = requests.get(
-            f"https://euroleague.net{sezon_kodu}",
+            f"{el_host}schedules?seasonCode={sezon_kodu}",
             headers=h,
             timeout=8,
         )
@@ -114,7 +116,7 @@ def _el_get(t):
                 if st_code in ("in", "post") and gc:
                     try:
                         gr = requests.get(
-                            f"https://euroleague.net{sezon_kodu}&gameCode={gc}",
+                            f"{el_host}games?seasonCode={sezon_kodu}&gameCode={gc}",
                             headers=h,
                             timeout=5,
                         )
@@ -175,7 +177,6 @@ def _el_get(t):
     except Exception:
         pass
     return {"events": ev}
-
 
 if "eski_skorlar" not in st.session_state:
     st.session_state.eski_skorlar = {}
