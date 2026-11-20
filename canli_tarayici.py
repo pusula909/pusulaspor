@@ -59,7 +59,7 @@ def _el_get(t):
                 ds = int(g.findtext("awayscore", "0") or 0)
                 played = g.findtext("played", "false").lower() == "true"
                 if gc:
-                    res_map[gc] = {"hs": str(hs), "ds": str(ds), "played": played}
+                    res_map[gc] = {"hs": str(hs), "ds": str(ds), "state": "post" if played else "pre"}
                 if played and (hs > 0 or ds > 0):
                     if hs > ds:
                         win_map[t1] = win_map.get(t1, 0) + 1
@@ -100,16 +100,26 @@ def _el_get(t):
                     except Exception:
                         pass
 
-                if st_code == "in" and gc:
+                if st_code in ("in", "post") and gc:
                     try:
-                        gr = requests.get(f"{el_host}games?seasonCode={sezon_kodu}&gameCode={gc}", headers=h, timeout=5)
-                        g_xml = ET.fromstring(gr.content)
-                        sa1 = g_xml.findtext(".//TotalPointsA", g_xml.findtext(".//ScoreA", "")).strip()
-                        sb1 = g_xml.findtext(".//TotalPointsB", g_xml.findtext(".//ScoreB", "")).strip()
-                        if sa1 and sb1:
-                            hs, ds = sa1, sb1
-                        q_say = sum(1 for q in range(1, 5) if g_xml.findtext(f".//Quarter{q}A", "").strip())
-                        detay = f"Canli (Q{q_say if q_say else 1})"
+                        live_json_url = "https://live." + f"euroleague.net/api/Boxscore?gamecode={gc}&seasoncode={sezon_kodu}"
+                        lj = requests.get(live_json_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=6).json()
+                        by_q = lj.get("ByQuarter", list())
+                        if len(by_q) >= 2:
+                            ev_q_dict = by_q.pop(0)
+                            dep_q_dict = by_q.pop(0)
+                            tot_a, tot_b, q_say = 0, 0, 0
+                            for q_idx in range(1, 5):
+                                qa = ev_q_dict.get(f"Quarter{q_idx}")
+                                qb = dep_q_dict.get(f"Quarter{q_idx}")
+                                if qa is not None and qb is not None and (int(qa) > 0 or int(qb) > 0 or q_idx == 1):
+                                    tot_a += int(qa)
+                                    tot_b += int(qb)
+                                    q_say += 1
+                            if tot_a > 0 or tot_b > 0:
+                                hs, ds = str(tot_a), str(tot_b)
+                            if st_code == "in":
+                                detay = f"Canli (Q{q_say if q_say else 1})"
                     except Exception:
                         pass
 
@@ -134,6 +144,7 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi):
     if not TG_TOKEN or not TG_CHAT_ID:
         return
     son_update_id = hafiza.get("son_update_id", 0)
+    istenen_komutlar = set()
     try:
         upd_url = "https://" + "api." + "telegram.org" + "/bot" + TG_TOKEN + f"/getUpdates?offset={son_update_id + 1}&timeout=3"
         r = requests.get(upd_url, timeout=8).json()
@@ -146,49 +157,60 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi):
             metin = msg.get("text", "").strip().lower()
             if chat_id != str(TG_CHAT_ID):
                 continue
-
             if "/canli" in metin:
-                if canli_ozet_listesi:
-                    telegram_gonder(f"📺 ANLIK CANLI MACLAR ({saat_str})\n\n" + "\n".join(canli_ozet_listesi[:15]))
-                else:
-                    telegram_gonder("Su an canli oynanan mac bulunmuyor.")
-            elif "/bulten" in metin:
-                if os.path.exists("son_bulten.json"):
-                    with open("son_bulten.json", "r", encoding="utf-8") as f:
-                        b_list = json.load(f)
-                    if b_list:
-                        satir = list(("🏆 KAYITLI GUNUN BULTENI\n",))
-                        for i, m in enumerate(b_list, 1):
-                            satir.append(f"{i}. [{m['lig']}] {m['mac']} -> {m['tahmin']} (%{m['guven']})")
-                        telegram_gonder("\n".join(satir))
-                    else:
-                        telegram_gonder("Henuz kayitli gunluk bulten yok.")
+                istenen_komutlar.add("canli")
+            if "/bulten" in metin:
+                istenen_komutlar.add("bulten")
+            if "/karne" in metin:
+                istenen_komutlar.add("karne")
+            if "/yardim" in metin or "/start" in metin:
+                istenen_komutlar.add("yardim")
+
+        if "canli" in istenen_komutlar:
+            if canli_ozet_listesi:
+                telegram_gonder(f"📺 ANLIK CANLI MACLAR ({saat_str})\n\n" + "\n".join(canli_ozet_listesi[:15]))
+            else:
+                telegram_gonder("Su an canli oynanan mac bulunmuyor.")
+
+        if "bulten" in istenen_komutlar:
+            if os.path.exists("son_bulten.json"):
+                with open("son_bulten.json", "r", encoding="utf-8") as f:
+                    b_list = json.load(f)
+                if b_list:
+                    satir = list(("🏆 KAYITLI GUNUN BULTENI\n",))
+                    for i, m in enumerate(b_list, 1):
+                        satir.append(f"{i}. [{m['lig']}] {m['mac']} -> {m['tahmin']} (%{m['guven']})")
+                    telegram_gonder("\n".join(satir))
                 else:
                     telegram_gonder("Henuz kayitli gunluk bulten yok.")
-            elif "/karne" in metin:
-                if os.path.exists("haftalik_arsiv.json"):
-                    with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
-                        arsiv = json.load(f)
-                    if arsiv:
-                        lig_ozet = {}
-                        for k in arsiv:
-                            l_ad = k["lig"]
-                            if l_ad not in lig_ozet:
-                                lig_ozet[l_ad] = {"top": 0, "hit": 0}
-                            lig_ozet[l_ad]["top"] += 1
-                            if k["tuttu"]:
-                                lig_ozet[l_ad]["hit"] += 1
-                        k_satir = list(("🏅 HAFTALIK BASARI KARNESI\n",))
-                        for l_ad, v in lig_ozet.items():
-                            yuzde = int((v["hit"] / v["top"]) * 100)
-                            k_satir.append(f"• {l_ad}: {v['top']} Macta {v['hit']} Isabet (%{yuzde})")
-                        telegram_gonder("\n".join(k_satir))
-                    else:
-                        telegram_gonder("Haftalik karne icin gece sonuclarinin kaydi bekleniyor.")
+            else:
+                telegram_gonder("Henuz kayitli gunluk bulten yok.")
+
+        if "karne" in istenen_komutlar:
+            if os.path.exists("haftalik_arsiv.json"):
+                with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
+                    arsiv = json.load(f)
+                if arsiv:
+                    lig_ozet = {}
+                    for k in arsiv:
+                        l_ad = k["lig"]
+                        if l_ad not in lig_ozet:
+                            lig_ozet[l_ad] = {"top": 0, "hit": 0}
+                        lig_ozet[l_ad]["top"] += 1
+                        if k["tuttu"]:
+                            lig_ozet[l_ad]["hit"] += 1
+                    k_satir = list(("🏅 HAFTALIK BASARI KARNESI\n",))
+                    for l_ad, v in lig_ozet.items():
+                        yuzde = int((v["hit"] / v["top"]) * 100)
+                        k_satir.append(f"• {l_ad}: {v['top']} Macta {v['hit']} Isabet (%{yuzde})")
+                    telegram_gonder("\n".join(k_satir))
                 else:
                     telegram_gonder("Haftalik karne icin gece sonuclarinin kaydi bekleniyor.")
-            elif "/yardim" in metin or "/start" in metin:
-                telegram_gonder("🤖 PusulaSpor Komutlari:\n/canli - O anki canli skorlar\n/bulten - Gunun AI bankolari\n/karne - Haftalik basari orani")
+            else:
+                telegram_gonder("Haftalik karne icin gece sonuclarinin kaydi bekleniyor.")
+
+        if "yardim" in istenen_komutlar:
+            telegram_gonder("🤖 PusulaSpor Komutlari:\n/canli - O anki canli skorlar\n/bulten - Gunun AI bankolari\n/karne - Haftalik basari orani")
     except Exception:
         pass
     hafiza["son_update_id"] = son_update_id
