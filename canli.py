@@ -729,7 +729,7 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
             aktif_model = "llama-3.1-8b-instant"
             try:
                 m_list = requests.get(f"{g_base}/models", headers=g_headers, timeout=6).json().get("data", list())
-                uygunlar = list(x["id"] for x in m_list if "llama" in x.get("id", "").lower() and "guard" not in x.get("id", "").lower())
+                uygunlar = list(x["id"] for x in m_list if "whisper" not in x.get("id", "").lower() and "guard" not in x.get("id", "").lower() and "tts" not in x.get("id", "").lower())
                 if uygunlar:
                     aktif_model = sorted(uygunlar, reverse=True).pop(0)
             except Exception:
