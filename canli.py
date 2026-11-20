@@ -117,28 +117,43 @@ def _el_get(t):
                         gr = requests.get(
                             f"{el_host}games?seasonCode={sezon_kodu}&gameCode={gc}",
                             headers=h,
-                            timeout=5,
+                            timeout=6,
                         )
                         g_xml = ET.fromstring(gr.content)
 
-                        sa1 = g_xml.findtext(".//TotalPointsA", g_xml.findtext(".//ScoreA", "")).strip()
-                        sb1 = g_xml.findtext(".//TotalPointsB", g_xml.findtext(".//ScoreB", "")).strip()
-                        if sa1 and sb1:
-                            hs, ds = sa1, sb1
+                        sa1 = ""
+                        sb1 = ""
+                        for tag_a, tag_b in (
+                            (".//TotalPointsA", ".//TotalPointsB"),
+                            (".//ScoreA", ".//ScoreB"),
+                            (".//PointsA", ".//PointsB"),
+                            (".//HomeScore", ".//AwayScore"),
+                        ):
+                            va = g_xml.findtext(tag_a, "").strip()
+                            vb = g_xml.findtext(tag_b, "").strip()
+                            if va and vb:
+                                sa1, sb1 = va, vb
+                                break
 
                         for q in range(1, 5):
-                            qa = g_xml.findtext(f".//Quarter{q}A", "").strip()
-                            qb = g_xml.findtext(f".//Quarter{q}B", "").strip()
+                            qa = g_xml.findtext(f".//Quarter{q}A", g_xml.findtext(f".//Q{q}A", "")).strip()
+                            qb = g_xml.findtext(f".//Quarter{q}B", g_xml.findtext(f".//Q{q}B", "")).strip()
                             if qa and qb:
                                 ceyrekler_ev.append({"value": qa, "displayValue": qa})
                                 ceyrekler_dep.append({"value": qb, "displayValue": qb})
+
+                        if (not sa1 or sa1 == "0") and ceyrekler_ev:
+                            sa1 = str(sum(int(float(x["value"])) for x in ceyrekler_ev))
+                            sb1 = str(sum(int(float(x["value"])) for x in ceyrekler_dep))
+
+                        if sa1 and sb1:
+                            hs, ds = sa1, sb1
 
                         if st_code == "in":
                             aktif_q = len(ceyrekler_ev) if ceyrekler_ev else 1
                             detay = f"Canli (Q{aktif_q})"
                     except Exception:
                         pass
-
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
                 dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
 
