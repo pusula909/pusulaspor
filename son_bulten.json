@@ -1,0 +1,67 @@
+[
+  {
+    "id": "401909313",
+    "yol": "basketball/nba",
+    "tarih": "20261120",
+    "tarih_guzel": "20.11.2026",
+    "lig": "NBA",
+    "ev": "Los Angeles Lakers",
+    "dep": "Sacramento Kings",
+    "mac": "Los Angeles Lakers - Sacramento Kings",
+    "saat": "11/20 - 10:00 PM EST",
+    "tahmin": "Los Angeles Lakers Kazanir (MS 1)",
+    "guven": 89
+  },
+  {
+    "id": "401909312",
+    "yol": "basketball/nba",
+    "tarih": "20261120",
+    "tarih_guzel": "20.11.2026",
+    "lig": "NBA",
+    "ev": "Denver Nuggets",
+    "dep": "Houston Rockets",
+    "mac": "Denver Nuggets - Houston Rockets",
+    "saat": "11/20 - 10:00 PM EST",
+    "tahmin": "Mac Toplami 232.5 UST",
+    "guven": 85
+  },
+  {
+    "id": "130",
+    "yol": "euroleague_resmi",
+    "tarih": "20261120",
+    "tarih_guzel": "20.11.2026",
+    "lig": "EuroLeague",
+    "ev": "OLYMPIACOS PIRAEUS",
+    "dep": "REAL MADRID",
+    "mac": "OLYMPIACOS PIRAEUS - REAL MADRID",
+    "saat": "20:15",
+    "tahmin": "Mac Toplami 174.5 UST",
+    "guven": 85
+  },
+  {
+    "id": "128",
+    "yol": "euroleague_resmi",
+    "tarih": "20261120",
+    "tarih_guzel": "20.11.2026",
+    "lig": "EuroLeague",
+    "ev": "FC BARCELONA",
+    "dep": "CRVENA ZVEZDA MERIDIANBET BELGRADE",
+    "mac": "FC BARCELONA - CRVENA ZVEZDA MERIDIANBET BELGRADE",
+    "saat": "20:30",
+    "tahmin": "Mac Toplami 172.5 UST",
+    "guven": 83
+  },
+  {
+    "id": "401909308",
+    "yol": "basketball/nba",
+    "tarih": "20261120",
+    "tarih_guzel": "20.11.2026",
+    "lig": "NBA",
+    "ev": "Detroit Pistons",
+    "dep": "Toronto Raptors",
+    "mac": "Detroit Pistons - Toronto Raptors",
+    "saat": "11/20 - 7:30 PM EST",
+    "tahmin": "Detroit Pistons 116.5 UST Sayi",
+    "guven": 81
+  }
+]
