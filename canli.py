@@ -943,7 +943,7 @@ elif gorunum == "AI Gunun Radari (Tum Ligler)":
                     pass
         st.session_state.radar_sonuclari = sorted(tum_radar, key=lambda x: x["GuvenInt"], reverse=True)
     if st.session_state.radar_sonuclari:
-        radar_df = pd.DataFrame(st.session_state.radar_sonuclari).drop(columns=("GuvenInt",))
+        radar_df = pd.DataFrame(st.session_state.radar_sonuclari).drop(columns=("GuvenInt",), errors="ignore")
         st.success(f"Toplam {len(radar_df)} mac tarandi ve guven sirasina gore listelendi!")
         st.dataframe(radar_df, use_container_width=True, hide_index=True)
         st.download_button(
