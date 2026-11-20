@@ -329,11 +329,12 @@ def canli_firsat_etiketi_uret(spor_turu, state, detay_sure, ev_s, dep_s, ev_rec,
             if "Q4" not in detay_sure and "4C" not in detay_sure and ev_g >= 0.65 and 6 <= (dep_s - ev_s) <= 14:
                 return "🔥 FAVORI GERIDE (MS 1 FIRSATI)"
             if "Q4" not in detay_sure and "4C" not in detay_sure and dep_g >= 0.65 and 6 <= (ev_s - dep_s) <= 14:
-                return "🔥 FAVORI GERIDE (MS 2 FIRSATI)"        else:
+                return "🔥 FAVORI GERIDE (MS 2 FIRSATI)"        
+            else:
             if ("45" in detay_sure or "Half" in detay_sure or "HT" in detay_sure) and top_s >= 2:
                 return "🔥 GOLLU TEMPO (2.5/3.5 UST)"
             if ("45" in detay_sure or "HT" in detay_sure) and top_s == 0 and (ev_g >= 0.60 or dep_g >= 0.60):
-                return "🔥 IY 0-0 (2. YARI GOL FIRSATI)"
+         return "🔥 IY 0-0 (2. YARI GOL FIRSATI)"
     except Exception:
         pass
     return "Normal Akis"
