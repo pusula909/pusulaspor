@@ -717,10 +717,32 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
             except Exception as ic_hata:
                 son_hata = str(ic_hata)
                 continue
-        return f"Gemini AI baglanti uyarisi: {son_hata}"
-    except Exception as e:
-        return f"Gemini AI baglanti uyarisi: {str(e)}"
+        except Exception as e:
+     son_hata = str(e)
 
+ groq_anahtar = str(st.secrets.get("GROQ_KEY", os.environ.get("GROQ_KEY", ""))).strip()
+ if groq_anahtar:
+     try:
+         g_url = "https://" + "api." + "groq.com" + "/openai/v1/chat/completions"
+         g_resp = requests.post(
+             g_url,
+             headers={"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"},
+             json={
+                 "model": "llama-3.3-70b-versatile",
+                 "messages": list(({"role": "user", "content": soru},)),
+                 "temperature": 0.4,
+             },
+             timeout=12,
+         ).json()
+         secim = g_resp.get("choices", list())
+         if secim:
+             yanit_metin = secim.pop(0).get("message", {}).get("content", "").strip()
+             if yanit_metin:
+                 return yanit_metin
+     except Exception:
+         pass
+
+ return f"AI kota uyarisi: {son_hata}"
 def excel_dosyasi_olustur(df):
     tampon = io.BytesIO()
     with pd.ExcelWriter(tampon, engine="openpyxl") as yazici:
