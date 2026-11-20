@@ -112,85 +112,51 @@ def _el_get(t):
                     except Exception:
                         pass
 
-                if st_code in ("in", "post") and gc:
+                 if st_code in ("in", "post") and gc:
                     try:
-                        gr = requests.get(
-                            f"{el_host}games?seasonCode={sezon_kodu}&gameCode={gc}",
-                            headers=h,
-                            timeout=6,
-                        )
-                        g_xml = ET.fromstring(gr.content)
-
-                        sa1 = ""
-                        sb1 = ""
-                        for tag_a, tag_b in (
-                            (".//TotalPointsA", ".//TotalPointsB"),
-                            (".//ScoreA", ".//ScoreB"),
-                            (".//PointsA", ".//PointsB"),
-                            (".//HomeScore", ".//AwayScore"),
-                        ):
-                            va = g_xml.findtext(tag_a, "").strip()
-                            vb = g_xml.findtext(tag_b, "").strip()
-                            if va and vb:
-                                sa1, sb1 = va, vb
-                                break
-
-                        for q in range(1, 5):
-                            qa = g_xml.findtext(f".//Quarter{q}A", g_xml.findtext(f".//Q{q}A", "")).strip()
-                            qb = g_xml.findtext(f".//Quarter{q}B", g_xml.findtext(f".//Q{q}B", "")).strip()
-                            if qa and qb:
-                                ceyrekler_ev.append({"value": qa, "displayValue": qa})
-                                ceyrekler_dep.append({"value": qb, "displayValue": qb})
-
-                        if (not sa1 or sa1 == "0") and ceyrekler_ev:
-                            sa1 = str(sum(int(float(x["value"])) for x in ceyrekler_ev))
-                            sb1 = str(sum(int(float(x["value"])) for x in ceyrekler_dep))
-
-                        if sa1 and sb1:
-                            hs, ds = sa1, sb1
-
-                        if st_code == "in":
-                            aktif_q = len(ceyrekler_ev) if ceyrekler_ev else 1
-                            detay = f"Canli (Q{aktif_q})"
+                        live_json_url = "https://live." + f"euroleague.net/api/Boxscore?gamecode={gc}&seasoncode={sezon_kodu}"
+                        lj = requests.get(live_json_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=6).json()
+                        by_q = lj.get("ByQuarter", list())
+                        if len(by_q) >= 2:
+                            ev_q_dict = by_q.pop(0)
+                            dep_q_dict = by_q.pop(0)
+                            tot_a, tot_b = 0, 0
+                            for q_idx in range(1, 5):
+                                qa = ev_q_dict.get(f"Quarter{q_idx}")
+                                qb = dep_q_dict.get(f"Quarter{q_idx}")
+                                if qa is not None and qb is not None and (int(qa) > 0 or int(qb) > 0 or q_idx == 1):
+                                    ceyrekler_ev.append({"value": str(qa), "displayValue": str(qa)})
+                                    ceyrekler_dep.append({"value": str(qb), "displayValue": str(qb)})
+                                    tot_a += int(qa)
+                                    tot_b += int(qb)
+                            if tot_a > 0 or tot_b > 0:
+                                hs, ds = str(tot_a), str(tot_b)
+                            if st_code == "in":
+                                aktif_q = len(ceyrekler_ev) if ceyrekler_ev else 1
+                                detay = f"Canli (Q{aktif_q})"
                     except Exception:
                         pass
-                ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
-                dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
 
-                ev.append(
-                    {
-                        "id": gc,
-                        "status": {"type": {"state": st_code, "shortDetail": detay}},
-                        "competitions": list(
-                            (
-                                {
-                                    "status": {"type": {"state": st_code, "shortDetail": detay}},
-                                    "competitors": list(
-                                        (
-                                            {
-                                                "homeAway": "home",
-                                                "team": {"id": "1", "displayName": h_ad},
-                                                "score": hs,
-                                                "records": list(({"summary": ev_r},)),
-                                                "linescores": ceyrekler_ev,
-                                            },
-                                            {
-                                                "homeAway": "away",
-                                                "team": {"id": "2", "displayName": a_ad},
-                                                "score": ds,
-                                                "records": list(({"summary": dep_r},)),
-                                                "linescores": ceyrekler_dep,
-                                            },
-                                        )
-                                    ),
-                                },
+                    if hs == "0" and ds == "0":
+                        try:
+                            gr = requests.get(
+                                f"{el_host}games?seasonCode={sezon_kodu}&gameCode={gc}",
+                                headers=h,
+                                timeout=6,
                             )
-                        ),
-                    }
-                )
-    except Exception:
-        pass
-    return {"events": ev}
+                            g_xml = ET.fromstring(gr.content)
+                            sa1 = g_xml.findtext(".//TotalPointsA", g_xml.findtext(".//ScoreA", "")).strip()
+                            sb1 = g_xml.findtext(".//TotalPointsB", g_xml.findtext(".//ScoreB", "")).strip()
+                            if sa1 and sb1:
+                                hs, ds = sa1, sb1
+                            for q in range(1, 5):
+                                qa = g_xml.findtext(f".//Quarter{q}A", "").strip()
+                                qb = g_xml.findtext(f".//Quarter{q}B", "").strip()
+                                if qa and qb:
+                                    ceyrekler_ev.append({"value": qa, "displayValue": qa})
+                                    ceyrekler_dep.append({"value": qb, "displayValue": qb})
+                        except Exception:
+                            pass   return {"events": ev}
 
 if "eski_skorlar" not in st.session_state:
     st.session_state.eski_skorlar = {}
