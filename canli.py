@@ -1,64 +1,134 @@
 import xml.etree.ElementTree as ET
 import xml.etree.ElementTree as ET
-
+@st.cache_data(ttl=45, show_spinner=False)
 def _el_get(t):
-    ev = list()
+    ev = []
     try:
-        r = requests.get("https://" + "api-live.euroleague.net/v1/schedules?seasonCode=E" + str(t[:4]), timeout=8)
-        items = ET.fromstring(r.content).findall(".//item")
-        win_map = {}
-        loss_map = {}
-        for x in items:
-            if x.findtext("played") == "true":
-                h = x.findtext("hometeam", "").strip()
-                a = x.findtext("awayteam", "").strip()
-                hs = int(x.findtext("homescore", "0") or 0)
-                ds = int(x.findtext("awayscore", "0") or 0)
-                if hs > ds:
-                    win_map[h] = win_map.get(h, 0) + 1
-                    loss_map[a] = loss_map.get(a, 0) + 1
-                else:
-                    win_map[a] = win_map.get(a, 0) + 1
-                    loss_map[h] = loss_map.get(h, 0) + 1
+        h = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Accept": "application/xml, text/xml"
+        }
+        yil = int(t[:4])
+        ay = int(t[4:6])
+        sezon_kodu = f"E{yil if ay >= 8 else yil - 1}"
+
+        win_map, loss_map, results_map = {}, {}, {}
+        try:
+            r_res = requests.get(f"https://euroleague.net{sezon_kodu}", headers=h, timeout=8)
+            for g in ET.fromstring(r_res.content).findall(".//game"):
+                gc = g.findtext("gamecode", "").strip().replace(f"{sezon_kodu}_", "")
+                t1 = g.findtext("hometeam", "").strip()
+                t2 = g.findtext("awayteam", "").strip()
+                hs = int(g.findtext("homescore", "0") or 0)
+                ds = int(g.findtext("awayscore", "0") or 0)
+                played = g.findtext("played", "false").lower() == "true"
+
+                if gc:
+                    results_map[gc] = {"hs": str(hs), "ds": str(ds), "played": played}
+
+                if played and (hs > 0 or ds > 0):
+                    if hs > ds:
+                        win_map[t1] = win_map.get(t1, 0) + 1
+                        loss_map[t2] = loss_map.get(t2, 0) + 1
+                    else:
+                        win_map[t2] = win_map.get(t2, 0) + 1
+                        loss_map[t1] = loss_map.get(t1, 0) + 1
+        except Exception:
+            pass
+
+        r_sch = requests.get(f"https://euroleague.net{sezon_kodu}", headers=h, timeout=8)
+        items = ET.fromstring(r_sch.content).findall(".//item")
+        suan_tr = datetime.now(timezone(timedelta(hours=3))).replace(tzinfo=None)
 
         for i in items:
             d_raw = i.findtext("date", "").strip()
             if not d_raw:
                 continue
-            if datetime.strptime(d_raw, "%b %d, %Y").strftime("%Y%m%d") == t:
+
+            d_obj = datetime.strptime(d_raw, "%b %d, %Y")
+            if d_obj.strftime("%Y%m%d") == t:
                 h_ad = i.findtext("hometeam", "").strip()
                 a_ad = i.findtext("awayteam", "").strip()
-                hs = i.findtext("homescore", "0") or "0"
-                ds = i.findtext("awayscore", "0") or "0"
-                st_code = "post" if i.findtext("played") == "true" else ("in" if int(hs) > 0 or int(ds) > 0 else "pre")
+                s_time = i.findtext("startime", "20:00").strip()
+                gc = i.findtext("gamecode", "").strip().replace(f"{sezon_kodu}_", "")
+
+                hs, ds = "0", "0"
+                st_code = "pre"
+                detay = s_time
+                ceyrekler_ev = []
+                ceyrekler_dep = []
+
+                if gc in results_map:
+                    hs = results_map[gc]["hs"]
+                    ds = results_map[gc]["ds"]
+                    if results_map[gc]["played"]:
+                        st_code = "post"
+                        detay = "Tamamlandi"
+                    elif int(hs) > 0 or int(ds) > 0:
+                        st_code = "in"
+                        detay = "Canli"
+
+                if st_code == "pre":
+                    try:
+                        m_saat = datetime.strptime(f"{d_raw} {s_time}", "%b %d, %Y %H:%M") + timedelta(hours=2)
+                        if m_saat <= suan_tr <= m_saat + timedelta(hours=3):
+                            st_code = "in"
+                            detay = "Canli Oynaniyor"
+                    except Exception:
+                        pass
+
+                if st_code in ("in", "post") and gc:
+                    try:
+                        gr = requests.get(f"https://euroleague.net{sezon_kodu}&gameCode={gc}", headers=h, timeout=5)
+                        g_xml = ET.fromstring(gr.content)
+                        
+                        sa1 = g_xml.findtext(".//TotalPointsA", g_xml.findtext(".//ScoreA", "")).strip()
+                        sb1 = g_xml.findtext(".//TotalPointsB", g_xml.findtext(".//ScoreB", "")).strip()
+                        if sa1 and sb1:
+                            hs, ds = sa1, sb1
+
+                        for q in range(1, 5):
+                            qa = g_xml.findtext(f".//Quarter{q}A", "").strip()
+                            qb = g_xml.findtext(f".//Quarter{q}B", "").strip()
+                            if qa and qb:
+                                ceyrekler_ev.append({"displayValue": qa})
+                                ceyrekler_dep.append({"displayValue": qb})
+
+                        if st_code == "in":
+                            aktif_q = len(ceyrekler_ev) if ceyrekler_ev else 1
+                            detay = f"Canli (Q{aktif_q})"
+                    except Exception:
+                        pass
+
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
                 dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
+
                 ev.append({
-                    "id": i.findtext("gamecode", ""),
-                    "status": {"type": {"state": st_code, "shortDetail": i.findtext("startime", "")}},
+                    "id": gc,
+                    "status": {"type": {"state": st_code, "shortDetail": detay}},
                     "competitions": [{
                         "competitors": [
-                            {"homeAway": "home", "team": {"id": "1", "displayName": h_ad}, "score": hs, "records": [{"summary": ev_r}]},
-                            {"homeAway": "away", "team": {"id": "2", "displayName": a_ad}, "score": ds, "records": [{"summary": dep_r}]}
+                            {
+                                "homeAway": "home",
+                                "team": {"id": "1", "displayName": h_ad},
+                                "score": hs,
+                                "records": [{"summary": ev_r}],
+                                "linescores": ceyrekler_ev
+                            },
+                            {
+                                "homeAway": "away",
+                                "team": {"id": "2", "displayName": a_ad},
+                                "score": ds,
+                                "records": [{"summary": dep_r}],
+                                "linescores": ceyrekler_dep
+                            }
                         ]
                     }]
                 })
     except Exception:
         pass
     return {"events": ev}
-import streamlit as st
-import xml.etree.ElementTree as ET
-def el_get(t):
-    ev=[]
-    try:
-        r=requests.get(f"https://api-live.euroleague.net/v1/schedules?seasonCode=E{t[:4]}",timeout=8)
-        for i in ET.fromstring(r.content).findall(".//item"):
-            if datetime.strptime(i.findtext("date","").strip(),"%b %d, %Y").strftime("%Y%m%d")==t:
-                hs,dep_s=i.findtext("homescore","0") or "0",i.findtext("awayscore","0") or "0"
-                st="post" if i.findtext("played")=="true" else ("in" if int(hs)>0 or int(dep_s)>0 else "pre")
-                ev.append({"id":i.findtext("gamecode",""),"status":{"type":{"state":st,"shortDetail":i.findtext("startime","")}},"competitions":[{"competitors":[{"homeAway":"home","team":{"id":"1","displayName":i.findtext("hometeam","")},"score":hs,"records":[{"summary":"0-0"}]},{"homeAway":"away","team":{"id":"2","displayName":i.findtext("awayteam","")},"score":as_,"records":[{"summary":"0-0"}]}]}]})
-    except: pass
-    return {"events":ev}
+
 
 import requests
 import pandas as pd
@@ -467,7 +537,6 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
             except Exception as ic_hata:
                 son_hata = str(ic_hata)
                 continue
-        return f"Gemini AI baglanti uyarisi: {son_hata}"
     except Exception as e:
         return f"Gemini AI baglanti uyarisi: {str(e)}"
 def excel_dosyasi_olustur(df):
@@ -501,27 +570,68 @@ if gorunum == "Canli Kupon Takip":
         secilen_k_etiket = c3.selectbox("Mac Sec", [m["etiket"] for m in k_maclar_veri], key="k_mac")
         secilen_k_obj = next(m for m in k_maclar_veri if m["etiket"] == secilen_k_etiket)
         t_col1, t_col2 = st.columns(2)
-        if k_spor == "Futbol":
-            secenekler = ["MS 1", "MS 0", "MS 2", "1.5 UST", "2.5 UST", "2.5 ALT", "KG VAR", "KG YOK", "Ozel Barem UST", "Ozel Barem ALT"]
-            secilen_tip = t_col1.selectbox("Tahmin Tipi", secenekler, key="k_tahmin")
-            ozel_b = t_col2.number_input("Ozel Barem (Ornek: 3.5)", min_value=0.5, max_value=15.5, value=2.5, step=1.0, key="k_barem_f")
+      if k_spor == "Futbol":
+        secenekler = [
+            "MS 1", "MS 0", "MS 2", 
+            "1.5 UST", "2.5 UST", "2.5 ALT", 
+            "KG VAR", "KG YOK", 
+            "Toplam Barem UST", "Toplam Barem ALT",
+            "Ev Sahibi Barem UST", "Ev Sahibi Barem ALT",
+            "Deplasman Barem UST", "Deplasman Barem ALT"
+        ]
+        secilen_tip = t_col1.selectbox("Tahmin Tipi", secenekler, key="k_tahmin")
+        
+        # Sadece Barem içeren seçeneklerde sağdaki kutu açılır
+        if "Barem" in secilen_tip:
+            taraf = "Ev Sahibi" if "Ev Sahibi" in secilen_tip else ("Deplasman" if "Deplasman" in secilen_tip else "Toplam")
+            ornek_val = 1.5 if taraf in ["Ev Sahibi", "Deplasman"] else 3.5
+            ozel_b = t_col2.number_input(
+                f"{taraf} Barem Gir (Örnek: {ornek_val})", 
+                min_value=0.5, max_value=15.5, value=ornek_val, step=1.0, key="k_barem_f"
+            )
+            yon = "UST" if "UST" in secilen_tip else "ALT"
+            oynanan_tahmin = f"{taraf} {ozel_b} {yon}"
         else:
-            secenekler = ["MS 1", "MS 2", "Toplam UST (El Ile Barem)", "Toplam ALT (El Ile Barem)"]
-            secilen_tip = t_col1.selectbox("Tahmin Tipi", secenekler, key="k_tahmin")
-            ozel_b = t_col2.number_input("Barem Sayisi Gir (Ornek: 164.5)", min_value=100.5, max_value=280.5, value=165.5, step=1.0, key="k_barem_b")
-        oynanan_tahmin = f"Toplam {ozel_b} {'UST' if 'UST' in secilen_tip else 'ALT'}" if "Ozel" in secilen_tip or "El Ile" in secilen_tip else secilen_tip
-        if st.button("Kupona Ekle"):
-            st.session_state.kupon_listesi.append({
-                "id": secilen_k_obj["id"],
-                "yol": secilen_k_obj["yol"],
-                "spor": secilen_k_obj["spor"],
-                "ev": secilen_k_obj["ev"],
-                "dep": secilen_k_obj["dep"],
-                "tahmin": oynanan_tahmin
-            })
-            st.session_state.kupon_bildirim_gonderildi = False
-            st.rerun()
+            oynanan_tahmin = secilen_tip
+
     else:
+        secenekler = [
+            "MS 1", "MS 2", 
+            "Toplam UST (El İle Barem)", "Toplam ALT (El İle Barem)",
+            "Ev Sahibi UST (El İle Barem)", "Ev Sahibi ALT (El İle Barem)",
+            "Deplasman UST (El İle Barem)", "Deplasman ALT (El İle Barem)"
+        ]
+        secilen_tip = t_col1.selectbox("Tahmin Tipi", secenekler, key="k_tahmin")
+        
+        # Sadece Barem içeren seçeneklerde sağdaki kutu açılır ve tarafa göre değer ayarlanır
+        if "El İle Barem" in secilen_tip:
+            if "Ev Sahibi" in secilen_tip:
+                taraf, varsayilan, min_v, max_v = "Ev Sahibi", 82.5, 40.5, 160.5
+            elif "Deplasman" in secilen_tip:
+                taraf, varsayilan, min_v, max_v = "Deplasman", 82.5, 40.5, 160.5
+            else:
+                taraf, varsayilan, min_v, max_v = "Toplam", 165.5, 100.5, 280.5
+                
+            ozel_b = t_col2.number_input(
+                f"{taraf} Barem Sayisi Gir (Örnek: {varsayilan})", 
+                min_value=min_v, max_value=max_v, value=varsayilan, step=1.0, key=f"k_barem_b_{taraf}"
+            )
+            yon = "UST" if "UST" in secilen_tip else "ALT"
+            oynanan_tahmin = f"{taraf} {ozel_b} {yon}"
+        else:
+            oynanan_tahmin = secilen_tip
+
+    if st.button("Kupona Ekle"):
+        st.session_state.kupon_listesi.append({
+            "id": secilen_k_obj["id"],
+            "yol": secilen_k_obj["yol"],
+            "spor": secilen_k_obj["spor"],
+            "ev": secilen_k_obj["ev"],
+            "dep": secilen_k_obj["dep"],
+            "tahmin": oynanan_tahmin
+        })
+        st.session_state.kupon_bildirim_gonderildi = False
+        st.rerun()
         st.info("Bu ligde secili tarihte mac bulunamadi.")
     
     st.divider()
