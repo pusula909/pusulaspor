@@ -717,7 +717,7 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
             except Exception as ic_hata:
                 son_hata = str(ic_hata)
                 continue
-        except Exception as e:
+     except Exception as e:
      son_hata = str(e)
 
  groq_anahtar = str(st.secrets.get("GROQ_KEY", os.environ.get("GROQ_KEY", ""))).strip()
