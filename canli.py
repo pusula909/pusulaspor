@@ -725,7 +725,7 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
     if groq_anahtar:
         g_base = "https://" + "api." + "groq.com" + "/openai/v1"
         g_headers = {"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"}
-       denenecek_modeller = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "qwen/qwen3-32b"]
+        denenecek_modeller = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "qwen/qwen3-32b"]
         for aktif_model in denenecek_modeller[:6]:
             try:
                 g_resp = requests.post(
