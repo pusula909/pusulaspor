@@ -562,10 +562,11 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
         return None
     soru = (
         f"Sen profesyonel bir {spor_turu} veri analistisin. {lig_adi} ligindeki {ev_ad} (Form: {ev_rec}) vs {dep_ad} (Form: {dep_rec}) "
-        f"macini incele. Mac durumu: {durum_metni}. Ev sahibi eksikler: {ev_eksik}. Deplasman eksikler: {dep_eksik}. "
-        f"Turkce olarak 3 kisa madde halinde: 1) Taktik ve tempo beklentisi, 2) Eksik oyuncularin oyuna etkisi, 3) Muhtemel ilk 5 / kadro yorumu yap."
+        f"macini incele. Mac durumu: {durum_metni}. "
+        f"{ev_ad} eksikler: {ev_eksik}. {dep_ad} eksikler: {dep_eksik}. "
+        f"Sadece su an aktif olan 2026-2027 sezonu guncel kadrolarini baz al (eski veya takas olmus oyunculari kesinlikle yazma). "
+        f"Turkce olarak 3 kisa madde halinde: 1) Taktik ve tempo beklentisi, 2) Eksik oyuncularin oyuna etkisi, 3) Guncel kadro ve kilit oyuncu yorumu yap."
     )
-
     son_hata =""
     modeller = ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview")
      
