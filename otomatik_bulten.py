@@ -91,7 +91,7 @@ def _el_get(t):
     return {"events": ev}
 
 
-def tahmin_hesapla(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi):
+def en_guclu_tahmini_bul(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi):
     try:
         ev_p = list(int(x) for x in ev_rec.split("-"))
         dep_p = list(int(x) for x in dep_rec.split("-"))
@@ -100,17 +100,54 @@ def tahmin_hesapla(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi):
         ev_g = max(0.08, min(0.92, (ev_p.pop(0) / ev_top) + 0.06))
         dep_g = max(0.08, min(0.92, (dep_p.pop(0) / dep_top)))
         fark = abs(ev_g - dep_g)
+        secenekler = list()
 
         if spor_turu == "Futbol":
             if ev_g > dep_g + 0.14:
-                return f"{ev_ad} Kazanir (MS 1)", min(89, int(56 + fark * 45))
+                secenekler.append({"tahmin": f"{ev_ad} Kazanir (MS 1)", "guven": min(89, int(56 + fark * 45))})
             elif dep_g > ev_g + 0.14:
-                return f"{dep_ad} Kazanir (MS 2)", min(88, int(55 + fark * 45))
-            return "Toplam 1.5 UST", min(84, int(68 + (ev_g + dep_g) * 10))
+                secenekler.append({"tahmin": f"{dep_ad} Kazanir (MS 2)", "guven": min(88, int(55 + fark * 45))})
+            else:
+                secenekler.append({"tahmin": "Cifte Sans 1X (MS 0)", "guven": min(75, int(64 - fark * 20))})
+
+            if ev_g >= 0.54 and dep_g >= 0.48:
+                secenekler.append({"tahmin": "Toplam 2.5 UST", "guven": min(84, int(62 + (ev_g + dep_g) * 15))})
+            elif ev_g <= 0.36 and dep_g <= 0.36:
+                secenekler.append({"tahmin": "Toplam 2.5 ALT", "guven": min(81, int(63 + (1 - (ev_g + dep_g)) * 16))})
+            else:
+                secenekler.append({"tahmin": "Toplam 1.5 UST", "guven": min(85, int(68 + (ev_g + dep_g) * 10))})
+
+            if ev_g >= 0.48 and dep_g >= 0.48:
+                secenekler.append({"tahmin": "KG VAR (Karsilikli Gol)", "guven": min(82, int(60 + min(ev_g, dep_g) * 32))})
+
+            if ev_g >= 0.62:
+                secenekler.append({"tahmin": f"{ev_ad} 1.5 UST Gol", "guven": min(83, int(55 + ev_g * 34))})
+            elif dep_g <= 0.32:
+                secenekler.append({"tahmin": f"{dep_ad} 1.5 ALT Gol", "guven": min(81, int(80 - dep_g * 28))})
         else:
             if ev_g >= dep_g:
-                return f"{ev_ad} Kazanir (MS 1)", min(89, int(54 + fark * 48))
-            return f"{dep_ad} Kazanir (MS 2)", min(88, int(54 + fark * 48))
+                secenekler.append({"tahmin": f"{ev_ad} Kazanir (MS 1)", "guven": min(89, int(54 + fark * 48))})
+            else:
+                secenekler.append({"tahmin": f"{dep_ad} Kazanir (MS 2)", "guven": min(88, int(54 + fark * 48))})
+
+            beklenen_toplam = round(154 + (ev_g + dep_g) * 14) + 0.5 if lig_adi == "EuroLeague" else round(212 + (ev_g + dep_g) * 14) + 0.5
+            if (ev_g + dep_g) >= 1.12:
+                secenekler.append({"tahmin": f"Mac Toplami {beklenen_toplam} UST", "guven": min(85, int(60 + (ev_g + dep_g) * 18))})
+            elif (ev_g + dep_g) <= 0.88:
+                secenekler.append({"tahmin": f"Mac Toplami {beklenen_toplam} ALT", "guven": min(83, int(75 - (ev_g + dep_g) * 12))})
+
+            taban_ev = 77 if lig_adi == "EuroLeague" else 105
+            ev_barem = round(taban_ev + ev_g * 14) + 0.5
+            if ev_g >= 0.58:
+                secenekler.append({"tahmin": f"{ev_ad} {ev_barem} UST Sayi", "guven": min(84, int(55 + ev_g * 34))})
+
+            taban_dep = 75 if lig_adi == "EuroLeague" else 103
+            dep_barem = round(taban_dep + dep_g * 14) + 0.5
+            if dep_g <= 0.38:
+                secenekler.append({"tahmin": f"{dep_ad} {dep_barem} ALT Sayi", "guven": min(82, int(80 - dep_g * 28))})
+
+        en_iyi = sorted(secenekler, key=lambda x: x["guven"], reverse=True).pop(0)
+        return en_iyi["tahmin"], en_iyi["guven"]
     except Exception:
         return "Form Analizi", 55
 
@@ -135,7 +172,7 @@ def bulten_olustur_ve_gonder():
                     ev_r = ev_t.get("records", list()).pop(0).get("summary", "1-1") if ev_t.get("records") else "1-1"
                     dep_r = dep_t.get("records", list()).pop(0).get("summary", "1-1") if dep_t.get("records") else "1-1"
                     saat = ev.get("status", {}).get("type", {}).get("shortDetail", "")
-                    tahmin, guven = tahmin_hesapla(ev_ad, dep_ad, ev_r, dep_r, s_adi, l_adi)
+                    tahmin, guven = en_guclu_tahmini_bul(ev_ad, dep_ad, ev_r, dep_r, s_adi, l_adi)
                     firsatlar.append({
                         "lig": l_adi,
                         "mac": f"{ev_ad} - {dep_ad}",
@@ -157,7 +194,7 @@ def bulten_olustur_ve_gonder():
         if GEMINI_AKTIF and GEMINI_KEY:
             try:
                 client = genai.Client(api_key=GEMINI_KEY, http_options={"api_version": "v1beta"})
-                ozet_istek = "Su maclar icin tek paragraflik kisa, motive edici bir gunun bulten yorumu yaz (maksimum 3 cumle): " + ", ".join(list(x["mac"] for x in en_iyiler))
+                ozet_istek = "Su maclar ve secilen tahminler icin 3 cumlelik kisa bir gunun bulten yorumu yaz: " + ", ".join(list(f"{x['mac']} ({x['tahmin']})" for x in en_iyiler))
                 yanit = client.models.generate_content(model="gemini-2.5-flash", contents=ozet_istek)
                 if yanit and yanit.text:
                     satirlar.append(f"\n🤖 AI Gunun Ozeti:\n{yanit.text.strip()}")
