@@ -750,7 +750,7 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
                 if yanit_metin:
                     return yanit_metin
             elif "error" in g_resp:
-                son_hata = f"Groq Hatasi: {g_resp['error'].get('message', '')}"                son_hata = f"Groq Hatasi: {g_resp['error'].get('message', '')}"
+                son_hata = f"Groq Hatasi: {g_resp['error'].get('message', '')}"                
         except Exception as ge:
             son_hata = f"Groq Baglanti: {ge}"
 
