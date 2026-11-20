@@ -1086,7 +1086,7 @@ else:
         st.markdown(f"*Durum:* {satir['Dakika / Ceyrek']}  |  *Periyot / IY Detayi:* {satir['IY / Ceyrek Skorlari']}")
         if satir["State"] == "in":
             st.warning(f"⚡ Canli Koc Hamlesi & Rotasyon Etkisi: {koc_etkisi_metni}")
-        df_goster = pd.DataFrame(detayli_tahmin_satirlari).drop(columns=("GuvenInt",))
+        df_goster = pd.DataFrame(detayli_tahmin_satirlari).drop(columns=("GuvenInt",), errors="ignore")
         st.dataframe(df_goster, use_container_width=True, hide_index=True)
         if gemini_api_key:
             with st.spinner("Gercek Yapay Zeka (Gemini) maci ve kadrolari yorumluyor..."):
