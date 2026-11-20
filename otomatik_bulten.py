@@ -116,17 +116,22 @@ def en_guclu_tahmini_bul(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi):
         dep_g = max(0.08, min(0.92, (dep_p.pop(0) / dep_top)))
         fark = abs(ev_g - dep_g)
         secenekler = list()
+        deger_etiket = ""
 
         if spor_turu == "Futbol":
             if ev_g > dep_g + 0.14:
                 secenekler.append({"tahmin": f"{ev_ad} Kazanir (MS 1)", "guven": min(89, int(56 + fark * 45))})
             elif dep_g > ev_g + 0.14:
                 secenekler.append({"tahmin": f"{dep_ad} Kazanir (MS 2)", "guven": min(88, int(55 + fark * 45))})
+                if dep_g >= 0.65:
+                    deger_etiket = "💎 DEPLASMAN DEGER FIRSATI"
             else:
                 secenekler.append({"tahmin": "Cifte Sans 1X (MS 0)", "guven": min(75, int(64 - fark * 20))})
 
             if ev_g >= 0.54 and dep_g >= 0.48:
                 secenekler.append({"tahmin": "Toplam 2.5 UST", "guven": min(84, int(62 + (ev_g + dep_g) * 15))})
+                if ev_g >= 0.62 and dep_g >= 0.58:
+                    deger_etiket = "💎 YUKSEK HUCUM VALUE (2.5 UST)"
             elif ev_g <= 0.36 and dep_g <= 0.36:
                 secenekler.append({"tahmin": "Toplam 2.5 ALT", "guven": min(81, int(63 + (1 - (ev_g + dep_g)) * 16))})
             else:
@@ -144,10 +149,14 @@ def en_guclu_tahmini_bul(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi):
                 secenekler.append({"tahmin": f"{ev_ad} Kazanir (MS 1)", "guven": min(89, int(54 + fark * 48))})
             else:
                 secenekler.append({"tahmin": f"{dep_ad} Kazanir (MS 2)", "guven": min(88, int(54 + fark * 48))})
+                if dep_g >= 0.68:
+                    deger_etiket = "💎 DEPLASMAN FAVORISI VALUE"
 
             beklenen_toplam = round(154 + (ev_g + dep_g) * 14) + 0.5 if lig_adi == "EuroLeague" else round(212 + (ev_g + dep_g) * 14) + 0.5
             if (ev_g + dep_g) >= 1.12:
                 secenekler.append({"tahmin": f"Mac Toplami {beklenen_toplam} UST", "guven": min(85, int(60 + (ev_g + dep_g) * 18))})
+                if (ev_g + dep_g) >= 1.28:
+                    deger_etiket = "💎 EKSTREM TEMPO FIRSATI"
             elif (ev_g + dep_g) <= 0.88:
                 secenekler.append({"tahmin": f"Mac Toplami {beklenen_toplam} ALT", "guven": min(83, int(75 - (ev_g + dep_g) * 12))})
 
@@ -162,9 +171,9 @@ def en_guclu_tahmini_bul(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi):
                 secenekler.append({"tahmin": f"{dep_ad} {dep_barem} ALT Sayi", "guven": min(82, int(80 - dep_g * 28))})
 
         en_iyi = sorted(secenekler, key=lambda x: x["guven"], reverse=True).pop(0)
-        return en_iyi["tahmin"], en_iyi["guven"]
+        return en_iyi["tahmin"], en_iyi["guven"], deger_etiket
     except Exception:
-        return "Form Analizi", 55
+        return "Form Analizi", 55, ""
 
 
 def bulten_olustur_ve_gonder():
@@ -187,7 +196,7 @@ def bulten_olustur_ve_gonder():
                     ev_r = ev_t.get("records", list()).pop(0).get("summary", "1-1") if ev_t.get("records") else "1-1"
                     dep_r = dep_t.get("records", list()).pop(0).get("summary", "1-1") if dep_t.get("records") else "1-1"
                     saat = ev.get("status", {}).get("type", {}).get("shortDetail", "")
-                    tahmin, guven = en_guclu_tahmini_bul(ev_ad, dep_ad, ev_r, dep_r, s_adi, l_adi)
+                    tahmin, guven, deger = en_guclu_tahmini_bul(ev_ad, dep_ad, ev_r, dep_r, s_adi, l_adi)
                     firsatlar.append({
                         "id": str(ev.get("id", "")),
                         "yol": l_yolu,
@@ -200,6 +209,7 @@ def bulten_olustur_ve_gonder():
                         "saat": saat,
                         "tahmin": tahmin,
                         "guven": guven,
+                        "deger": deger,
                     })
             except Exception:
                 pass
@@ -213,7 +223,8 @@ def bulten_olustur_ve_gonder():
     else:
         satirlar = list((f"🏆 {tarih_guzel} PUSULASPOR AI GUNUN BANKOLARI\n",))
         for idx, m in enumerate(en_iyiler, 1):
-            satirlar.append(f"{idx}. [{m['lig']}] {m['mac']} ({m['saat']})\n   👉 Tahmin: {m['tahmin']} (Guven: %{m['guven']})")
+            etiket_ek = f" | {m['deger']}" if m.get("deger") else ""
+            satirlar.append(f"{idx}. [{m['lig']}] {m['mac']} ({m['saat']})\n   👉 Tahmin: {m['tahmin']} (Guven: %{m['guven']}){etiket_ek}")
 
         if GEMINI_AKTIF and GEMINI_KEY:
             try:
@@ -238,6 +249,14 @@ def sonuc_raporu_kontrol_et():
 
     if not kayitli_maclar:
         return
+
+    arsiv = list()
+    if os.path.exists("haftalik_arsiv.json"):
+        try:
+            with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
+                arsiv = json.load(f)
+        except Exception:
+            arsiv = list()
 
     rapor_tarih = kayitli_maclar.get("tarih_guzel", tarih_guzel)
     satirlar = list((f"📊 {rapor_tarih} PUSULASPOR AI GECE SONUC KARNESI\n",))
@@ -299,12 +318,31 @@ def sonuc_raporu_kontrol_et():
         else:
             ikon = "❌ YATTI"
 
+        arsiv.append({"tarih": rapor_tarih, "lig": m["lig"], "tuttu": tuttu})
         satirlar.append(f"{idx}. [{m['lig']}] {m['mac']} -> Skor: {ev_s}-{dep_s}\n   🎯 {t} | {ikon}")
+
+    with open("haftalik_arsiv.json", "w", encoding="utf-8") as f:
+        json.dump(arsiv[-70:], f, ensure_ascii=False, indent=2)
 
     if biten_sayisi > 0:
         oran = int((tuttu_sayisi / biten_sayisi) * 100)
         satirlar.append(f"\n📈 GENEL BASARI: {biten_sayisi} Macta {tuttu_sayisi} Isabet (%{oran})")
     telegram_gonder("\n".join(satirlar))
+
+    if suan_tr.weekday() == 0 and len(arsiv) >= 5:
+        lig_ozet = {}
+        for kayit in arsiv[-35:]:
+            l_ad = kayit["lig"]
+            if l_ad not in lig_ozet:
+                lig_ozet[l_ad] = {"top": 0, "hit": 0}
+            lig_ozet[l_ad]["top"] += 1
+            if kayit["tuttu"]:
+                lig_ozet[l_ad]["hit"] += 1
+        h_satir = list(("🏅 HAFTALIK LIG BAZLI BASARI KARNESI\n",))
+        for l_ad, v in lig_ozet.items():
+            yuzde = int((v["hit"] / v["top"]) * 100)
+            h_satir.append(f"• {l_ad}: {v['top']} Macta {v['hit']} Isabet (%{yuzde})")
+        telegram_gonder("\n".join(h_satir))
 
 
 if __name__ == "__main__":
