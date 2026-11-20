@@ -22,16 +22,18 @@ jobs:
           python-version: '3.11'
 
       - name: Kutuphaneleri Yukle
-        run: pip install requests
+        run: pip install requests google-genai
 
       - name: Canli Maclari Tara ve Telegrama Gonder
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
         run: |
           python canli_tarayici.py
           git config user.name "PusulaSpor Bot"
           git config user.email "bot@pusulaspor.local"
           git add canli_uyarilar.json
           git commit -m "Canli uyari hafizasi guncellendi" || exit 0
+          git pull --rebase origin main || exit 0
           git push
