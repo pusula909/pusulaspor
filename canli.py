@@ -1063,9 +1063,10 @@ else:
                 "Ev Form": ev_rec,
                 "Dep Form": dep_rec,
                 "Hizli AI Ozet": ozet_tahmin,
+                "Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec),
+
             }
         )
-"Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec),
     if maclar:
         en_iyi_kartlar = sorted(banko_havuzu, key=lambda x: x["guven_int"], reverse=True)[:3]
         if en_iyi_kartlar:
