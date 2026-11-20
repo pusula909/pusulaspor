@@ -1,4 +1,6 @@
+import json
 import os
+import sys
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 import requests
@@ -39,6 +41,12 @@ TUM_LIGLER = {
 }
 
 
+def telegram_gonder(mesaj):
+    if TG_TOKEN and TG_CHAT_ID:
+        tg_adres = "https://" + "api." + "telegram.org" + "/bot" + TG_TOKEN + "/sendMessage"
+        requests.post(tg_adres, data={"chat_id": TG_CHAT_ID, "text": mesaj}, timeout=10)
+
+
 def _el_get(t):
     ev = list()
     try:
@@ -48,15 +56,19 @@ def _el_get(t):
         sezon_kodu = f"E{yil if ay >= 8 else yil - 1}"
         el_host = "https://api-live." + "euroleague.net/v1/"
 
-        win_map, loss_map = {}, {}
+        win_map, loss_map, res_map = {}, {}, {}
         try:
             r_res = requests.get(f"{el_host}results?seasonCode={sezon_kodu}", headers=h, timeout=8)
             for g in ET.fromstring(r_res.content).findall(".//game"):
+                gc = g.findtext("gamecode", "").strip().replace(f"{sezon_kodu}_", "")
                 t1 = g.findtext("hometeam", "").strip()
                 t2 = g.findtext("awayteam", "").strip()
                 hs = int(g.findtext("homescore", "0") or 0)
                 ds = int(g.findtext("awayscore", "0") or 0)
-                if g.findtext("played", "false").lower() == "true" and (hs > 0 or ds > 0):
+                played = g.findtext("played", "false").lower() == "true"
+                if gc:
+                    res_map[gc] = {"hs": str(hs), "ds": str(ds), "state": "post" if played else "pre"}
+                if played and (hs > 0 or ds > 0):
                     if hs > ds:
                         win_map[t1] = win_map.get(t1, 0) + 1
                         loss_map[t2] = loss_map.get(t2, 0) + 1
@@ -75,14 +87,17 @@ def _el_get(t):
                 h_ad = i.findtext("hometeam", "").strip()
                 a_ad = i.findtext("awayteam", "").strip()
                 s_time = i.findtext("startime", "20:00").strip()
+                gc = i.findtext("gamecode", "").strip().replace(f"{sezon_kodu}_", "")
+                info = res_map.get(gc, {"hs": "0", "ds": "0", "state": "pre"})
                 ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
                 dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
                 ev.append({
-                    "status": {"type": {"shortDetail": s_time}},
+                    "id": gc,
+                    "status": {"type": {"state": info["state"], "shortDetail": s_time}},
                     "competitions": list(({
                         "competitors": list((
-                            {"homeAway": "home", "team": {"displayName": h_ad}, "records": list(({"summary": ev_r},))},
-                            {"homeAway": "away", "team": {"displayName": a_ad}, "records": list(({"summary": dep_r},))},
+                            {"homeAway": "home", "team": {"displayName": h_ad}, "score": info["hs"], "records": list(({"summary": ev_r},))},
+                            {"homeAway": "away", "team": {"displayName": a_ad}, "score": info["ds"], "records": list(({"summary": dep_r},))},
                         ))
                     },)),
                 })
@@ -174,7 +189,13 @@ def bulten_olustur_ve_gonder():
                     saat = ev.get("status", {}).get("type", {}).get("shortDetail", "")
                     tahmin, guven = en_guclu_tahmini_bul(ev_ad, dep_ad, ev_r, dep_r, s_adi, l_adi)
                     firsatlar.append({
+                        "id": str(ev.get("id", "")),
+                        "yol": l_yolu,
+                        "tarih": tarih,
+                        "tarih_guzel": tarih_guzel,
                         "lig": l_adi,
+                        "ev": ev_ad,
+                        "dep": dep_ad,
                         "mac": f"{ev_ad} - {dep_ad}",
                         "saat": saat,
                         "tahmin": tahmin,
@@ -184,6 +205,9 @@ def bulten_olustur_ve_gonder():
                 pass
 
     en_iyiler = sorted(firsatlar, key=lambda x: x["guven"], reverse=True)[:5]
+    with open("son_bulten.json", "w", encoding="utf-8") as f:
+        json.dump(en_iyiler, f, ensure_ascii=False, indent=2)
+
     if not en_iyiler:
         mesaj = f"📅 {tarih_guzel} PusulaSpor AI Bulteni\nBugun icin bultende uygun mac bulunamadi."
     else:
@@ -203,10 +227,88 @@ def bulten_olustur_ve_gonder():
 
         mesaj = "\n".join(satirlar)
 
-    if TG_TOKEN and TG_CHAT_ID:
-        tg_adres = "https://" + "api." + "telegram.org" + "/bot" + TG_TOKEN + "/sendMessage"
-        requests.post(tg_adres, data={"chat_id": TG_CHAT_ID, "text": mesaj}, timeout=10)
+    telegram_gonder(mesaj)
+
+
+def sonuc_raporu_kontrol_et():
+    if not os.path.exists("son_bulten.json"):
+        return
+    with open("son_bulten.json", "r", encoding="utf-8") as f:
+        kayitli_maclar = json.load(f)
+
+    if not kayitli_maclar:
+        return
+
+    rapor_tarih = kayitli_maclar.get("tarih_guzel", tarih_guzel)
+    satirlar = list((f"📊 {rapor_tarih} PUSULASPOR AI GECE SONUC KARNESI\n",))
+    tuttu_sayisi = 0
+    biten_sayisi = 0
+
+    for idx, m in enumerate(kayitli_maclar, 1):
+        ev_s, dep_s, st_code = 0, 0, "pre"
+        try:
+            resp = (
+                _el_get(m["tarih"])
+                if m["yol"] == "euroleague_resmi"
+                else requests.get(f"{url_basi}{m['yol']}/scoreboard?dates={m['tarih']}", headers=basliklar, timeout=8).json()
+            )
+            for ev in resp.get("events", list()):
+                if str(ev.get("id", "")) == str(m["id"]):
+                    st_code = ev.get("status", {}).get("type", {}).get("state", "pre")
+                    comp = ev.get("competitions", list()).pop(0)
+                    for t_obj in comp.get("competitors", list()):
+                        if t_obj.get("homeAway") == "home":
+                            ev_s = int(float(t_obj.get("score", 0) or 0))
+                        else:
+                            dep_s = int(float(t_obj.get("score", 0) or 0))
+                    break
+        except Exception:
+            pass
+
+        if st_code != "post":
+            satirlar.append(f"{idx}. [{m['lig']}] {m['mac']}\n   ⏳ Mac Henuz Tamamlanmadi ({ev_s}-{dep_s})")
+            continue
+
+        biten_sayisi += 1
+        t = m["tahmin"]
+        top_s = ev_s + dep_s
+        tuttu = False
+
+        if "(MS 1)" in t and ev_s > dep_s:
+            tuttu = True
+        elif "(MS 2)" in t and dep_s > ev_s:
+            tuttu = True
+        elif "(MS 0)" in t and ev_s >= dep_s:
+            tuttu = True
+        elif "KG VAR" in t and ev_s > 0 and dep_s > 0:
+            tuttu = True
+        elif "UST" in t:
+            barem = float(list(x for x in t.split() if "." in x).pop(0))
+            hedef = ev_s if t.startswith(m["ev"]) else (dep_s if t.startswith(m["dep"]) else top_s)
+            if hedef > barem:
+                tuttu = True
+        elif "ALT" in t:
+            barem = float(list(x for x in t.split() if "." in x).pop(0))
+            hedef = ev_s if t.startswith(m["ev"]) else (dep_s if t.startswith(m["dep"]) else top_s)
+            if hedef < barem:
+                tuttu = True
+
+        if tuttu:
+            tuttu_sayisi += 1
+            ikon = "✅ TUTTU"
+        else:
+            ikon = "❌ YATTI"
+
+        satirlar.append(f"{idx}. [{m['lig']}] {m['mac']} -> Skor: {ev_s}-{dep_s}\n   🎯 {t} | {ikon}")
+
+    if biten_sayisi > 0:
+        oran = int((tuttu_sayisi / biten_sayisi) * 100)
+        satirlar.append(f"\n📈 GENEL BASARI: {biten_sayisi} Macta {tuttu_sayisi} Isabet (%{oran})")
+    telegram_gonder("\n".join(satirlar))
 
 
 if __name__ == "__main__":
-    bulten_olustur_ve_gonder()
+    if len(sys.argv) > 1 and sys.argv.pop(1) == "rapor":
+        sonuc_raporu_kontrol_et()
+    else:
+        bulten_olustur_ve_gonder()
