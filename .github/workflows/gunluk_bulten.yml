@@ -3,7 +3,16 @@ name: Gunluk PusulaSpor AI Bulteni
 on:
   schedule:
     - cron: '0 8 * * *'
+    - cron: '30 1 * * *'
   workflow_dispatch:
+    inputs:
+      islem:
+        description: 'Calistirilacak Mod (bulten veya rapor)'
+        required: false
+        default: 'bulten'
+
+permissions:
+  contents: write
 
 jobs:
   bulten-gonder:
@@ -20,9 +29,23 @@ jobs:
       - name: Kutuphaneleri Yukle
         run: pip install requests google-genai
 
-      - name: Bulteni Calistir ve Telegrama Gonder
+      - name: Sabah Bulteni Olustur ve Kaydet
+        if: github.event.schedule != '30 1 * * *' && github.event.inputs.islem != 'rapor'
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
-        run: python otomatik_bulten.py
+        run: |
+          python otomatik_bulten.py
+          git config user.name "PusulaSpor Bot"
+          git config user.email "bot@pusulaspor.local"
+          git add son_bulten.json
+          git commit -m "Gunluk bulten kaydi" || exit 0
+          git push
+
+      - name: Gece Sonuc Raporunu Kontrol Et
+        if: github.event.schedule == '30 1 * * *' || github.event.inputs.islem == 'rapor'
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: python otomatik_bulten.py rapor
