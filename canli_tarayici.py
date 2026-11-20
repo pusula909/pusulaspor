@@ -64,15 +64,7 @@ def cift_motor_ai_sor(soru):
     if GROQ_KEY:
         g_base = "https://" + "api." + "groq.com" + "/openai/v1"
         g_headers = {"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"}
-        denenecek_modeller = list()
-        try:
-            m_list = requests.get(f"{g_base}/models", headers=g_headers, timeout=6).json().get("data", list())
-            for x in m_list:
-                mid = x.get("id", "")
-                if mid and all(k not in mid.lower() for k in ("whisper", "guard", "tts", "safeguard")):
-                    denenecek_modeller.append(mid)
-        except Exception:
-            pass
+        denenecek_modeller = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "qwen/qwen3-32b"]
 
         for aktif_model in denenecek_modeller[:6]:
             try:
@@ -416,10 +408,10 @@ def canli_maclari_tara():
                             uyari_tipi = "🔥 YUKSEK TEMPO / ROTASYON ANALIZI"
                         elif ("Q4" in detay_sure or "4C" in detay_sure or "OT" in detay_sure) and fark <= 6:
                             uyari_tipi = "⏳ CRUNCH TIME (SON CEYREK KARARI)"
-                        elif ev_g >= 0.65 and (dep_s - ev_s) >= 6:
+                        elif "Q4" not in detay_sure and "4C" not in detay_sure and ev_g >= 0.65 and 6 <= (dep_s - ev_s) <= 14:
                             uyari_tipi = f"🔥 FAVORI GERIDE ({ev_ad} Takipte)"
-                        elif dep_g >= 0.65 and (ev_s - dep_s) >= 6:
-                            uyari_tipi = f"🔥 FAVORI GERIDE ({dep_ad} Takipte)"
+                        elif "Q4" not in detay_sure and "4C" not in detay_sure and dep_g >= 0.65 and 6 <= (ev_s - dep_s) <= 14:
+                            uyari_tipi = f"🔥 FAVORI GERIDE ({dep_ad} Takipte
                     else:
                         rakamlar = "".join(c for c in detay_sure if c.isdigit())
                         dk = int(rakamlar) if rakamlar else 0
