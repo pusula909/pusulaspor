@@ -1138,6 +1138,27 @@ else:
         st.write(f"*{satir['Ev Sahibi']} Muhtemel Kadro:*", ", ".join(ev_kadro) if ev_kadro else "Lig verisi bekleniyor")
         st.write(f"*{satir['Deplasman']} Eksikler:*", ", ".join(dep_eksikler) if dep_eksikler else "Bildirilen eksik yok")
         st.write(f"*{satir['Deplasman']} Muhtemel Kadro:*", ", ".join(dep_kadro) if dep_kadro else "Lig verisi bekleniyor")
+        st.divider()
+        st.subheader(f"📊 {satir['Ev Sahibi']} vs {satir['Deplasman']} | Guc & Tempo Karsilastirma Grafigi")
+        try:
+            ev_p_g = list(int(x) for x in satir["Ev Form"].split("-"))
+            dep_p_g = list(int(x) for x in satir["Dep Form"].split("-"))
+            ev_oran = round((ev_p_g.pop(0) / (sum(ev_p_g) if sum(ev_p_g) > 0 else 1)) * 100, 1)
+            dep_oran = round((dep_p_g.pop(0) / (sum(dep_p_g) if sum(dep_p_g) > 0 else 1)) * 100, 1)
+            taban_skor = 80.0 if spor == "Basketbol" else 1.4
+            ev_beklenen = round(taban_skor * (0.85 + (ev_oran / 200)), 1)
+            dep_beklenen = round(taban_skor * (0.85 + (dep_oran / 200)), 1)
+
+            grafik_df = pd.DataFrame(
+                {
+                    satir["Ev Sahibi"]: (ev_oran, ev_beklenen),
+                    satir["Deplasman"]: (dep_oran, dep_beklenen),
+                },
+                index=("Galibiyet Yuzdesi (%)", "Beklenen Skor / Tempo"),
+            )
+            st.bar_chart(grafik_df, use_container_width=True)
+        except Exception:
+            pass
     else:
         st.warning("Bu tarihte mac bulunamadi. Sol menuden tarihi degistirin.")
 
