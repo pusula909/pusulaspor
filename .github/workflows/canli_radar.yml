@@ -1,0 +1,37 @@
+name: 7/24 Canli Mac Radari
+
+on:
+  schedule:
+    - cron: '*/15 15-23 * * *'
+    - cron: '*/15 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  canli-tara:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu Cek
+        uses: actions/checkout@v4
+
+      - name: Python Kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Kutuphaneleri Yukle
+        run: pip install requests
+
+      - name: Canli Maclari Tara ve Telegrama Gonder
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          python canli_tarayici.py
+          git config user.name "PusulaSpor Bot"
+          git config user.email "bot@pusulaspor.local"
+          git add canli_uyarilar.json
+          git commit -m "Canli uyari hafizasi guncellendi" || exit 0
+          git push
