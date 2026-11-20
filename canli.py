@@ -41,11 +41,7 @@ def _el_get(t):
 
         win_map, loss_map, results_map = {}, {}, {}
         try:
-            r_res = requests.get(
-                f"{el_host}results?seasonCode={sezon_kodu}",
-                headers=h,
-                timeout=8,
-            )
+            r_res = requests.get(f"{el_host}results?seasonCode={sezon_kodu}", headers=h, timeout=8)
             for g in ET.fromstring(r_res.content).findall(".//game"):
                 gc = g.findtext("gamecode", "").strip().replace(f"{sezon_kodu}_", "")
                 t1 = g.findtext("hometeam", "").strip()
@@ -67,11 +63,7 @@ def _el_get(t):
         except Exception:
             pass
 
-        r_sch = requests.get(
-            f"{el_host}schedules?seasonCode={sezon_kodu}",
-            headers=h,
-            timeout=8,
-        )
+        r_sch = requests.get(f"{el_host}schedules?seasonCode={sezon_kodu}", headers=h, timeout=8)
         items = ET.fromstring(r_sch.content).findall(".//item")
         suan_tr = datetime.now(timezone(timedelta(hours=3))).replace(tzinfo=None)
 
@@ -103,7 +95,7 @@ def _el_get(t):
                         st_code = "in"
                         detay = "Canli"
 
-                  if st_code == "pre":
+                if st_code == "pre":
                     try:
                         m_saat = datetime.strptime(f"{d_raw} {s_time}", "%b %d, %Y %H:%M") + timedelta(hours=2)
                         if m_saat <= suan_tr <= m_saat + timedelta(hours=3):
@@ -111,7 +103,8 @@ def _el_get(t):
                             detay = "Canli Oynaniyor"
                     except Exception:
                         pass
-                 if st_code in ("in", "post") and gc:
+
+                if st_code in ("in", "post") and gc:
                     try:
                         live_json_url = "https://live." + f"euroleague.net/api/Boxscore?gamecode={gc}&seasoncode={sezon_kodu}"
                         lj = requests.get(live_json_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=6).json()
@@ -138,11 +131,7 @@ def _el_get(t):
 
                     if hs == "0" and ds == "0":
                         try:
-                            gr = requests.get(
-                                f"{el_host}games?seasonCode={sezon_kodu}&gameCode={gc}",
-                                headers=h,
-                                timeout=6,
-                            )
+                            gr = requests.get(f"{el_host}games?seasonCode={sezon_kodu}&gameCode={gc}", headers=h, timeout=6)
                             g_xml = ET.fromstring(gr.content)
                             sa1 = g_xml.findtext(".//TotalPointsA", g_xml.findtext(".//ScoreA", "")).strip()
                             sb1 = g_xml.findtext(".//TotalPointsB", g_xml.findtext(".//ScoreB", "")).strip()
@@ -155,8 +144,45 @@ def _el_get(t):
                                     ceyrekler_ev.append({"value": qa, "displayValue": qa})
                                     ceyrekler_dep.append({"value": qb, "displayValue": qb})
                         except Exception:
-                            pass   return {"events": ev}
+                            pass
 
+                ev_r = f"{win_map.get(h_ad, 0)}-{loss_map.get(h_ad, 0)}"
+                dep_r = f"{win_map.get(a_ad, 0)}-{loss_map.get(a_ad, 0)}"
+
+                ev.append(
+                    {
+                        "id": gc,
+                        "status": {"type": {"state": st_code, "shortDetail": detay}},
+                        "competitions": list(
+                            (
+                                {
+                                    "status": {"type": {"state": st_code, "shortDetail": detay}},
+                                    "competitors": list(
+                                        (
+                                            {
+                                                "homeAway": "home",
+                                                "team": {"id": "1", "displayName": h_ad},
+                                                "score": hs,
+                                                "records": list(({"summary": ev_r},)),
+                                                "linescores": ceyrekler_ev,
+                                            },
+                                            {
+                                                "homeAway": "away",
+                                                "team": {"id": "2", "displayName": a_ad},
+                                                "score": ds,
+                                                "records": list(({"summary": dep_r},)),
+                                                "linescores": ceyrekler_dep,
+                                            },
+                                        )
+                                    ),
+                                },
+                            )
+                        ),
+                    }
+                )
+    except Exception:
+        pass
+    return {"events": ev}
 if "eski_skorlar" not in st.session_state:
     st.session_state.eski_skorlar = {}
 if "radar_sonuclari" not in st.session_state:
