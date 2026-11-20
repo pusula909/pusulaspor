@@ -566,8 +566,9 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
         f"Turkce olarak 3 kisa madde halinde: 1) Taktik ve tempo beklentisi, 2) Eksik oyuncularin oyuna etkisi, 3) Muhtemel ilk 5 / kadro yorumu yap."
     )
 
-     modeller = ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview")
-     son_hata = ""
+son_hata =""
+modeller = ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview")
+     
     try:
         client = genai.Client(api_key=api_key.strip())
         for m in modeller:
