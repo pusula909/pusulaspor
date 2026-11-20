@@ -570,7 +570,7 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
     modeller = ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview")
      
     try:
-        client = genai.Client(api_key=api_key.strip())
+        client = genai.Client(api_key=api_key.strip(), http_options={"api_version": "v1beta"})
         for m in modeller:
             try:
                 yanit = client.models.generate_content(
