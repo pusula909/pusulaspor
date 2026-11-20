@@ -726,35 +726,37 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
         try:
             g_base = "https://" + "api." + "groq.com" + "/openai/v1"
             g_headers = {"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"}
-            aktif_model = "llama-3.1-8b-instant"
+            denenecek_modeller = list()
             try:
                 m_list = requests.get(f"{g_base}/models", headers=g_headers, timeout=6).json().get("data", list())
-                uygunlar = list(x["id"] for x in m_list if "whisper" not in x.get("id", "").lower() and "guard" not in x.get("id", "").lower() and "tts" not in x.get("id", "").lower())
-                if uygunlar:
-                    aktif_model = sorted(uygunlar, reverse=True).pop(0)
+                for x in m_list:
+                    mid = x.get("id", "")
+                    if mid and all(k not in mid.lower() for k in ("whisper", "guard", "tts", "safeguard")):
+                        denenecek_modeller.append(mid)
             except Exception:
                 pass
 
-            g_resp = requests.post(
-                f"{g_base}/chat/completions",
-                headers=g_headers,
-                json={
-                    "model": aktif_model,
-                    "messages": [{"role": "user", "content": soru}],
-                    "temperature": 0.4,
-                },
-                timeout=12,
-            ).json()
-            if "choices" in g_resp and len(g_resp["choices"]) > 0:
-                yanit_metin = g_resp["choices"]["message"]["content"].strip()
-                if yanit_metin:
-                    return yanit_metin
-            elif "error" in g_resp:
-                son_hata = f"Groq Hatasi: {g_resp['error'].get('message', '')}"                
-        except Exception as ge:
-            son_hata = f"Groq Baglanti: {ge}"
-
-    return f"AI baglanti uyarisi: {son_hata}"
+            for aktif_model in denenecek_modeller[:6]:
+                try:
+                    g_resp = requests.post(
+                        f"{g_base}/chat/completions",
+                        headers=g_headers,
+                        json={
+                            "model": aktif_model,
+                            "messages": [{"role": "user", "content": soru}],
+                            "temperature": 0.4,
+                            "max_tokens": 450,
+                        },
+                        timeout=12,
+                    ).json()
+                    if "choices" in g_resp and len(g_resp["choices"]) > 0:
+                        yanit_metin = g_resp["choices"].pop(0).get("message", {}).get("content", "").strip()
+                        if yanit_metin:
+                            return yanit_metin
+                    elif "error" in g_resp:
+                        son_hata = f"Groq ({aktif_model}): {g_resp['error'].get('message', '')}"
+                except Exception as ge:
+                    son_hata = f"Groq Baglanti: {ge}"    return f"AI baglanti uyarisi: {son_hata}"
 def excel_dosyasi_olustur(df):
     tampon = io.BytesIO()
     with pd.ExcelWriter(tampon, engine="openpyxl") as yazici:
