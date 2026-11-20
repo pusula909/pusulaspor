@@ -1032,6 +1032,11 @@ else:
             skor_gosterim = "vs"
 
         iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
+        firsat_etiket = canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)
+        firsat_anahtar = f"FIRSAT_{mac_id}_{firsat_etiket}"
+        if "🔥" in firsat_etiket and firsat_anahtar not in st.session_state.gonderilen_kritik_uyarilar:
+            if telegram_mesaj_gonder(tg_token, tg_chat_id, f"{firsat_etiket} | {ev_ad} {ev_s_int}-{dep_s_int} {dep_ad} ({durum_detay})"):
+                st.session_state.gonderilen_kritik_uyarilar.append(firsat_anahtar)
         _, ozet_tahmin, en_guclu = coklu_tahmin_motoru(
             ev_ad, dep_ad, ev_rec, dep_rec, spor, lig, 0, 0, state, ev_s_int, dep_s_int
         )
