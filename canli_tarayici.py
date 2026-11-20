@@ -130,19 +130,85 @@ def _el_get(t):
     return {"events": ev}
 
 
+def telegram_komutlari_isle(hafiza, canli_ozet_listesi):
+    if not TG_TOKEN or not TG_CHAT_ID:
+        return
+    son_update_id = hafiza.get("son_update_id", 0)
+    try:
+        upd_url = "https://" + "api." + "telegram.org" + "/bot" + TG_TOKEN + f"/getUpdates?offset={son_update_id + 1}&timeout=3"
+        r = requests.get(upd_url, timeout=8).json()
+        for item in r.get("result", list()):
+            uid = item.get("update_id", 0)
+            if uid > son_update_id:
+                son_update_id = uid
+            msg = item.get("message", {})
+            chat_id = str(msg.get("chat", {}).get("id", ""))
+            metin = msg.get("text", "").strip().lower()
+            if chat_id != str(TG_CHAT_ID):
+                continue
+
+            if "/canli" in metin:
+                if canli_ozet_listesi:
+                    telegram_gonder(f"📺 ANLIK CANLI MACLAR ({saat_str})\n\n" + "\n".join(canli_ozet_listesi[:15]))
+                else:
+                    telegram_gonder("Su an canli oynanan mac bulunmuyor.")
+            elif "/bulten" in metin:
+                if os.path.exists("son_bulten.json"):
+                    with open("son_bulten.json", "r", encoding="utf-8") as f:
+                        b_list = json.load(f)
+                    if b_list:
+                        satir = list(("🏆 KAYITLI GUNUN BULTENI\n",))
+                        for i, m in enumerate(b_list, 1):
+                            satir.append(f"{i}. [{m['lig']}] {m['mac']} -> {m['tahmin']} (%{m['guven']})")
+                        telegram_gonder("\n".join(satir))
+                    else:
+                        telegram_gonder("Henuz kayitli gunluk bulten yok.")
+                else:
+                    telegram_gonder("Henuz kayitli gunluk bulten yok.")
+            elif "/karne" in metin:
+                if os.path.exists("haftalik_arsiv.json"):
+                    with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
+                        arsiv = json.load(f)
+                    if arsiv:
+                        lig_ozet = {}
+                        for k in arsiv:
+                            l_ad = k["lig"]
+                            if l_ad not in lig_ozet:
+                                lig_ozet[l_ad] = {"top": 0, "hit": 0}
+                            lig_ozet[l_ad]["top"] += 1
+                            if k["tuttu"]:
+                                lig_ozet[l_ad]["hit"] += 1
+                        k_satir = list(("🏅 HAFTALIK BASARI KARNESI\n",))
+                        for l_ad, v in lig_ozet.items():
+                            yuzde = int((v["hit"] / v["top"]) * 100)
+                            k_satir.append(f"• {l_ad}: {v['top']} Macta {v['hit']} Isabet (%{yuzde})")
+                        telegram_gonder("\n".join(k_satir))
+                    else:
+                        telegram_gonder("Haftalik karne icin gece sonuclarinin kaydi bekleniyor.")
+                else:
+                    telegram_gonder("Haftalik karne icin gece sonuclarinin kaydi bekleniyor.")
+            elif "/yardim" in metin or "/start" in metin:
+                telegram_gonder("🤖 PusulaSpor Komutlari:\n/canli - O anki canli skorlar\n/bulten - Gunun AI bankolari\n/karne - Haftalik basari orani")
+    except Exception:
+        pass
+    hafiza["son_update_id"] = son_update_id
+
+
 def canli_maclari_tara():
-    hafiza = {"tarih": tarih, "uyarilar": list()}
+    hafiza = {"tarih": tarih, "uyarilar": list(), "son_update_id": 0}
     if os.path.exists("canli_uyarilar.json"):
         try:
             with open("canli_uyarilar.json", "r", encoding="utf-8") as f:
                 eski = json.load(f)
+                hafiza["son_update_id"] = eski.get("son_update_id", 0)
                 if eski.get("tarih") == tarih:
-                    hafiza = eski
+                    hafiza["uyarilar"] = eski.get("uyarilar", list())
         except Exception:
             pass
 
     gonderilenler = set(hafiza.get("uyarilar", list()))
     yeni_mesajlar = list()
+    canli_ozet_listesi = list()
 
     for s_adi, lig_sozluk in TUM_LIGLER.items():
         for l_adi, l_yolu in lig_sozluk.items():
@@ -168,6 +234,8 @@ def canli_maclari_tara():
                     ev_ad, dep_ad = ev_t["team"]["displayName"], dep_t["team"]["displayName"]
                     ev_s = int(float(ev_t.get("score", 0) or 0))
                     dep_s = int(float(dep_t.get("score", 0) or 0))
+                    canli_ozet_listesi.append(f"• [{l_adi}] {ev_ad} {ev_s}-{dep_s} {dep_ad} ({detay_sure})")
+
                     ev_rec = ev_t.get("records", list()).pop(0).get("summary", "1-1") if ev_t.get("records") else "1-1"
                     dep_rec = dep_t.get("records", list()).pop(0).get("summary", "1-1") if dep_t.get("records") else "1-1"
 
@@ -210,6 +278,8 @@ def canli_maclari_tara():
     if yeni_mesajlar:
         baslik = f"🚨 CANLI RADAR UYARISI ({saat_str})\n\n"
         telegram_gonder(baslik + "\n\n".join(yeni_mesajlar))
+
+    telegram_komutlari_isle(hafiza, canli_ozet_listesi)
 
     hafiza["uyarilar"] = list(gonderilenler)
     with open("canli_uyarilar.json", "w", encoding="utf-8") as f:
