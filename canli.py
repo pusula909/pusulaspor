@@ -724,23 +724,33 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
 
     if groq_anahtar:
         try:
-            g_url = "https://" + "api." + "groq.com" + "/openai/v1/chat/completions"
+            g_base = "https://" + "api." + "groq.com" + "/openai/v1"
+            g_headers = {"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"}
+            aktif_model = "llama-3.1-8b-instant"
+            try:
+                m_list = requests.get(f"{g_base}/models", headers=g_headers, timeout=6).json().get("data", list())
+                uygunlar = list(x["id"] for x in m_list if "llama" in x.get("id", "").lower() and "guard" not in x.get("id", "").lower())
+                if uygunlar:
+                    aktif_model = sorted(uygunlar, reverse=True).pop(0)
+            except Exception:
+                pass
+
             g_resp = requests.post(
-                g_url,
-                headers={"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"},
+                f"{g_base}/chat/completions",
+                headers=g_headers,
                 json={
-                    "model": "llama-3.3-70b-versatile",
+                    "model": aktif_model,
                     "messages": [{"role": "user", "content": soru}],
                     "temperature": 0.4,
                 },
                 timeout=12,
             ).json()
             if "choices" in g_resp and len(g_resp["choices"]) > 0:
-                yanit_metin = g_resp["choices"][0]["message"]["content"].strip()
+                yanit_metin = g_resp["choices"]["message"]["content"].strip()
                 if yanit_metin:
                     return yanit_metin
             elif "error" in g_resp:
-                son_hata = f"Groq Hatasi: {g_resp['error'].get('message', '')}"
+                son_hata = f"Groq Hatasi: {g_resp['error'].get('message', '')}"                son_hata = f"Groq Hatasi: {g_resp['error'].get('message', '')}"
         except Exception as ge:
             son_hata = f"Groq Baglanti: {ge}"
 
