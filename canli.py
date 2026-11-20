@@ -757,7 +757,8 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
             except Exception as ge:
                 son_hata = f"Groq Baglanti: {ge}"
 
-    return f"AI baglanti uyarisi: {son_hata}"def excel_dosyasi_olustur(df):
+    return f"AI baglanti uyarisi: {son_hata}"
+def excel_dosyasi_olustur(df):
     tampon = io.BytesIO()
     with pd.ExcelWriter(tampon, engine="openpyxl") as yazici:
         df.to_excel(yazici, index=False, sheet_name="AI_Analiz")
