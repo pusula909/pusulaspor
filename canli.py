@@ -1240,8 +1240,7 @@ else:
         st.dataframe(df_goster, use_container_width=True, hide_index=True)
         if gemini_api_key:
             with st.spinner("Gercek Yapay Zeka (Gemini) maci ve kadrolari yorumluyor..."):
-                zengin_durum = f"{satir['Dakika / Ceyrek']} | Skor: {satir['Canli Skor']} | Periyotlar: {satir['IY / Ceyrek Skorlari']} | Taktik: {koc_etkisi_metni} | Canli Saha & Oyuncu Durumu: {canli_oyuncu_ve_olay_cek(satir['MacID'], satir['LigYolu'], spor, f'E{secilen_tarih.year if secilen_tarih.month >= 8 else secilen_tarih.year - 1}')} | Kadro Havuzu: Ev({', '.join(ev_kadro)}), Dep({', '.join(dep_kadro)})"
-                ai_yorum = gemini_taktik_yorumu_uret(
+                zengin_durum = f"{satir.get('Dakika / Ceyrek', '')} | Skor: {satir.get('Canli Skor', '')} | Periyotlar: {satir.get('IY / Ceyrek Skorlari', '')} | Taktik: {koc_etkisi_metni} | Canli Saha & Oyuncu Durumu: {canli_oyuncu_ve_olay_cek(satir.get('MacID', satir.get('ID', '')), satir.get('LigYolu', lig_yolu), spor, f'E{secilen_tarih.year if secilen_tarih.month >= 8 else secilen_tarih.year - 1}')} | Kadro Havuzu: Ev({', '.join(ev_kadro)}), Dep({', '.join(dep_kadro)})"                ai_yorum = gemini_taktik_yorumu_uret(
                     gemini_api_key,
                     spor,
                     lig,
