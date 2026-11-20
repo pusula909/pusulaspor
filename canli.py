@@ -264,6 +264,49 @@ favori = st.sidebar.text_input("Favori Takim", "").strip().lower()
 otomatik_yenile = st.sidebar.checkbox("Canli Otomatik Yenileme & Alarm (30 sn)", value=False)
 
 yol = TUM_LIGLER[spor][lig]
+YILDIZ_LISTESI = (
+    "Giannis", "Jokic", "Doncic", "Tatum", "Curry", "LeBron", "Durant", "Embiid", "Shai", "Edwards",
+    "Brunson", "Mitchell", "Booker", "Davis", "Wembanyama", "Haliburton", "Maxey", "Banchero", "Morant",
+    "Lillard", "Irving", "Young", "Ball", "Towns", "Sengun", "Larkin", "Vezenkov", "James", "Baldwin",
+    "Tavares", "Campazzo", "Hezonja", "Lessort", "Nunn", "Sloukas", "Mirotic", "Clyburn", "Icardi", "Osimhen",
+    "Dzeko", "Tadic", "Immobile", "Rafa", "Haaland", "Salah", "Mbappe", "Vinicius", "Bellingham", "Kane",
+    "Yamal", "Lewandowski", "Palmer", "Saka", "Lautaro"
+)
+
+def sakatlik_etki_hesapla(sakat_listesi):
+    etki = 0
+    kritik_isimler = list()
+    for s in sakat_listesi:
+        if "(Out)" in s or "(Doubtful)" in s or "(Eksik)" in s:
+            if any(y.lower() in s.lower() for y in YILDIZ_LISTESI):
+                etki += 3
+                kritik_isimler.append(s)
+            else:
+                etki += 1
+    return etki, kritik_isimler
+
+def son_dakika_baski_kontrol(spor_turu, state, detay_sure, ev_ad, dep_ad, ev_s, dep_s, ev_rec, dep_rec):
+    if state != "in":
+        return ""
+    try:
+        ev_p = list(int(x) for x in ev_rec.split("-"))
+        dep_p = list(int(x) for x in dep_rec.split("-"))
+        ev_g = ev_p.pop(0) / (sum(ev_p) if sum(ev_p) > 0 else 1)
+        dep_g = dep_p.pop(0) / (sum(dep_p) if sum(dep_p) > 0 else 1)
+        fark = abs(ev_s - dep_s)
+
+        if spor_turu == "Futbol":
+            rakamlar = "".join(c for c in detay_sure if c.isdigit())
+            dk = int(rakamlar) if rakamlar else 0
+            if dk >= 75 and fark <= 1 and (ev_g >= 0.58 or dep_g >= 0.58):
+                baskili_takim = ev_ad if ev_g >= dep_g else dep_ad
+                return f"⏳ SON DAKIKA BASKI UYARISI ({dk}. Dk): {ev_ad} {ev_s}-{dep_s} {dep_ad} | {baskili_takim} gol icin yukleniyor!"
+        else:
+            if ("Q4" in detay_sure or "4C" in detay_sure or "OT" in detay_sure) and fark <= 5:
+                return f"⏳ CRUNCH TIME (SON CEYREK HEYECANI): {ev_ad} {ev_s}-{dep_s} {dep_ad} ({detay_sure}) | Fark sadece {fark} sayi!"
+    except Exception:
+        pass
+    return ""
 def canli_firsat_etiketi_uret(spor_turu, state, detay_sure, ev_s, dep_s, ev_rec, dep_rec):
     if state != "in":
         return "-"
@@ -1032,6 +1075,11 @@ else:
             skor_gosterim = "vs"
 
         iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
+        baski_uyari = son_dakika_baski_kontrol(spor, state, durum_detay, ev_ad, dep_ad, ev_s_int, dep_s_int, ev_rec, dep_rec)
+        baski_anahtar = f"BASKI_{mac_id}_{baski_uyari}"
+        if baski_uyari and baski_anahtar not in st.session_state.gonderilen_kritik_uyarilar:
+            if telegram_mesaj_gonder(tg_token, tg_chat_id, baski_uyari):
+                st.session_state.gonderilen_kritik_uyarilar.append(baski_anahtar)
         firsat_etiket = canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)
         firsat_anahtar = f"FIRSAT_{mac_id}_{firsat_etiket}"
         if "🔥" in firsat_etiket and firsat_anahtar not in st.session_state.gonderilen_kritik_uyarilar:
@@ -1101,6 +1149,12 @@ else:
         koc_etkisi_metni, momentum_etkisi, _ = koc_ve_rotasyon_etkisi_getir(
             yol, satir["ID"], satir["EvID"], satir["DepID"], spor, satir["Ev Sahibi"], satir["Deplasman"]
         )
+        ev_sakat_puan, ev_yildiz_eksikler = sakatlik_etki_hesapla(ev_eksikler)
+        dep_sakat_puan, dep_yildiz_eksikler = sakatlik_etki_hesapla(dep_eksikler)
+        if ev_yildiz_eksikler:
+            st.error(f"⚠️ KRITIK YILDIZ EKSIK ALARMI ({satir['Ev Sahibi']}): {', '.join(ev_yildiz_eksikler)} — Guven orani dusuruldu!")
+        if dep_yildiz_eksikler:
+            st.error(f"⚠️ KRITIK YILDIZ EKSIK ALARMI ({satir['Deplasman']}): {', '.join(dep_yildiz_eksikler)} — Guven orani dusuruldu!")
         detayli_tahmin_satirlari, _, _ = coklu_tahmin_motoru(
             satir["Ev Sahibi"],
             satir["Deplasman"],
