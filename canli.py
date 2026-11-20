@@ -630,20 +630,80 @@ def ai_kadro_ve_eksik_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu):
     except Exception:
         pass
     return ev_ilk_kadro, dep_ilk_kadro, ev_sakatlar, dep_sakatlar, kaynak_durumu
-@st.cache_data(ttl=600, show_spinner=False)
+def canli_oyuncu_ve_olay_cek(mac_id, lig_yolu, spor_turu, sezon_kodu="E2026"):
+    detay_ozet = list()
+    try:
+        if lig_yolu == "euroleague_resmi" and mac_id:
+            u = "https://live." + f"euroleague.net/api/Boxscore?gamecode={mac_id}&seasoncode={sezon_kodu}"
+            j = requests.get(u, headers={"User-Agent": "Mozilla/5.0"}, timeout=5).json()
+            for idx, st_blok in enumerate(j.get("Stats", list())[:2]):
+                t_ad = st_blok.get("Team", f"Takim {idx+1}")
+                oyuncular = st_blok.get("PlayersStats", list())
+                sahadakiler = list()
+                faul_problemi = list()
+                for o in oyuncular:
+                    isim = o.get("Player", "").strip()
+                    pts = int(o.get("Points", 0) or 0)
+                    fls = int(o.get("FoulsCommited", 0) or 0)
+                    is_playing = o.get("IsPlaying", 0)
+                    if is_playing == 1 and isim:
+                        sahadakiler.append(f"{isim} ({pts}s, {fls}f)")
+                    if fls >= 3 and isim:
+                        faul_problemi.append(f"{isim} ({fls} faul)")
+                if sahadakiler:
+                    detay_ozet.append(f"{t_ad} Sahadaki Bes: {', '.join(sahadakiler[:5])}")
+                if faul_problemi:
+                    detay_ozet.append(f"{t_ad} Faul Siniri: {', '.join(faul_problemi[:4])}")
+        elif mac_id and "/" in lig_yolu:
+            u = f"{url_basi}{lig_yolu}/summary?event={mac_id}"
+            j = requests.get(u, headers=basliklar, timeout=5).json()
+            for item in j.get("keyEvents", list())[-6:]:
+                tip = item.get("type", {}).get("text", "")
+                dk = item.get("clock", {}).get("displayValue", "")
+                txt = item.get("text", "")
+                if txt:
+                    detay_ozet.append(f"[{dk}] {tip}: {txt}")
+            for box_t in j.get("boxscore", {}).get("players", list())[:2]:
+                t_ad = box_t.get("team", {}).get("displayName", "")
+                stats_grp = box_t.get("statistics", list())
+                if stats_grp:
+                    ath_list = stats_grp.pop(0).get("athletes", list())
+                    aktifler = list()
+                    for a in ath_list[:6]:
+                        a_ad = a.get("athlete", {}).get("displayName", "")
+                        st_vals = a.get("stats", list())
+                        if a_ad and st_vals:
+                            aktifler.append(f"{a_ad} ({'/'.join(st_vals[:3])})")
+                    if aktifler:
+                        detay_ozet.append(f"{t_ad} Rotasyon: {', '.join(aktifler)}")
+    except Exception:
+        pass
+    return " | ".join(detay_ozet) if detay_ozet else "Canli oyuncu/olay verisi henuz olusmadi."
+
+
+@st.cache_data(ttl=90, show_spinner=False)
 def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, ev_eksik, dep_eksik, durum_metni):
     if not GEMINI_AKTIF or not api_key:
         return None
     soru = (
-        f"Sen profesyonel bir {spor_turu} veri analistisin. {lig_adi} ligindeki {ev_ad} (Form: {ev_rec}) vs {dep_ad} (Form: {dep_rec}) "
-        f"macini incele. Mac durumu: {durum_metni}. "
-        f"{ev_ad} eksikler: {ev_eksik}. {dep_ad} eksikler: {dep_eksik}. "
-        f"Sadece su an aktif olan 2026-2027 sezonu guncel kadrolarini baz al (eski veya takas olmus oyunculari kesinlikle yazma). "
-        f"Turkce olarak 3 kisa madde halinde: 1) Taktik ve tempo beklentisi, 2) Eksik oyuncularin oyuna etkisi, 3) Guncel kadro ve kilit oyuncu yorumu yap."
+        f"Sen dunya capinda bir {spor_turu} Bas Analisti ve Basantrenor Danismanisin. "
+        f"Duz istatistik ezberine veya 'ilk yari cok sayi/gol oldu kesin ust biter' gibi yuzeysel klişelere ASLA dusme! "
+        f"Mac: {lig_adi} | {ev_ad} (Form: {ev_rec}) vs {dep_ad} (Form: {dep_rec}). "
+        f"Anlik Durum, Skor, Ceyrek/Yari Akisi ve Canli Saha/Oyuncu/Rotasyon Verileri: {durum_metni}. "
+        f"{ev_ad} Eksikler: {ev_eksik}. {dep_ad} Eksikler: {dep_eksik}. "
+        f"Analiz Kriterlerin:\n"
+        f"1) Skor farki acildiysa kocun yildizlari kenara alip yedeklere donme (garbage time / rotasyon) ihtimalini hesapla.\n"
+        f"2) Ilk yari anormal yuksek/dusuk tempo ciktiysa, ikinci yarida kocun savunma sertligi veya tempo kirma hamlesiyle baremin tersine donup donmeyecegini tart.\n"
+        f"3) Sahadaki mevcut 5'leri, faul problemindeki kilit oyunculari, kartlari ve sakatliklari hesaba kat.\n"
+        f"4) Sadece 2026-2027 sezonu guncel kadrolarini kullan.\n\n"
+        f"Ciktiyi Turkce olarak TAM OLARAK su 3 baslikta, net ve ikna edici yaz:\n"
+        f"🎯 NOKTA ATISI ANA KARAR: (Tek bir net secenek ve kendi belirledigin mantikli barem)\n"
+        f"🧠 KOC, ROTASYON VE OYUN OKUMASI: (Neden bu karari verdigini sahadaki oyuncular, koc hamlesi ve tempo kirilmasiyla acikla)\n"
+        f"⚠️ EN BUYUK RISK / DIKKAT NOKTASI: (Bu tahmini bozabilecek tek kritik senaryo)"
     )
-    son_hata =""
+    son_hata = ""
     modeller = ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview")
-     
+
     try:
         client = genai.Client(api_key=api_key.strip(), http_options={"api_version": "v1beta"})
         for m in modeller:
@@ -660,7 +720,6 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
         return f"Gemini AI baglanti uyarisi: {son_hata}"
     except Exception as e:
         return f"Gemini AI baglanti uyarisi: {str(e)}"
-
 
 def excel_dosyasi_olustur(df):
     tampon = io.BytesIO()
@@ -1181,7 +1240,7 @@ else:
         st.dataframe(df_goster, use_container_width=True, hide_index=True)
         if gemini_api_key:
             with st.spinner("Gercek Yapay Zeka (Gemini) maci ve kadrolari yorumluyor..."):
-                zengin_durum = f"{satir['Dakika / Ceyrek']} | Taktik: {koc_etkisi_metni} | Aktif Kadro Ornekleri: Ev({', '.join(ev_kadro)}), Dep({', '.join(dep_kadro)})"
+                zengin_durum = f"{satir['Dakika / Ceyrek']} | Skor: {satir['Canli Skor']} | Periyotlar: {satir['IY / Ceyrek Skorlari']} | Taktik: {koc_etkisi_metni} | Canli Saha & Oyuncu Durumu: {canli_oyuncu_ve_olay_cek(satir['MacID'], satir['LigYolu'], spor, f'E{secilen_tarih.year if secilen_tarih.month >= 8 else secilen_tarih.year - 1}')} | Kadro Havuzu: Ev({', '.join(ev_kadro)}), Dep({', '.join(dep_kadro)})"
                 ai_yorum = gemini_taktik_yorumu_uret(
                     gemini_api_key,
                     spor,
