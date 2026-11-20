@@ -683,11 +683,9 @@ def canli_oyuncu_ve_olay_cek(mac_id, lig_yolu, spor_turu, sezon_kodu="E2026"):
 
 @st.cache_data(ttl=90, show_spinner=False)
 def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, ev_eksik, dep_eksik, durum_metni):
-    if not GEMINI_AKTIF or not api_key:
-        return None
     soru = (
         f"Sen dunya capinda bir {spor_turu} Bas Analisti ve Basantrenor Danismanisin. "
-        f"Duz istatistik ezberine veya 'ilk yari cok sayi/gol oldu kesin ust biter' gibi yuzeysel klişelere ASLA dusme! "
+        f"Duz istatistik ezberine (ilk yari cok sayi/gol oldu kesin ust biter gibi kliselere) ASLA dusme! "
         f"Mac: {lig_adi} | {ev_ad} (Form: {ev_rec}) vs {dep_ad} (Form: {dep_rec}). "
         f"Anlik Durum, Skor, Ceyrek/Yari Akisi ve Canli Saha/Oyuncu/Rotasyon Verileri: {durum_metni}. "
         f"{ev_ad} Eksikler: {ev_eksik}. {dep_ad} Eksikler: {dep_eksik}. "
@@ -701,47 +699,46 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
         f"🧠 KOC, ROTASYON VE OYUN OKUMASI: (Neden bu karari verdigini sahadaki oyuncular, koc hamlesi ve tempo kirilmasiyla acikla)\n"
         f"⚠️ EN BUYUK RISK / DIKKAT NOKTASI: (Bu tahmini bozabilecek tek kritik senaryo)"
     )
+
     son_hata = ""
-    modeller = ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview")
+    if GEMINI_AKTIF and api_key:
+        modeller = ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview")
+        try:
+            client = genai.Client(api_key=api_key.strip(), http_options={"api_version": "v1beta"})
+            for m in modeller:
+                try:
+                    yanit = client.models.generate_content(model=m, contents=soru)
+                    if yanit and yanit.text:
+                        return yanit.text
+                except Exception as ic_hata:
+                    son_hata = str(ic_hata)
+                    continue
+        except Exception as e:
+            son_hata = str(e)
 
-    try:
-        client = genai.Client(api_key=api_key.strip(), http_options={"api_version": "v1beta"})
-        for m in modeller:
-            try:
-                yanit = client.models.generate_content(
-                    model=m,
-                    contents=soru,
-                )
-                if yanit and yanit.text:
-                    return yanit.text
-            except Exception as ic_hata:
-                son_hata = str(ic_hata)
-                continue
-    except Exception as e:
-        son_hata = str(e)
     groq_anahtar = str(st.secrets.get("GROQ_KEY", os.environ.get("GROQ_KEY", ""))).strip()
- if groq_anahtar:
-     try:
-         g_url = "https://" + "api." + "groq.com" + "/openai/v1/chat/completions"
-         g_resp = requests.post(
-             g_url,
-             headers={"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"},
-             json={
-                 "model": "llama-3.3-70b-versatile",
-                 "messages": list(({"role": "user", "content": soru},)),
-                 "temperature": 0.4,
-             },
-             timeout=12,
-         ).json()
-         secim = g_resp.get("choices", list())
-         if secim:
-             yanit_metin = secim.pop(0).get("message", {}).get("content", "").strip()
-             if yanit_metin:
-                 return yanit_metin
-     except Exception:
-         pass
+    if groq_anahtar:
+        try:
+            g_url = "https://" + "api." + "groq.com" + "/openai/v1/chat/completions"
+            g_resp = requests.post(
+                g_url,
+                headers={"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"},
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": list(({"role": "user", "content": soru},)),
+                    "temperature": 0.4,
+                },
+                timeout=12,
+            ).json()
+            secim = g_resp.get("choices", list())
+            if secim:
+                yanit_metin = secim.pop(0).get("message", {}).get("content", "").strip()
+                if yanit_metin:
+                    return yanit_metin
+        except Exception as ge:
+            son_hata = f"{son_hata} | Groq: {ge}"
 
- return f"AI kota uyarisi: {son_hata}"
+    return f"AI baglanti uyarisi: {son_hata}"
 def excel_dosyasi_olustur(df):
     tampon = io.BytesIO()
     with pd.ExcelWriter(tampon, engine="openpyxl") as yazici:
