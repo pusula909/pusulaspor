@@ -13,6 +13,7 @@ except Exception:
 TG_TOKEN = os.environ.get("TG_TOKEN", "").strip()
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "").strip()
 GEMINI_KEY = os.environ.get("GEMINI_KEY", "").strip()
+GROQ_KEY = os.environ.get("GROQ_KEY", "").strip()
 
 suan_tr = datetime.now(timezone(timedelta(hours=3)))
 tarih = suan_tr.strftime("%Y%m%d")
@@ -44,6 +45,55 @@ def telegram_gonder(mesaj):
     if TG_TOKEN and TG_CHAT_ID:
         tg_adres = "https://" + "api." + "telegram.org" + "/bot" + TG_TOKEN + "/sendMessage"
         requests.post(tg_adres, data={"chat_id": TG_CHAT_ID, "text": mesaj}, timeout=10)
+
+
+def cift_motor_ai_sor(soru):
+    if GEMINI_AKTIF and GEMINI_KEY:
+        try:
+            client = genai.Client(api_key=GEMINI_KEY, http_options={"api_version": "v1beta"})
+            for m in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+                try:
+                    yanit = client.models.generate_content(model=m, contents=soru)
+                    if yanit and yanit.text:
+                        return yanit.text.strip()
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    if GROQ_KEY:
+        g_base = "https://" + "api." + "groq.com" + "/openai/v1"
+        g_headers = {"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"}
+        denenecek_modeller = list()
+        try:
+            m_list = requests.get(f"{g_base}/models", headers=g_headers, timeout=6).json().get("data", list())
+            for x in m_list:
+                mid = x.get("id", "")
+                if mid and all(k not in mid.lower() for k in ("whisper", "guard", "tts", "safeguard")):
+                    denenecek_modeller.append(mid)
+        except Exception:
+            pass
+
+        for aktif_model in denenecek_modeller[:6]:
+            try:
+                g_resp = requests.post(
+                    f"{g_base}/chat/completions",
+                    headers=g_headers,
+                    json={
+                        "model": aktif_model,
+                        "messages": [{"role": "user", "content": soru}],
+                        "temperature": 0.3,
+                        "max_tokens": 420,
+                    },
+                    timeout=12,
+                ).json()
+                if "choices" in g_resp and len(g_resp["choices"]) > 0:
+                    yanit_metin = g_resp["choices"].pop(0).get("message", {}).get("content", "").strip()
+                    if yanit_metin:
+                        return yanit_metin
+            except Exception:
+                continue
+    return ""
 
 
 def canli_oyuncu_ve_olay_cek(mac_id, lig_yolu, sezon_kodu):
@@ -97,31 +147,19 @@ def canli_oyuncu_ve_olay_cek(mac_id, lig_yolu, sezon_kodu):
 
 
 def ai_bas_analist_karari(spor_turu, lig_adi, ev_ad, dep_ad, ev_s, dep_s, detay_sure, ev_rec, dep_rec, saha_detay):
-    if not GEMINI_AKTIF or not GEMINI_KEY:
-        return ""
     soru = (
         f"Sen dunya capinda bir {spor_turu} Bas Analisti ve Basantrenor Danismanisin. "
+        f"SIKI KURAL: Hafizandaki eski yillarin kadrolarini (ornegin eski takimlarina gitmis yildizlari) ASLA yazma! Sadece asagidaki canli saha verisindeki isimleri veya genel takim oyununu kullan. "
         f"Duz istatistik ezberine (ilk yari cok sayi/gol oldu kesin ust biter gibi kliselere) ASLA dusme! "
         f"Canli Mac: {lig_adi} | {ev_ad} ({ev_rec}) {ev_s} - {dep_s} {dep_ad} ({dep_rec}) | Sure: {detay_sure}. "
         f"Canli Saha, Oyuncu, Faul, Kart ve Rotasyon Verileri: {saha_detay}. "
-        f"Analiz Kriterlerin: Fark acildiysa kocun yildizlari kenara alip yedeklere donme (tempo dususu / garbage time) ihtimalini, "
+        f"Analiz Kriterlerin: Fark acildiysa kocun yildizlari kenara alip yedeklere donme (garbage time / tempo dususu) ihtimalini, "
         f"ilk yari anormal tempo ciktiysa 2. yarida savunma sertligiyle baremin tersine donup donmeyecegini ve faul/kart etkisini hesapla. "
-        f"Ciktiyi Turkce, kisa ve cok ikna edici sekilde TAM OLARAK su 2 satirla yaz:\n"
+        f"Ciktiyi Turkce, kisa ve ikna edici sekilde TAM OLARAK su 2 satirla yaz:\n"
         f"🎯 AI Karari: (Tek net tahmin ve barem)\n"
         f"🧠 Koc & Saha Gerekcesi: (En fazla 2 cumleyle neden bu ters kose veya nokta atisi karari verdigin)"
     )
-    try:
-        client = genai.Client(api_key=GEMINI_KEY, http_options={"api_version": "v1beta"})
-        for m in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
-            try:
-                yanit = client.models.generate_content(model=m, contents=soru)
-                if yanit and yanit.text:
-                    return yanit.text.strip()
-            except Exception:
-                continue
-    except Exception:
-        pass
-    return ""
+    return cift_motor_ai_sor(soru)
 
 
 def _el_get(t):
