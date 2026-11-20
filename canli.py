@@ -103,7 +103,7 @@ def _el_get(t):
                         st_code = "in"
                         detay = "Canli"
 
-                 if st_code == "pre":
+                  if st_code == "pre":
                     try:
                         m_saat = datetime.strptime(f"{d_raw} {s_time}", "%b %d, %Y %H:%M") + timedelta(hours=2)
                         if m_saat <= suan_tr <= m_saat + timedelta(hours=3):
