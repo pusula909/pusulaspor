@@ -26,8 +26,7 @@ st.markdown(
 st.title("AI Pro Spor Veri Merkezi | Canli Analiz, Radar & Taktik Yorum")
 
 
-@st.cache_data(ttl=45, show_spinner=False)
-@st.cache_data(ttl=45, show_spinner=False)
+@st.cache_data(ttl=30, show_spinner=False)
 def _el_get(t):
     ev = list()
     try:
