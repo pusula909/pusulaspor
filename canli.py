@@ -330,3 +330,185 @@ else:
                             if len(taks) < 2:
                                 continue
                             ev_n = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "home"), "")
+dep_n = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "away"), "")
+                            m_id = ev_item.get("id", "")
+                            detay = gercek_oran_ve_istatistik_cek(lg_yol, m_id, ev_n, dep_n)
+                            if detay["piyasa_ev_ihtimal"] is None and detay["ev_oran_yuzde"] is None:
+                                continue
+                            secim, ihtimal, gerekce = gercek_mac_tahmini_hesapla(ev_n, dep_n, sp_ad, lg_ad, detay)
+                            if ihtimal >= 56.0:
+                                adaylar.append({
+                                    "id": m_id,
+                                    "yol": lg_yol,
+                                    "spor": sp_ad,
+                                    "lig": lg_ad,
+                                    "ev": ev_n,
+                                    "dep": dep_n,
+                                    "tahmin": secim,
+                                    "guven": ihtimal,
+                                    "gerekce": gerekce,
+                                    "sakat": detay["sakat_metin"],
+                                })
+                    except Exception:
+                        continue
+            adaylar.sort(key=lambda x: x["guven"], reverse=True)
+            secilenler = adaylar[:kombine_tetik]
+            if secilenler:
+                st.session_state.kupon_listesi = secilenler
+                for s in secilenler:
+                    st.info(f"**{s['lig']} | {s['ev']} vs {s['dep']}** -> **{s['tahmin']}** (Gercek Ihtimal: **%{s['guven']}**) | {s['gerekce']}")
+            else:
+                st.warning("Secili tarihte resmi oran ve istatistik kriterini karsilayan yeterli mac bulunamadi (ezbere mac eklenmedi).")
+
+    st.divider()
+    st.subheader("Tekli Mac Derin Analiz & Manuel Kupona Ekle")
+    c_s, c_l, c_m = st.columns(3)
+    sec_spor = c_s.selectbox("Spor", ["Futbol", "Basketbol"])
+    sec_lig = c_l.selectbox("Lig", list(TUM_LIGLER[sec_spor].keys()))
+    sec_yol = TUM_LIGLER[sec_spor][sec_lig]
+
+    mac_listesi = list()
+    if sec_yol != "euroleague_resmi":
+        try:
+            r_m = requests.get(f"https://espn.com{sec_yol}/scoreboard?dates={tarih_str}", timeout=6).json()
+            for ev_o in r_m.get("events", list()):
+                comp = ev_o.get("competitions", list(({},))).pop(0)
+                taks = comp.get("competitors", list())
+                if len(taks) >= 2:
+                    ev_t = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "home"), "")
+                    dep_t = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "away"), "")
+                    mac_listesi.append({
+                        "id": ev_o.get("id", ""),
+                        "yol": sec_yol,
+                        "spor": sec_spor,
+                        "lig": sec_lig,
+                        "ev": ev_t,
+                        "dep": dep_t,
+                        "label": f"{ev_t} vs {dep_t}",
+                    })
+        except Exception:
+            pass
+
+    if mac_listesi:
+        sec_label = c_m.selectbox("Mac Secin", [m["label"] for m in mac_listesi])
+        sec_mac = next(m for m in mac_listesi if m["label"] == sec_label)
+        mac_detay = gercek_oran_ve_istatistik_cek(sec_mac["yol"], sec_mac["id"], sec_mac["ev"], sec_mac["dep"])
+        oto_secim, oto_ihtimal, oto_gerekce = gercek_mac_tahmini_hesapla(
+            sec_mac["ev"], sec_mac["dep"], sec_mac["spor"], sec_mac["lig"], mac_detay
+        )
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Ev Piyasa / Form", f"%{mac_detay['piyasa_ev_ihtimal'] or '-'} / %{mac_detay['ev_oran_yuzde'] or '-'}")
+        m2.metric("Dep Piyasa / Form", f"%{mac_detay['piyasa_dep_ihtimal'] or '-'} / %{mac_detay['dep_oran_yuzde'] or '-'}")
+        m3.metric("Resmi Barem / Handikap", f"{mac_detay['barem'] or '-'} / {mac_detay['handikap'] or '-'}")
+        m4.metric("Model Tahmini", f"%{oto_ihtimal}" if oto_ihtimal > 0 else "Veri Yok")
+
+        st.success(f"**Analiz Sonucu:** {oto_secim} | {oto_gerekce} | **Eksikler:** {mac_detay['sakat_metin']}")
+
+        col_t1, col_t2 = st.columns(2)
+        secenekler = [oto_secim, f"{sec_mac['ev']} Kazanir (MS 1)", f"{sec_mac['dep']} Kazanir (MS 2)", "Beraberlik (MS 0)", "KG VAR"]
+        if mac_detay["barem"]:
+            secenekler.extend([f"Mac Toplami {mac_detay['barem']} UST", f"Mac Toplami {mac_detay['barem']} ALT"])
+        manuel_tip = col_t1.selectbox("Kupon Tercihi", list(dict.fromkeys(secenekler)))
+        if col_t2.button("Kupona Ekle"):
+            st.session_state.kupon_listesi.append({
+                "id": sec_mac["id"],
+                "yol": sec_mac["yol"],
+                "spor": sec_mac["spor"],
+                "ev": sec_mac["ev"],
+                "dep": sec_mac["dep"],
+                "tahmin": manuel_tip,
+                "guven": oto_ihtimal if oto_ihtimal > 0 else 50.0,
+            })
+            st.rerun()
+
+        if st.button("AI Taktik, Kadro & H2H Yorumu Getir"):
+            with st.spinner("Gercek verilerle AI yorumu hazirlaniyor..."):
+                p_ai = (
+                    f"Mac: {sec_mac['ev']} vs {sec_mac['dep']} ({sec_mac['lig']})\n"
+                    f"Resmi Oranlar: Ev {mac_detay['ev_ondalik']} (%{mac_detay['piyasa_ev_ihtimal']}) - Dep {mac_detay['dep_ondalik']} (%{mac_detay['piyasa_dep_ihtimal']})\n"
+                    f"Sezon Galibiyet Oranlari: Ev %{mac_detay['ev_oran_yuzde']} - Dep %{mac_detay['dep_oran_yuzde']}\n"
+                    f"Barem: {mac_detay['barem']} | Sakatliklar: {mac_detay['sakat_metin']} | H2H: {mac_detay['h2h_metin']}\n"
+                    f"Bu gercek verilere dayanarak kisa, net ve profesyonel taktik analizi yap."
+                )
+                yorum_txt, kaynak_txt = ai_yorum_uret(p_ai)
+                st.caption(f"Kaynak: {kaynak_txt}")
+                st.write(yorum_txt)
+    else:
+        st.info("Secili lig ve tarihte mac bulunamadi.")
+
+    if st.session_state.kupon_listesi:
+        st.divider()
+        st.subheader("Aktif Kuponum & Canli Tutma Ihtimali")
+        satirlar = list()
+        kombine_olasilik = 1.0
+        for item in st.session_state.kupon_listesi:
+            ev_s, dep_s, st_k, det_k = 0, 0, "pre", "Beklemede"
+            try:
+                sr = requests.get(f"https://espn.com{item['yol']}/summary?event={item['id']}", timeout=5).json()
+                hc = sr.get("header", {}).get("competitions", list(({},))).pop(0)
+                st_k = hc.get("status", {}).get("type", {}).get("state", "pre")
+                det_k = hc.get("status", {}).get("type", {}).get("shortDetail", "Beklemede")
+                for tobj in hc.get("competitors", list()):
+                    if tobj.get("homeAway") == "home":
+                        ev_s = int(float(tobj.get("score", 0) or 0))
+                    else:
+                        dep_s = int(float(tobj.get("score", 0) or 0))
+            except Exception:
+                pass
+
+            t = item["tahmin"]
+            toplam_s = ev_s + dep_s
+            tekil_olasilik = round(float(item.get("guven", 50.0)) / 100.0, 2)
+            durum_ikon = "⏳ Beklemede"
+
+            if st_k in ("in", "post"):
+                tuttu_mu = False
+                if ("MS 1" in t or item["ev"] in t) and "UST" not in t and "ALT" not in t and ev_s > dep_s:
+                    tuttu_mu = True
+                elif ("MS 2" in t or item["dep"] in t) and "UST" not in t and "ALT" not in t and dep_s > ev_s:
+                    tuttu_mu = True
+                elif "MS 0" in t and ev_s == dep_s:
+                    tuttu_mu = True
+                elif "KG VAR" in t and ev_s > 0 and dep_s > 0:
+                    tuttu_mu = True
+                elif "UST" in t:
+                    parcalar = [p for p in t.split() if p.replace(".", "", 1).isdigit()]
+                    if parcalar and toplam_s > float(parcalar.pop(0)):
+                        tuttu_mu = True
+                elif "ALT" in t:
+                    parcalar = [p for p in t.split() if p.replace(".", "", 1).isdigit()]
+                    if parcalar and toplam_s < float(parcalar.pop(0)):
+                        tuttu_mu = True
+
+                if st_k == "post":
+                    durum_ikon = "✅ TUTTU" if tuttu_mu else "❌ YATTI"
+                    tekil_olasilik = 1.0 if tuttu_mu else 0.0
+                elif tuttu_mu and ("UST" in t or "KG VAR" in t):
+                    durum_ikon = "✅ TUTTU (Barem Asildi)"
+                    tekil_olasilik = 1.0
+                elif tuttu_mu:
+                    durum_ikon = "🟢 Su An Tutuyor"
+                    tekil_olasilik = max(tekil_olasilik, 0.78)
+                else:
+                    durum_ikon = "🟡 Geride / Bekliyor"
+                    tekil_olasilik = min(tekil_olasilik, 0.35)
+
+            kombine_olasilik *= tekil_olasilik
+            satirlar.append({
+                "Mac": f"{item['ev']} vs {item['dep']}",
+                "Oynanan": t,
+                "Skor": f"{ev_s} - {dep_s}",
+                "Sure": det_k,
+                "Durum": durum_ikon,
+                "Gercek Ihtimal": f"%{int(round(tekil_olasilik * 100))}",
+            })
+
+        st.dataframe(pd.DataFrame(satirlar), use_container_width=True)
+        c_kupon1, c_kupon2, c_kupon3 = st.columns(3)
+        c_kupon1.metric("Kuponun Gercek Tutma Ihtimali", f"%{int(round(kombine_olasilik * 100))}")
+        if c_kupon2.button("Kuponu Telegram'a Gonder"):
+            satir_txt = "\n".join(f"- {r['Mac']} | {r['Oynanan']} ({r['Gercek Ihtimal']})" for r in satirlar)
+            if telegram_gonder(f"🎯 GERCEK ORAN & VALUE KUPONU\n\n{satir_txt}\n\nToplam Ihtimal: %{int(round(kombine_olasilik * 100))}"):
+                st.success("Kupon Telegram'a gonderildi!")
+        if c_kupon3.button("Kuponu Temizle"):                            
