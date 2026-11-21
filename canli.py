@@ -449,7 +449,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
         fark = abs(ev_g - dep_g)
         satirlar = list()
         etiket = "CANLI AI" if state == "in" else "Mac Onu AI"
-    if spor_turu == "Futbol":
+        if spor_turu == "Futbol":
             if ev_g > dep_g + 0.14:
                 ms_secenek = f"{ev_ad} Kazanir (MS 1)"
                 ms_guven = min(89, int(56 + fark * 45))
