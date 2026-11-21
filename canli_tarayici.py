@@ -306,10 +306,9 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                  for i, m in enumerate(b_list, 1):
                      satir.append(f"{i}. [{m['lig']}] {m['mac']} -> {m['tahmin']} (%{m['guven']})")
                  telegram_gonder("\n".join(satir))
-        else:
-                 telegram_gonder("Henuz kayitli gunluk bulten yok.")
-        else:
-             telegram_gonder("Henuz kayitli gunluk bulten yok.")
+            else:
+                   telegram_gonder("Henuz kayitli gunluk bulten yok.")
+        
                 
                
 
