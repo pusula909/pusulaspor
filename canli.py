@@ -728,7 +728,7 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
     if groq_anahtar:
         g_base = "https://" + "api." + "groq.com" + "/openai/v1"
         g_headers = {"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"}
-        denenecek_modeller = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "openai/gpt-oss-120b"]
+        denenecek_modeller = ["openai/gpt-oss-120b", "openai/gpt-oss-120b", "openai/gpt-oss-120b"]
         for aktif_model in denenecek_modeller[:6]:
             try:
                 g_resp = requests.post(
@@ -1246,7 +1246,7 @@ elif gorunum == "Yildiz Oyuncu Analizi":
                             gr_p = requests.post(
                                 "https://groq.com",
                                 headers={"Authorization": f"Bearer {g_k}", "Content-Type": "application/json"},
-                                json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": prop_soru}], "temperature": 0.35},
+                                json={"model": "openai/gpt-oss-120b", "messages": [{"role": "user", "content": prop_soru}], "temperature": 0.35},
                                 timeout=12,
                             ).json()
                             if "choices" in gr_p and gr_p["choices"]:
