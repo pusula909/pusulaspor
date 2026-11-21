@@ -511,4 +511,4 @@ else:
             satir_txt = "\n".join(f"- {r['Mac']} | {r['Oynanan']} ({r['Gercek Ihtimal']})" for r in satirlar)
             if telegram_gonder(f"🎯 GERCEK ORAN & VALUE KUPONU\n\n{satir_txt}\n\nToplam Ihtimal: %{int(round(kombine_olasilik * 100))}"):
                 st.success("Kupon Telegram'a gonderildi!")
-        if c_kupon3.button("Kuponu Temizle"):                            
+                                 
