@@ -1,4 +1,5 @@
 import io
+from ortak_beyin import lig_basari_bonusu_getir, sharp_piyasa_durumu_getir
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
@@ -796,7 +797,8 @@ if gorunum == "Canli Kupon Takip":
                             })
                     except Exception:
                         pass
-
+            for m in aday_dosyalari:
+                m["on_guven"] += lig_basari_bonusu_getir(m["lig"]) + sharp_piyasa_durumu_getir(m["id"])[0]
             en_iyi_adaylar = sorted(aday_dosyalari, key=lambda x: x["on_guven"], reverse=True)[:15]
             derin_havuz = list()
             for m in en_iyi_adaylar:
