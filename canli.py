@@ -463,7 +463,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Sonucu (MS)", "AI Tahmin Secenegi": ms_secenek, "Guven Seviyesi": f"%{ms_guven}", "GuvenInt": ms_guven})
 
             toplam_gol = ev_skor + dep_skor
-                if state == "in":
+          if state == "in":
                 dk_mevcut = max(1, int(locals().get("dakika", 45) or 45))
                 sut_toplam = int(locals().get("ev_sot", 0) or 0) + int(locals().get("dep_sot", 0) or 0)
                 kalan_dk = max(1, 90 - dk_mevcut)
