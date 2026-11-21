@@ -558,8 +558,10 @@ def excel_dosyasi_olustur(df):
     tampon = io.BytesIO()
     with pd.ExcelWriter(tampon, engine="openpyxl") as yazici:
         df.to_excel(yazici, index=False, sheet_name="AI_Analiz")
-    return tampon.getvalue()if gorunum == "VIP Bulten & AI Karne":
+    return tampon.getvalue()
 
+
+if gorunum == "VIP Bulten & AI Karne":
 
     st.subheader("🌅 Gunun VIP AI Bulteni & Haftalik Performans Karnesi")
     col_b, col_k = st.columns(2)
