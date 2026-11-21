@@ -1,46 +1,11 @@
 import io
-from ortak_beyin import lig_basari_bonusu_getir, sharp_piyasa_durumu_getir
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 import requests
 import streamlit as st
-def gercek_mac_verisi_cek(yol, mac_id):
-    ev_oran, dep_oran, barem, handikap, sakat_fark = None, None, None, None, 0
-    if not yol or not mac_id or yol == "euroleague_resmi":
-        return ev_oran, dep_oran, barem, handikap, sakat_fark
-    try:
-        sj = requests.get(f"https://espn.com{yol}/summary?event={mac_id}", timeout=6).json()
-        comps = sj.get("header", {}).get("competitions", list(({},))).pop(0).get("competitors", list())
-        for c in comps:
-            rec_str = next((r.get("summary", "") for r in c.get("record", list()) if r.get("type") == "total"), "")
-            if "-" in rec_str:
-                parca = rec_str.split("-")
-                g_sayi, m_sayi = int(parca.pop(0)), int(parca.pop(0))
-                toplam_m = g_sayi + m_sayi
-                if toplam_m > 0:
-                    yuzde = round((g_sayi / toplam_m) * 100, 1)
-                    if c.get("homeAway") == "home":
-                        ev_oran = yuzde
-                    else:
-                        dep_oran = yuzde
-        for pk in sj.get("pickcenter", list())[:1]:
-            if pk.get("overUnder") is not None:
-                barem = float(pk.get("overUnder"))
-            if pk.get("spread") is not None:
-                handikap = float(pk.get("spread"))
-        ev_id = next((c.get("team", {}).get("id", "") for c in comps if c.get("homeAway") == "home"), "")
-        for grp in sj.get("injuries", list()):
-            t_id = grp.get("team", {}).get("id", "")
-            eksik_say = sum(1 for inj in grp.get("injuries", list()) if inj.get("status") in ("Out", "Doubtful"))
-            if ev_id and ev_id == t_id:
-                sakat_fark -= eksik_say * 3
-            else:
-                sakat_fark += eksik_say * 3
-    except Exception:
-        pass
-    return ev_oran, dep_oran, barem, handikap, sakat_fark
+
 try:
     import winsound
     SES_AKTIF = True
@@ -263,7 +228,7 @@ gemini_api_key = gizli_gemini_key
 st.sidebar.header("Kontrol Merkezi")
 gorunum = st.sidebar.radio(
     "Mod Secimi",
-    ["Maclar ve Canli AI Analiz", "Canli Kupon Takip", "AI Gunun Radari (Tum Ligler)", "Puan Durumu","AI Dogruluk Karnesi", "Yildiz Oyuncu Analizi"],
+    ["Maclar ve Canli AI Analiz", "Canli Kupon Takip", "AI Gunun Radari (Tum Ligler)", "Puan Durumu"],
 )
 tarih_obj = st.sidebar.date_input("Tarih", datetime.now())
 tarih = tarih_obj.strftime("%Y%m%d")
@@ -464,22 +429,12 @@ def koc_ve_rotasyon_etkisi_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu, ev_
 
 def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_eksik=0, dep_eksik=0, state="pre", ev_skor=0, dep_skor=0):
     try:
-        ev_p = [int(x) for x in str(ev_rec).split("-") if x.strip().isdigit()]
-        dep_p = [int(x) for x in str(dep_rec).split("-") if x.strip().isdigit()]
-        if len(ev_p) >= 2 and sum(ev_p) > 0:
-            ev_oran = ev_p.pop(0) / sum(ev_p)
-        elif str(ev_rec).replace(".", "", 1).isdigit():
-            ev_oran = float(ev_rec) / 100.0
-        else:
-            ev_oran = 0.50
-        if len(dep_p) >= 2 and sum(dep_p) > 0:
-            dep_oran = dep_p.pop(0) / sum(dep_p)
-        elif str(dep_rec).replace(".", "", 1).isdigit():
-            dep_oran = float(dep_rec) / 100.0
-        else:
-            dep_oran = 0.50
-        ev_g = max(0.08, min(0.92, ev_oran + 0.05 - (ev_eksik * 0.03)))
-        dep_g = max(0.08, min(0.92, dep_oran - (dep_eksik * 0.03)))
+        ev_p = list(int(x) for x in ev_rec.split("-"))
+        dep_p = list(int(x) for x in dep_rec.split("-"))
+        ev_top = sum(ev_p) if sum(ev_p) > 0 else 1
+        dep_top = sum(dep_p) if sum(dep_p) > 0 else 1
+        ev_g = max(0.08, min(0.92, (ev_p.pop(0) / ev_top) + 0.06 - (ev_eksik * 0.03)))
+        dep_g = max(0.08, min(0.92, (dep_p.pop(0) / dep_top) - (dep_eksik * 0.03)))
 
         if state == "in":
             skor_farki = ev_skor - dep_skor
@@ -493,6 +448,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
         fark = abs(ev_g - dep_g)
         satirlar = list()
         etiket = "CANLI AI" if state == "in" else "Mac Onu AI"
+
         if spor_turu == "Futbol":
             if ev_g > dep_g + 0.14:
                 ms_secenek = f"{ev_ad} Kazanir (MS 1)"
@@ -506,27 +462,19 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Sonucu (MS)", "AI Tahmin Secenegi": ms_secenek, "Guven Seviyesi": f"%{ms_guven}", "GuvenInt": ms_guven})
 
             toplam_gol = ev_skor + dep_skor
-        if state == "in":
-            dk_mevcut = max(1, int(locals().get("dakika", 45) or 45))
-            sut_toplam = int(locals().get("ev_sot", 0) or 0) + int(locals().get("dep_sot", 0) or 0)
-            kalan_dk = max(1, 90 - dk_mevcut)
-            tempo_hizi = (toplam_gol * 18 + sut_toplam * 6) / dk_mevcut
-            if dk_mevcut >= 78 and tempo_hizi < 1.15:
-                au_secenek = f"Canli Toplam {toplam_gol + 0.5} ALT (Mac Kilitli / Dusuk Tempo)"
-                au_guven = min(84, int(58 + (dk_mevcut - 75) * 1.4))
-            else:
+            if state == "in":
                 hedef_barem = toplam_gol + 0.5
-                au_secenek = f"Canli Toplam {hedef_barem} UST (Tempo: {round(tempo_hizi, 1)})"
-                au_guven = max(48, min(83, int(45 + tempo_hizi * 14 + (kalan_dk / 5))))
-        elif ev_g >= 0.54 and dep_g >= 0.48:
-            au_secenek = "Toplam 2.5 UST"
-            au_guven = min(79, int(58 + (ev_g + dep_g) * 14))
-        elif ev_g <= 0.36 and dep_g <= 0.36:
-            au_secenek = "Toplam 2.5 ALT"
-            au_guven = min(76, int(60 + (1 - (ev_g + dep_g)) * 16))
-        else:
-            au_secenek = "Toplam 1.5 UST"
-            au_guven = min(84, int(68 + (ev_g + dep_g) * 10))
+                au_secenek = f"Canli Toplam {hedef_barem} UST"
+                au_guven = min(82, int(62 + (ev_g + dep_g) * 12))
+            elif ev_g >= 0.54 and dep_g >= 0.48:
+                au_secenek = "Toplam 2.5 UST"
+                au_guven = min(79, int(58 + (ev_g + dep_g) * 14))
+            elif ev_g <= 0.36 and dep_g <= 0.36:
+                au_secenek = "Toplam 2.5 ALT"
+                au_guven = min(76, int(60 + (1 - (ev_g + dep_g)) * 16))
+            else:
+                au_secenek = "Toplam 1.5 UST"
+                au_guven = min(84, int(68 + (ev_g + dep_g) * 10))
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Toplam Gol Baremi", "AI Tahmin Secenegi": au_secenek, "Guven Seviyesi": f"%{au_guven}", "GuvenInt": au_guven})
 
             if (state == "in" and ev_skor > 0 and dep_skor > 0) or (ev_g >= 0.45 and dep_g >= 0.45):
@@ -556,9 +504,9 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Deplasman Takim Golu", "AI Tahmin Secenegi": dep_gol_sec, "Guven Seviyesi": f"%{dep_gol_guv}", "GuvenInt": dep_gol_guv})
 
             en_iyi = sorted(satirlar, key=lambda x: x["GuvenInt"], reverse=True).pop(0)
-        ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
-        return satirlar, ozet_metin, en_iyi
-        if spor_turu != "Futbol":
+            ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
+            return satirlar, ozet_metin, en_iyi
+        else:
             if ev_g >= dep_g:
                 ms_secenek = f"{ev_ad} Kazanir (MS 1)"
                 ms_guven = min(89, int(54 + fark * 48))
@@ -772,7 +720,7 @@ def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec
     if groq_anahtar:
         g_base = "https://" + "api." + "groq.com" + "/openai/v1"
         g_headers = {"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"}
-        denenecek_modeller = ["openai/gpt-oss-120b", "openai/gpt-oss-120b", "openai/gpt-oss-120b"]
+        denenecek_modeller = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "qwen/qwen3-32b"]
         for aktif_model in denenecek_modeller[:6]:
             try:
                 g_resp = requests.post(
@@ -805,171 +753,6 @@ def excel_dosyasi_olustur(df):
 
 if gorunum == "Canli Kupon Takip":
     st.subheader("Canli Kombine Kupon Olusturucu & Anlik Takip")
-    st.markdown("### 🧠 Kaya Gibi Saglam Derin Analiz AI Kombine")
-    hk1, hk2 = st.columns(2)
-    secilen_paket = ""
-    if hk1.button("🎯 Derin Analiz: En Saglam 3'lu Kombine"):
-        secilen_paket = "uclu"
-    if hk2.button("💎 Derin Analiz: En Saglam 4'lu Kombine"):
-        secilen_paket = "dortlu"
-
-    if secilen_paket:
-        with st.spinner("Tum liglerin icine giriliyor: Sakatliklar, piyasa handikaplari, baremler ve form derinlemesine analiz ediliyor..."):
-            aday_dosyalari = list()
-            for sp_ad, lg_dict in TUM_LIGLER.items():
-                for lg_ad, lg_yol in lg_dict.items():
-                    try:
-                        r_k = (
-                            _el_get(tarih)
-                            if lg_yol == "euroleague_resmi"
-                            else requests.get(f"{url_basi}{lg_yol}/scoreboard?dates={tarih}", headers=basliklar, timeout=5).json()
-                        )
-                        for ev_k in r_k.get("events", list()):
-                            if ev_k.get("status", {}).get("type", {}).get("state", "pre") != "pre":
-                                continue
-                            m_id_k = str(ev_k.get("id", ""))
-                            cmp = ev_k.get("competitions", list(({},))).pop(0)
-                            t_lst = cmp.get("competitors", list())
-                            if len(t_lst) < 2:
-                                continue
-                            t1_k, t2_k = t_lst.pop(0), t_lst.pop(0)
-                            ev_tk = t1_k if t1_k.get("homeAway") == "home" else t2_k
-                            dep_tk = t2_k if t1_k.get("homeAway") == "home" else t1_k
-                            e_ad = ev_tk.get("team", {}).get("displayName", "Ev")
-                            d_ad = dep_tk.get("team", {}).get("displayName", "Dep")
-                            e_rc = ev_tk.get("records", list()).pop(0).get("summary", "1-1") if ev_tk.get("records") else "1-1"
-                            d_rc = dep_tk.get("records", list()).pop(0).get("summary", "1-1") if dep_tk.get("records") else "1-1"
-                            tum_sec, _, en_g = coklu_tahmin_motoru(e_ad, d_ad, e_rc, d_rc, sp_ad, lg_ad, 0, 0, "pre", 0, 0)
-                            aday_dosyalari.append({
-                                "id": m_id_k, "yol": lg_yol, "spor": sp_ad, "lig": lg_ad,
-                                "ev": e_ad, "dep": d_ad, "ev_r": e_rc, "dep_r": d_rc,
-                                "tum_secenekler": " | ".join(list(f"{s['AI Tahmin Secenegi']} ({s['Guven Seviyesi']})" for s in tum_sec)),
-                                "on_tahmin": en_g["AI Tahmin Secenegi"], "on_guven": en_g["GuvenInt"]
-                            })
-                    except Exception:
-                        pass
-            for m in aday_dosyalari:
-                m["on_guven"] += lig_basari_bonusu_getir(m["lig"]) + sharp_piyasa_durumu_getir(m["id"])[0]
-            en_iyi_adaylar = sorted(aday_dosyalari, key=lambda x: x["on_guven"], reverse=True)[:15]
-            derin_havuz = list()
-            for m in en_iyi_adaylar:
-                sakat_list = list()
-                h2h_list = list()
-                piyasa_bilgi = "Standart Piyasa"
-                ou_v, det_v = "", ""
-
-                if m["yol"] != "euroleague_resmi" and "/" in m["yol"] and m["id"]:
-                    try:
-                        sj = requests.get(f"{url_basi}{m['yol']}/summary?event={m['id']}", headers=basliklar, timeout=5).json()
-                        for grp in sj.get("injuries", list()):
-                            t_isim = grp.get("team", {}).get("displayName", "")
-                            for inj in grp.get("injuries", list()):
-                                st_inj = inj.get("status", "")
-                                oy_ad = inj.get("athlete", {}).get("displayName", "")
-                                if st_inj in ("Out", "Doubtful") and oy_ad:
-                                    sakat_list.append(f"{t_isim}: {oy_ad} ({st_inj})")
-                        for h_oyun in sj.get("headToHeadGames", list())[:3]:
-                            if h_oyun.get("score"):
-                                h2h_list.append(f"{h_oyun.get('gameDate', '')[:10]} ({h_oyun.get('score')})")
-                        pk_l = sj.get("pickcenter", list())
-                        if pk_l:
-                            pk0 = pk_l.pop(0)
-                            ou_v = str(pk0.get("overUnder", ""))
-                            det_v = str(pk0.get("details", ""))
-                            piyasa_bilgi = f"Handikap: {det_v or '-'} | Alt/Ust Baremi: {ou_v or '-'}"
-                    except Exception:
-                        pass
-
-                m["sakatlar"] = ", ".join(sakat_list[:4]) if sakat_list else "Eksik Yok"
-                m["h2h"] = ", ".join(h2h_list) if h2h_list else "Kayit Yok"
-                m["piyasa"] = piyasa_bilgi
-                m["ou"] = ou_v
-                m["handikap"] = det_v
-                derin_havuz.append(m)
-
-            hedef_adet = 3 if secilen_paket == "uclu" else 4
-            secilen_final = list()
-
-            if derin_havuz:
-                dosya_ozeti = "\n".join(
-                    list(
-                        f"MAC_{idx+1} | [{x['lig']}] {x['ev']} ({x['ev_r']}) vs {x['dep']} ({x['dep_r']}) | "
-                        f"{x['piyasa']} | Sakatlar: {x['sakatlar']} | H2H: {x['h2h']} | Alternatifler: {x['tum_secenekler']}"
-                        for idx, x in enumerate(derin_havuz)
-                    )
-                )
-                ai_soru = (
-                    f"Sen dunya capinda bir Spor Bas Analistisin. Amacin kullaniciya gercekten kazanacak (WON), kaya gibi saglam ve akillica {hedef_adet} maclik bir kombine cikarmak.\n"
-                    f"ONEMLI KURAL: Iddaa'da orani bile acilmayan (1.02 - 1.10 gibi) ezici favori maclarda duz MS 1 / MS 2 yazip gecme! O maclarda piyasa handikapini, takim toplam gol/sayi baremini veya mac alt/ust baremini kullan (Ornegin: Ev Sahibi 1.5 UST, Toplam 2.5 UST, Ev Sahibi -8.5 Handikap, Mac Toplami 222.5 UST gibi).\n"
-                    f"Sakatliklari, H2H gecmisini ve formu derinlemesine analiz ederek en guvendigin {hedef_adet} maci sec.\n"
-                    f"Ciktiyi HER MAC ICIN TAM OLARAK su formatta yaz:\n"
-                    f"MAC_1 | SECIM: (Net bahis secenegi) | GEREKCE: (Sakatlik, form ve piyasa verilerine dayali 2 cumlelik ikna edici uzman analizi)\n\n"
-                    f"Maclar:\n{dosya_ozeti}"
-                )
-                ai_cevap = ""
-                if GEMINI_AKTIF and gemini_api_key:
-                    try:
-                        cl = genai.Client(api_key=gemini_api_key.strip(), http_options={"api_version": "v1beta"})
-                        for mod in ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash"):
-                            try:
-                                r_ai = cl.models.generate_content(model=mod, contents=ai_soru)
-                                if r_ai and r_ai.text:
-                                    ai_cevap = r_ai.text.strip()
-                                    break
-                            except Exception:
-                                continue
-                    except Exception:
-                        pass
-
-                if not ai_cevap:
-                    try:
-                        g_k = str(st.secrets.get("GROQ_KEY", "")).strip()
-                        if g_k:
-                            gr = requests.post(
-                                "https://groq.com",
-                                headers={"Authorization": f"Bearer {g_k}", "Content-Type": "application/json"},
-                                json={"model": "openai/gpt-oss-120b", "messages": [{"role": "user", "content": ai_soru}], "temperature": 0.35, "max_tokens": 700},
-                                timeout=15,
-                            ).json()
-                            if "choices" in gr and gr["choices"]:
-                                ai_cevap = gr["choices"].pop(0).get("message", {}).get("content", "").strip()
-                    except Exception:
-                        pass
-
-                for sat in ai_cevap.splitlines():
-                    if "MAC_" in sat and "|" in sat:
-                        for idx, cand in enumerate(derin_havuz):
-                            etiket_m = f"MAC_{idx+1}"
-                            if etiket_m in sat and cand not in secilen_final:
-                                parcalar = sat.split("|")
-                                secim_txt = next((p.replace("SECIM:", "").strip() for p in parcalar if "SECIM:" in p), "")
-                                gerekce_txt = next((p.replace("GEREKCE:", "").strip() for p in parcalar if "GEREKCE:" in p), "")
-                                if secim_txt:
-                                    cand["final_secim"] = secim_txt
-                                    cand["gerekce"] = gerekce_txt or f"{cand['piyasa']} ve kadro durumuna gore AI tarafindan secildi."
-                                    secilen_final.append(cand)
-
-        if not secilen_final:
-                for cand in derin_havuz:
-                    if len(secilen_final) >= hedef_adet:
-                        break
-                    if not cand.get("ou") and not cand.get("piyasa"):
-                        continue
-                    if cand["spor"] == "Futbol" and cand["ev_r"] >= 58 and cand["dep_r"] <= 42:
-                        cand["final_secim"] = f"{cand['ev']} Kazanir (MS 1)"
-                        cand["gerekce"] = f"Form farki (%{cand['ev_r']} vs %{cand['dep_r']}) ve piyasa verileriyle dogrulandi."
-                        secilen_final.append(cand)
-                    elif cand.get("ou"):
-                        cand["final_secim"] = f"Mac Toplami {cand['ou']} UST"
-                        cand["gerekce"] = f"Resmi piyasa baremi ({cand['ou']}) ve kadro durumu ({cand['sakatlar']}) uyumlu."
-                        secilen_final.append(cand)
-
-                secilen_final = secilen_final[:hedef_adet]
-                st.session_state.kupon_listesi = list(
-                    {"id": x["id"], "yol": x["yol"], "spor": x["spor"], "ev": x["ev"], "dep": x["dep"], "tahmin": x["final_secim"], "guven": x["on_guven"]}
-                    for x in secilen_final
-                )
-                st.session_state.kupon_gerekceleri = secilen_final
     c1, c2, c3 = st.columns(3)
     k_spor = c1.selectbox("Spor", ("Basketbol", "Futbol"), key="k_spor")
     k_lig = c2.selectbox("Lig", list(TUM_LIGLER[k_spor].keys()), key="k_lig")
@@ -1089,11 +872,6 @@ if gorunum == "Canli Kupon Takip":
                     "ev": secilen_k_obj["ev"],
                     "dep": secilen_k_obj["dep"],
                     "tahmin": oynanan_tahmin,
-                    "guven": (
-                            lambda eo, do, br, hk, sf: coklu_tahmin_motoru(
-                                secilen_k_obj["ev"], secilen_k_obj["dep"], eo or 50, do or 50, secilen_k_obj["spor"], "pre", 0, 0, ""
-                            )["GuvenInt"] + sf
-                        )(*gercek_mac_verisi_cek(secilen_k_obj["yol"], secilen_k_obj["id"])),
                 }
             )
             st.session_state.kupon_bildirim_gonderildi = False
@@ -1138,7 +916,7 @@ if gorunum == "Canli Kupon Takip":
             t = item["tahmin"]
             toplam_s = ev_s + dep_s
             durum_ikon = "⏳ Beklemede"
-            tekil_olasilik = round(float(item.get("guven", 64)) / 100.0, 2)
+            tekil_olasilik = 0.58
 
             if state_k in ("in", "post"):
                 tuttu_mu = False
@@ -1173,10 +951,7 @@ if gorunum == "Canli Kupon Takip":
                         hepsi_bitti_ve_tuttu = False
                 else:
                     hepsi_bitti_ve_tuttu = False
-                    if tuttu_mu and ("UST" in t or "KG VAR" in t):
-                        durum_ikon = "✅ TUTTU (Barem Asildi)"
-                        tekil_olasilik = 1.0
-                    elif tuttu_mu:
+                    if tuttu_mu:
                         durum_ikon = "🟢 Su An Tutuyor"
                         tekil_olasilik = 0.78
                     else:
@@ -1234,134 +1009,7 @@ if gorunum == "Canli Kupon Takip":
                 )
                 telegram_mesaj_gonder(tg_token, tg_chat_id, ozet_msj)
                 st.session_state.kupon_bildirim_gonderildi = True
-elif gorunum == "Yildiz Oyuncu Analizi":
-    st.subheader("🏀 NBA & EuroLeague Yildiz Oyuncu Performans (Player Props) Tahmincisi")
-    if st.button("🚀 Bugunun En Guvenli Yildiz Oyuncu Tahminlerini Cikar"):
-        with st.spinner("NBA ve EuroLeague kadrolari, sakatliklar ve savunma eslesmeleri analiz ediliyor..."):
-            basket_maclar = list()
-            for lg_ad, lg_yol in TUM_LIGLER.get("Basketbol", {}).items():
-                try:
-                    r_b = (
-                        _el_get(tarih)
-                        if lg_yol == "euroleague_resmi"
-                        else requests.get(f"{url_basi}{lg_yol}/scoreboard?dates={tarih}", headers=basliklar, timeout=6).json()
-                    )
-                    for ev_b in r_b.get("events", list()):
-                        m_id_b = str(ev_b.get("id", ""))
-                        cmp_b = ev_b.get("competitions", list(({},))).pop(0)
-                        t_b = cmp_b.get("competitors", list())
-                        if len(t_b) < 2:
-                            continue
-                        e_b = t_b.pop(0).get("team", {}).get("displayName", "")
-                        d_b = t_b.pop(0).get("team", {}).get("displayName", "")
-                        sakat_b = list()
-                        ou_b = ""
-                        if lg_yol != "euroleague_resmi" and m_id_b:
-                            try:
-                                sj_b = requests.get(f"{url_basi}{lg_yol}/summary?event={m_id_b}", headers=basliklar, timeout=5).json()
-                                for grp in sj_b.get("injuries", list()):
-                                    for inj in grp.get("injuries", list()):
-                                        if inj.get("status", "") in ("Out", "Doubtful"):
-                                            sakat_b.append(inj.get("athlete", {}).get("displayName", ""))
-                                for pk in sj_b.get("pickcenter", list())[:1]:
-                                    ou_b = str(pk.get("overUnder", ""))
-                            except Exception:
-                                pass
-                        basket_maclar.append(f"[{lg_ad}] {e_b} vs {d_b} (Barem: {ou_b or '-'} | Eksikler: {', '.join(sakat_b[:4]) or 'Yok'})")
-                except Exception:
-                    pass
 
-            if basket_maclar:
-                prop_soru = (
-                    "Sen dunya capinda bir Basketbol Player Props (Oyuncu Istatistik) Analistisin.\n"
-                    "Bugunun asagidaki NBA ve EuroLeague maclarini, eksik oyunculari (eksik yildiz varsa diger yildizin yukunun artmasini) ve mac baremlerini incele.\n"
-                    "Kazanma ihtimali en yuksek 4 yildiz oyuncu istatistik tahmini (Sayi, Ribaund, Asist veya Sayi+Ribaund+Asist UST/ALT) uret.\n"
-                    "Her tahmini net barem ve 2 cumlelik taktik gerekcesiyle Turkce listele:\n\n"
-                    + "\n".join(basket_maclar[:12])
-                )
-                prop_sonuc = ""
-                if GEMINI_AKTIF and gemini_api_key:
-                    try:
-                        cl_p = genai.Client(api_key=gemini_api_key.strip(), http_options={"api_version": "v1beta"})
-                        for mod in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
-                            try:
-                                r_p = cl_p.models.generate_content(model=mod, contents=prop_soru)
-                                if r_p and r_p.text:
-                                    prop_sonuc = r_p.text.strip()
-                                    break
-                            except Exception:
-                                continue
-                    except Exception:
-                        pass
-
-                if not prop_sonuc:
-                    try:
-                        g_k = str(st.secrets.get("GROQ_KEY", "")).strip()
-                        if g_k:
-                            gr_p = requests.post(
-                                "https://groq.com",
-                                headers={"Authorization": f"Bearer {g_k}", "Content-Type": "application/json"},
-                                json={"model": "openai/gpt-oss-120b", "messages": [{"role": "user", "content": prop_soru}], "temperature": 0.35},
-                                timeout=12,
-                            ).json()
-                            if "choices" in gr_p and gr_p["choices"]:
-                                prop_sonuc = gr_p["choices"].pop(0).get("message", {}).get("content", "").strip()
-                    except Exception:
-                        pass
-
-                
-
-                if prop_sonuc:
-                    st.success("Gunun Yildiz Oyuncu Analiz Raporu Hazir!")
-                    st.markdown(prop_sonuc)
-                    telegram_mesaj_gonder(tg_token, tg_chat_id, f"🏀 GUNUN YILDIZ OYUNCU (PLAYER PROPS) TAHMINLERI\n\n{prop_sonuc}")
-                else:
-                    yedek_satirlar = list()
-                    for bm in basket_maclar[:4]:
-                        mac_adi_k = bm.split("(").pop(0).strip()
-                        detay_k = bm.split("(").pop().replace(")", "").strip()
-                        yedek_satirlar.append(
-                            f"• **{mac_adi_k}** -> Takimin 1. skorer opsiyonu icin **Sayi + Ribaund + Asist UST** "
-                            f"*(Analiz: {detay_k} verilerine gore tempo ve kullanim orani yuksek)*"
-                        )
-                    prop_sonuc = "\n\n".join(yedek_satirlar)
-                    st.success("Gunun Yildiz Oyuncu Analiz Raporu Hazir!")
-                    st.markdown(prop_sonuc)
-                    telegram_mesaj_gonder(tg_token, tg_chat_id, f"🏀 GUNUN YILDIZ OYUNCU TAHMINLERI\n\n{prop_sonuc}")
-            else:
-                st.info("Bugun programda analiz edilecek NBA veya EuroLeague maci bulunamadi.")
-elif gorunum == "AI Dogruluk Karnesi":
-    st.subheader("📊 AI Dogruluk Karnesi & Lig Bazli Basari Analizi")
-    import json, os
-    if os.path.exists("haftalik_arsiv.json"):
-        with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
-            arsiv_veri = json.load(f)
-        if arsiv_veri:
-            df_arsiv = pd.DataFrame(arsiv_veri)
-            toplam_mac = len(df_arsiv)
-            toplam_isabet = int(df_arsiv["tuttu"].sum())
-            genel_oran = int((toplam_isabet / toplam_mac) * 100)
-
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Toplam Analiz Edilen Mac", f"{toplam_mac} Mac")
-            m2.metric("Basarili AI Tahmini", f"{toplam_isabet} Isabet")
-            m3.metric("Genel AI Isabet Orani", f"%{genel_oran}")
-
-            st.divider()
-            st.subheader("🏆 Lig Bazinda AI Basari Yuzdesi (%)")
-            lig_grup = df_arsiv.groupby("lig").agg(
-                Toplam_Mac=("tuttu", "count"),
-                Tutan_Tahmin=("tuttu", "sum")
-            ).reset_index()
-            lig_grup["Basari_Orani (%)"] = ((lig_grup["Tutan_Tahmin"] / lig_grup["Toplam_Mac"]) * 100).round(1)
-            lig_grup = lig_grup.sort_values(by="Basari_Orani (%)", ascending=False)
-
-            st.bar_chart(lig_grup.set_index("lig")["Basari_Orani (%)"], color="#16A34A")
-            st.dataframe(lig_grup, use_container_width=True, hide_index=True)
-        else:
-            st.info("Henuz tamamlanmis bulten kaydi bulunmuyor. Maclar bittikce grafik otomatik dolacaktir.")
-    else:
-        st.info("Henuz arsiv dosyasi olusmadi. Gunun bultenindeki maclar tamamlandikca veriler burada birikecektir.")
 elif gorunum == "Puan Durumu":
     st.subheader(f"{lig} - Guncel Puan Durumu")
     try:
@@ -1516,7 +1164,7 @@ else:
 
         iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
         baski_uyari = son_dakika_baski_kontrol(spor, state, durum_detay, ev_ad, dep_ad, ev_s_int, dep_s_int, ev_rec, dep_rec)
-        baski_anahtar = f"BASKI_{mac_id}"
+        baski_anahtar = f"BASKI_{mac_id}_{baski_uyari}"
         if baski_uyari and baski_anahtar not in st.session_state.gonderilen_kritik_uyarilar:
             if telegram_mesaj_gonder(tg_token, tg_chat_id, baski_uyari):
                 st.session_state.gonderilen_kritik_uyarilar.append(baski_anahtar)
@@ -1648,7 +1296,7 @@ else:
                    
             if ai_yorum:
                 st.success(f"Gemini AI Taktik ve Kadro Yorumu: {ai_yorum}")
-                tablo_en_iyi = next(iter(detayli_tahmin_satirlari), {}).get("AI Tahmin Secenegi", "")
+                tablo_en_iyi = next(iter(detayli_tahmin_satirlari)).get("AI Tahmin Secenegi", "")
                 st.warning(f"⚡ *NET ÖZET KARAR:* Matematiksel Tablon *{tablo_en_iyi}* diyor — Yapay Zeka ise yukarıdaki *NOKTA ATIŞI ANA KARAR* satırını öneriyor. İkisi aynı yönüyse *GÜÇLÜ SİNYAL, zıtsa **PAS GEÇ!*") 
         if h2h_verisi:
             st.info("*Son Kafa Kafaya (H2H) Maclar:* " + "  |  ".join(h2h_verisi))
