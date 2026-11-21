@@ -228,7 +228,7 @@ gemini_api_key = gizli_gemini_key
 st.sidebar.header("Kontrol Merkezi")
 gorunum = st.sidebar.radio(
     "Mod Secimi",
-    ["Maclar ve Canli AI Analiz", "Canli Kupon Takip", "AI Gunun Radari (Tum Ligler)", "Puan Durumu","AI Dogruluk Karnesi"],
+    ["Maclar ve Canli AI Analiz", "Canli Kupon Takip", "AI Gunun Radari (Tum Ligler)", "Puan Durumu","AI Dogruluk Karnesi", "Yildiz Oyuncu Analizi"],
 )
 tarih_obj = st.sidebar.date_input("Tarih", datetime.now())
 tarih = tarih_obj.strftime("%Y%m%d")
@@ -1167,6 +1167,89 @@ if gorunum == "Canli Kupon Takip":
                 )
                 telegram_mesaj_gonder(tg_token, tg_chat_id, ozet_msj)
                 st.session_state.kupon_bildirim_gonderildi = True
+elif gorunum == "Yildiz Oyuncu Analizi":
+    st.subheader("🏀 NBA & EuroLeague Yildiz Oyuncu Performans (Player Props) Tahmincisi")
+    if st.button("🚀 Bugunun En Guvenli Yildiz Oyuncu Tahminlerini Cikar"):
+        with st.spinner("NBA ve EuroLeague kadrolari, sakatliklar ve savunma eslesmeleri analiz ediliyor..."):
+            basket_maclar = list()
+            for lg_ad, lg_yol in TUM_LIGLER.get("Basketbol", {}).items():
+                try:
+                    r_b = (
+                        _el_get(tarih)
+                        if lg_yol == "euroleague_resmi"
+                        else requests.get(f"{url_basi}{lg_yol}/scoreboard?dates={tarih}", headers=basliklar, timeout=6).json()
+                    )
+                    for ev_b in r_b.get("events", list()):
+                        m_id_b = str(ev_b.get("id", ""))
+                        cmp_b = ev_b.get("competitions", list(({},))).pop(0)
+                        t_b = cmp_b.get("competitors", list())
+                        if len(t_b) < 2:
+                            continue
+                        e_b = t_b.pop(0).get("team", {}).get("displayName", "")
+                        d_b = t_b.pop(0).get("team", {}).get("displayName", "")
+                        sakat_b = list()
+                        ou_b = ""
+                        if lg_yol != "euroleague_resmi" and m_id_b:
+                            try:
+                                sj_b = requests.get(f"{url_basi}{lg_yol}/summary?event={m_id_b}", headers=basliklar, timeout=5).json()
+                                for grp in sj_b.get("injuries", list()):
+                                    for inj in grp.get("injuries", list()):
+                                        if inj.get("status", "") in ("Out", "Doubtful"):
+                                            sakat_b.append(inj.get("athlete", {}).get("displayName", ""))
+                                for pk in sj_b.get("pickcenter", list())[:1]:
+                                    ou_b = str(pk.get("overUnder", ""))
+                            except Exception:
+                                pass
+                        basket_maclar.append(f"[{lg_ad}] {e_b} vs {d_b} (Barem: {ou_b or '-'} | Eksikler: {', '.join(sakat_b[:4]) or 'Yok'})")
+                except Exception:
+                    pass
+
+            if basket_maclar:
+                prop_soru = (
+                    "Sen dunya capinda bir Basketbol Player Props (Oyuncu Istatistik) Analistisin.\n"
+                    "Bugunun asagidaki NBA ve EuroLeague maclarini, eksik oyunculari (eksik yildiz varsa diger yildizin yukunun artmasini) ve mac baremlerini incele.\n"
+                    "Kazanma ihtimali en yuksek 4 yildiz oyuncu istatistik tahmini (Sayi, Ribaund, Asist veya Sayi+Ribaund+Asist UST/ALT) uret.\n"
+                    "Her tahmini net barem ve 2 cumlelik taktik gerekcesiyle Turkce listele:\n\n"
+                    + "\n".join(basket_maclar[:12])
+                )
+                prop_sonuc = ""
+                if GEMINI_AKTIF and gemini_api_key:
+                    try:
+                        cl_p = genai.Client(api_key=gemini_api_key.strip(), http_options={"api_version": "v1beta"})
+                        for mod in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+                            try:
+                                r_p = cl_p.models.generate_content(model=mod, contents=prop_soru)
+                                if r_p and r_p.text:
+                                    prop_sonuc = r_p.text.strip()
+                                    break
+                            except Exception:
+                                continue
+                    except Exception:
+                        pass
+
+                if not prop_sonuc:
+                    try:
+                        g_k = str(st.secrets.get("GROQ_KEY", "")).strip()
+                        if g_k:
+                            gr_p = requests.post(
+                                "https://groq.com",
+                                headers={"Authorization": f"Bearer {g_k}", "Content-Type": "application/json"},
+                                json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": prop_soru}], "temperature": 0.35},
+                                timeout=12,
+                            ).json()
+                            if "choices" in gr_p and gr_p["choices"]:
+                                prop_sonuc = gr_p["choices"].pop(0).get("message", {}).get("content", "").strip()
+                    except Exception:
+                        pass
+
+                if prop_sonuc:
+                    st.success("Gunun Yildiz Oyuncu Analiz Raporu Hazir!")
+                    st.markdown(prop_sonuc)
+                    telegram_mesaj_gonder(tg_token, tg_chat_id, f"🏀 GUNUN YILDIZ OYUNCU (PLAYER PROPS) TAHMINLERI\n\n{prop_sonuc}")
+                else:
+                    st.warning("Su an AI servislerinden yanit alinamadi, birazdan tekrar deneyin.")
+            else:
+                st.info("Bugun programda analiz edilecek NBA veya EuroLeague maci bulunamadi.")
 elif gorunum == "AI Dogruluk Karnesi":
     st.subheader("📊 AI Dogruluk Karnesi & Lig Bazli Basari Analizi")
     import json, os
