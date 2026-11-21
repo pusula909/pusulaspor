@@ -884,7 +884,7 @@ if gorunum == "Canli Kupon Takip":
                             gr = requests.post(
                                 "https://groq.com",
                                 headers={"Authorization": f"Bearer {g_k}", "Content-Type": "application/json"},
-                                json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": ai_soru}], "temperature": 0.35, "max_tokens": 700},
+                                json={"model": "openai/gpt-oss-120b", "messages": [{"role": "user", "content": ai_soru}], "temperature": 0.35, "max_tokens": 700},
                                 timeout=15,
                             ).json()
                             if "choices" in gr and gr["choices"]:
