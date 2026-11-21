@@ -512,7 +512,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Deplasman Takim Golu", "AI Tahmin Secenegi": dep_gol_sec, "Guven Seviyesi": f"%{dep_gol_guv}", "GuvenInt": dep_gol_guv})
 
             en_iyi = sorted(satirlar, key=lambda x: x["GuvenInt"], reverse=True).pop(0)
-            ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
+        ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
             return satirlar, ozet_metin, en_iyi
         if spor_turu != "Futbol":
             if ev_g >= dep_g:
