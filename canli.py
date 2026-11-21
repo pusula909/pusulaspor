@@ -1,5 +1,5 @@
+import time; import io; from matematik_model import piyasa_ve_oran_hareketi_cek, futbol_poisson_hesapla, basketbol_tempo_hesapla; from ai_beyin import canli_baski_ve_istatistik_hesapla, yapilandirilmis_ai_karari_uret
 
-import io; from matematik_model import piyasa_ve_oran_hareketi_cek, futbol_poisson_hesapla, basketbol_tempo_hesapla; from ai_beyin import canli_baski_ve_istatistik_hesapla, yapilandirilmis_ai_karari_uret
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
