@@ -1194,6 +1194,7 @@ else:
         maclar.append(
             {
                 "ID": mac_id,
+                "LigYolu": yol,
                 "EvID": ev_id,
                 "DepID": dep_id,
                 "State": state,
@@ -1236,6 +1237,19 @@ else:
         secilen_mac = st.selectbox("Incelenecek maci secin:", df_ham["MacSecim"].tolist())
         satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records").pop(0)
         h2h_verisi = h2h_ve_form_getir(yol, satir["ID"], satir["Ev Sahibi"], satir["Deplasman"])
+        piyasa_notu = ""
+        try:
+            if yol != "euroleague_resmi" and "/" in yol:
+                p_json = requests.get(f"{url_basi}{yol}/summary?event={satir['ID']}", headers=basliklar, timeout=5).json()
+                pick = p_json.get("pickcenter", [])
+                if pick:
+                    ou_val = pick.get("overUnder", "")
+                    det_val = pick.get("details", "")
+                    if ou_val or det_val:
+                        piyasa_notu = f"Piyasa Baremi: {ou_val} | Handikap: {det_val}"
+                        st.info(f"💰 Gercek Bahis Piyasasi Cizgisi -> Alt/Ust Baremi: **{ou_val}** | Favori/Handikap: **{det_val}**")
+        except Exception:
+            pass
         ev_kadro, dep_kadro, ev_eksikler, dep_eksikler, kaynak = ai_kadro_ve_eksik_getir(
             yol, satir["ID"], satir["EvID"], satir["DepID"], spor
         )
