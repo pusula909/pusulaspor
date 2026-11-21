@@ -330,7 +330,7 @@ else:
                             if len(taks) < 2:
                                 continue
                             ev_n = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "home"), "")
-dep_n = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "away"), "")
+                            dep_n = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "away"), "")
                             m_id = ev_item.get("id", "")
                             detay = gercek_oran_ve_istatistik_cek(lg_yol, m_id, ev_n, dep_n)
                             if detay["piyasa_ev_ihtimal"] is None and detay["ev_oran_yuzde"] is None:
