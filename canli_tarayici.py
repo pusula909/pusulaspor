@@ -340,7 +340,105 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
         pass
     hafiza["son_update_id"] = son_update_id
 
+def bulten_anlik_sonuc_kontrol(gonderilenler):
+    if not os.path.exists("son_bulten.json"):
+        return
+    try:
+        with open("son_bulten.json", "r", encoding="utf-8") as f:
+            kayitli_maclar = json.load(f)
+    except Exception:
+        return
 
+    if not kayitli_maclar:
+        return
+
+    arsiv = list()
+    if os.path.exists("haftalik_arsiv.json"):
+        try:
+            with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
+                arsiv = json.load(f)
+        except Exception:
+            arsiv = list()
+
+    arsiv_degisti = False
+    for m in kayitli_maclar:
+        mac_id = str(m.get("id", ""))
+        sonuc_anahtari = f"SONUC_{m.get('tarih', tarih)}_{mac_id}"
+        if not mac_id or sonuc_anahtari in gonderilenler:
+            continue
+
+        ev_s, dep_s, st_code = 0, 0, "pre"
+        try:
+            resp = (
+                _el_get(m["tarih"])
+                if m["yol"] == "euroleague_resmi"
+                else requests.get(f"{url_basi}{m['yol']}/scoreboard?dates={m['tarih']}", headers=basliklar, timeout=8).json()
+            )
+            for ev in resp.get("events", list()):
+                if str(ev.get("id", "")) == mac_id:
+                    st_code = ev.get("status", {}).get("type", {}).get("state", "pre")
+                    comp = ev.get("competitions", list()).pop(0)
+                    for t_obj in comp.get("competitors", list()):
+                        if t_obj.get("homeAway") == "home":
+                            ev_s = int(float(t_obj.get("score", 0) or 0))
+                        else:
+                            dep_s = int(float(t_obj.get("score", 0) or 0))
+                    break
+        except Exception:
+            pass
+
+        if st_code != "post":
+            continue
+
+        t = m.get("tahmin", "")
+        top_s = ev_s + dep_s
+        tuttu = False
+
+        if "(MS 1)" in t and ev_s > dep_s:
+            tuttu = True
+        elif "(MS 2)" in t and dep_s > ev_s:
+            tuttu = True
+        elif "(MS 0)" in t and ev_s >= dep_s:
+            tuttu = True
+        elif "KG VAR" in t and ev_s > 0 and dep_s > 0:
+            tuttu = True
+        elif "UST" in t:
+            barem_list = list(x for x in t.split() if "." in x)
+            if barem_list:
+                barem = float(barem_list.pop(0))
+                hedef = ev_s if t.startswith(m.get("ev", "")) else (dep_s if t.startswith(m.get("dep", "")) else top_s)
+                if hedef > barem:
+                    tuttu = True
+        elif "ALT" in t:
+            barem_list = list(x for x in t.split() if "." in x)
+            if barem_list:
+                barem = float(barem_list.pop(0))
+                hedef = ev_s if t.startswith(m.get("ev", "")) else (dep_s if t.startswith(m.get("dep", "")) else top_s)
+                if hedef < barem:
+                    tuttu = True
+
+        gonderilenler.add(sonuc_anahtari)
+        durum_baslik = "✅ TAHMIN TUTTU!" if tuttu else "❌ TAHMIN YATTI"
+        arsiv.append({
+            "tarih": m.get("tarih_guzel", suan_tr.strftime("%d.%m.%Y")),
+            "lig": m.get("lig", "Genel"),
+            "mac": m.get("mac", ""),
+            "tahmin": t,
+            "skor": f"{ev_s}-{dep_s}",
+            "tuttu": tuttu
+        })
+        arsiv_degisti = True
+
+        telegram_gonder(
+            f"{durum_baslik}\n"
+            f"🏆 [{m.get('lig', '')}] {m.get('mac', '')}\n"
+            f"🎯 Tahmin: {t} (Guven: %{m.get('guven', '')})\n"
+            f"🏁 Mac Sonucu: {ev_s} - {dep_s}"
+        )
+
+    if arsiv_degisti:
+        with open("haftalik_arsiv.json", "w", encoding="utf-8") as f:
+            json.dump(arsiv[-150:], f, ensure_ascii=False, indent=2)
 def canli_maclari_tara():
     hafiza = {"tarih": tarih, "uyarilar": list(), "son_update_id": 0}
     if os.path.exists("canli_uyarilar.json"):
@@ -436,7 +534,7 @@ def canli_maclari_tara():
     if yeni_mesajlar:
         baslik = f"🚨 PUSULASPOR AI CANLI BAS ANALIST RAPORU ({saat_str})\n\n"
         telegram_gonder(baslik + "\n\n".join(yeni_mesajlar[:4]))
-
+    bulten_anlik_sonuc_kontrol(gonderilenler)
     telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri)
 
     hafiza["uyarilar"] = list(gonderilenler)
