@@ -632,6 +632,7 @@ def sharp_para_ve_oran_radari(gonderilenler):
 
                             if hareket_notu:
                                 gonderilenler.add(sharp_anahtar)
+                                mac_sozluk[mac_id]["sharp_uyari"] = hareket_notu
                                 sharp_alarmlar.append(
                                     f"🚨 [{l_adi}] {ev_ad} - {dep_ad}\n"
                                     f"   📊 {hareket_notu}\n"
