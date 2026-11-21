@@ -916,7 +916,7 @@ if gorunum == "Canli Kupon Takip":
 
                 secilen_final = secilen_final[:hedef_adet]
                 st.session_state.kupon_listesi = list(
-                    {"id": x["id"], "yol": x["yol"], "spor": x["spor"], "ev": x["ev"], "dep": x["dep"], "tahmin": x["final_secim"]}
+                    {"id": x["id"], "yol": x["yol"], "spor": x["spor"], "ev": x["ev"], "dep": x["dep"], "tahmin": x["final_secim"], "guven": x["on_guven"]}
                     for x in secilen_final
                 )
                 st.session_state.kupon_gerekceleri = secilen_final
@@ -1039,6 +1039,7 @@ if gorunum == "Canli Kupon Takip":
                     "ev": secilen_k_obj["ev"],
                     "dep": secilen_k_obj["dep"],
                     "tahmin": oynanan_tahmin,
+                    "guven": coklu_tahmin_motoru(secilen_k_obj["ev"], secilen_k_obj["dep"], 50, 50, secilen_k_obj["spor"], "pre", 0, 0, "")[2]["GuvenInt"],
                 }
             )
             st.session_state.kupon_bildirim_gonderildi = False
