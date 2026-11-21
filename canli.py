@@ -1244,7 +1244,7 @@ else:
                 pick = p_json.get("pickcenter", [])
                 for p in pick[:1]:
                     ou_val = p.get("overUnder", "")
-                    det_val = p.get("details", "")s
+                    det_val = p.get("details", "")
                     
                     if ou_val or det_val:
                         piyasa_notu = f"Piyasa Baremi: {ou_val} | Handikap: {det_val}"
