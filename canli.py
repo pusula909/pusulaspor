@@ -1,11 +1,13 @@
-
-
+from matematik_model import piyasa_ve_oran_hareketi_cek, futbol_poisson_hesapla, basketbol_tempo_hesapla
+from ai_beyin import canli_baski_ve_istatistik_hesapla, yapilandirilmis_ai_karari_uret
+import io
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 import requests
 import streamlit as st
-import streamlit as st; import io, time; from matematik_model import *; from ai_beyin import *
+
 try:
     import winsound
     SES_AKTIF = True
@@ -1245,7 +1247,7 @@ else:
 
         if spor == "Futbol":
             mat_sonuc = futbol_poisson_hesapla(
-                yol, satir["Ev Sahibi"], satir["Deplasman"], 0,0,
+                yol, satir["Ev Sahibi"], satir["Deplasman"], len(ev_eksikler), len(dep_eksikler),
                 satir["State"], satir["EvSkorInt"], satir["DepSkorInt"]
             )
             p_col1, p_col2, p_col3, p_col4 = st.columns(4)
@@ -1255,7 +1257,7 @@ else:
             p_col4.metric("Piyasa Baremi", f"{piyasa_v['guncel_barem'] or '2.5'} ({piyasa_v['handikap'] or '-'})")
         else:
             mat_sonuc = basketbol_tempo_hesapla(
-                yol, lig, satir["Ev Sahibi"], satir["Deplasman"], 0,0, piyasa_v["guncel_barem"]
+                yol, lig, satir["Ev Sahibi"], satir["Deplasman"], len(ev_eksikler), len(dep_eksikler), piyasa_v["guncel_barem"]
             )
             p_col1, p_col2, p_col3, p_col4 = st.columns(4)
             p_col1.metric("Model Beklenen Skor", f"{mat_sonuc['toplam_beklenti']} Sayi")
@@ -1277,6 +1279,7 @@ else:
                     "durum": satir["Dakika / Ceyrek"],
                     "skor": satir["Canli Skor"],
                     "form": f"Ev: {satir['Ev Form']}, Dep: {satir['Dep Form']}",
+                    "eksikler": f"Ev: {', '.join(ev_eksikler) or 'Yok'} | Dep: {', '.join(dep_eksikler) or 'Yok'}",
                     "matematik_model": mat_sonuc,
                     "piyasa_oran_hareketi": piyasa_v,
                     "canli_saha_ve_boxscore": f"{baski_v['istatistik_ozeti']} | {saha_bilgi}",
@@ -1389,4 +1392,3 @@ else:
 if otomatik_yenile:
     time.sleep(30)
     st.rerun()
-
