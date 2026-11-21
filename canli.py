@@ -747,3 +747,27 @@ elif gorunum == "AI Gunun Radari (Tum Ligler)":
                 ilerleme.progress(min(1.0, sayac / toplam_islem))
                 try:
                     r_veri = _el_get(tarih) if l_yolu == "euroleague_resmi" else requests.get(f"{url_basi}{l_yolu}/scoreboard?dates={tarih}", headers=basliklar, timeout=6).json()
+                    for ev in r_veri.get("events", []):
+                        st_code = ev.get("status", {}).get("type", {}).get("state", "pre")
+                        if st_code == "post":
+                            continue
+                        comp = ev.get("competitions", [{}]).pop(0)
+                        t_list = comp.get("competitors", [])
+                        if len(t_list) < 2:
+                            continue
+                        ev_t = next((t for t in t_list if t.get("homeAway") == "home"), t_list.pop(0))
+                        dep_t = next((t for t in t_list if t.get("homeAway") == "away"), t_list.pop(0))
+                        ev_ad, dep_ad = ev_t["team"]["displayName"], dep_t["team"]["displayName"]
+                        ev_rec = ev_t.get("records", [{}]).pop(0).get("summary", "1-1") if ev_t.get("records") else "1-1"
+                        dep_rec = dep_t.get("records", [{}]).pop(0).get("summary", "1-1") if dep_t.get("records") else "1-1"
+                        ev_s = int(float(ev_t.get("score", 0) or 0))
+                        dep_s = int(float(dep_t.get("score", 0) or 0))
+                        _, _, en_g = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, s_adi, l_adi, 0, 0, st_code, ev_s, dep_s)
+                        if en_g["GuvenInt"] >= 74:
+                            tum_radar.append({"Lig": l_adi, "Mac": f"{ev_ad} - {dep_ad}", "Durum": "CANLI" if st_code == "in" else ev.get("status", {}).get("type", {}).get("shortDetail", ""), "AI Secimi": en_g["AI Tahmin Secenegi"], "Guven %": en_g["GuvenInt"]})
+                except Exception:
+                    pass
+        if tum_radar:
+            st.dataframe(pd.DataFrame(tum_radar).sort_values(by="Guven %", ascending=False), use_container_width=True, hide_index=True)
+        else:
+            st.info("Su an yuksek guvenli radar eslesmesi bulunamadi.")
