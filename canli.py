@@ -1301,7 +1301,7 @@ else:
                    
             if ai_yorum:
                 st.success(f"Gemini AI Taktik ve Kadro Yorumu: {ai_yorum}")
-                tablo_en_iyi = detayli_tahmin_satirlari["AI Tahmin Secenegi"]
+                tablo_en_iyi = next(iter(detayli_tahmin_satirlari)).get("AI Tahmin Secenegi", "")
                 st.warning(f"⚡ *NET ÖZET KARAR:* Matematiksel Tablon *{tablo_en_iyi}* diyor — Yapay Zeka ise yukarıdaki *NOKTA ATIŞI ANA KARAR* satırını öneriyor. İkisi aynı yönüyse *GÜÇLÜ SİNYAL, zıtsa **PAS GEÇ!*") 
         if h2h_verisi:
             st.info("*Son Kafa Kafaya (H2H) Maclar:* " + "  |  ".join(h2h_verisi))
