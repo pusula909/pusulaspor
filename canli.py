@@ -449,8 +449,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
         fark = abs(ev_g - dep_g)
         satirlar = list()
         etiket = "CANLI AI" if state == "in" else "Mac Onu AI"
-
-        if spor_turu == "Futbol":
+    if spor_turu == "Futbol":
             if ev_g > dep_g + 0.14:
                 ms_secenek = f"{ev_ad} Kazanir (MS 1)"
                 ms_guven = min(89, int(56 + fark * 45))
@@ -464,11 +463,11 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
 
             toplam_gol = ev_skor + dep_skor
             if state == "in":
-            dk_mevcut = max(1, int(locals().get("dakika", 45) or 45))
-            sut_toplam = int(locals().get("ev_sot", 0) or 0) + int(locals().get("dep_sot", 0) or 0)
+        dk_mevcut = max(1, int(locals().get("dakika", 45) or 45))
+        sut_toplam = int(locals().get("ev_sot", 0) or 0) + int(locals().get("dep_sot", 0) or 0)
             kalan_dk = max(1, 90 - dk_mevcut)
             tempo_hizi = (toplam_gol * 18 + sut_toplam * 6) / dk_mevcut
-            if dk_mevcut >= 78 and tempo_hizi < 1.15:
+    if dk_mevcut >= 78 and tempo_hizi < 1.15:
                 au_secenek = f"Canli Toplam {toplam_gol + 0.5} ALT (Mac Kilitli / Dusuk Tempo)"
                 au_guven = min(84, int(58 + (dk_mevcut - 75) * 1.4))
             else:
