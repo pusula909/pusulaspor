@@ -918,6 +918,20 @@ if gorunum == "Canli Kupon Takip":
                         list(
                             f"🏆 [{x['lig']}] {x['ev']} - {x['dep']}\n"
                             f"🎯 AI Secimi: {x['final_secim']} ({x['piyasa']})\n"
+                            f"📝 Gerekce: {x['gerekce']}"
+                            for x in secilen_final
+                        )
+                    )
+                )
+                telegram_mesaj_gonder(tg_token, tg_chat_id, tg_rapor)
+                st.rerun()
+            else:
+                st.warning("Su an analiz edilecek baslamamis mac bulunamadi.")
+
+    if "kupon_gerekceleri" in st.session_state and st.session_state.kupon_gerekceleri and st.session_state.kupon_listesi:
+        st.subheader("🧠 Bas Analist AI Secim Gerekceleri")
+        for g_item in st.session_state.kupon_gerekceleri:
+            st.info(f"**[{g_item['lig']}] {g_item['ev']} vs {g_item['dep']} -> {g_item['final_secim']}**\n\n{g_item['gerekce']}")
     c1, c2, c3 = st.columns(3)
     k_spor = c1.selectbox("Spor", ("Basketbol", "Futbol"), key="k_spor")
     k_lig = c2.selectbox("Lig", list(TUM_LIGLER[k_spor].keys()), key="k_lig")
