@@ -1,3 +1,5 @@
+from matematik_model import piyasa_ve_oran_hareketi_cek, futbol_poisson_hesapla, basketbol_tempo_hesapla
+from ai_beyin import canli_baski_ve_istatistik_hesapla, yapilandirilmis_ai_karari_uret
 import io
 import time
 import xml.etree.ElementTree as ET
@@ -1237,6 +1239,59 @@ else:
         secilen_mac = st.selectbox("Incelenecek maci secin:", df_ham["MacSecim"].tolist())
         satir = df_ham[df_ham["MacSecim"] == secilen_mac].head(1).to_dict(orient="records").pop(0)
         h2h_verisi = h2h_ve_form_getir(yol, satir["ID"], satir["Ev Sahibi"], satir["Deplasman"])
+        piyasa_v = piyasa_ve_oran_hareketi_cek(yol, satir["ID"])
+        baski_v = canli_baski_ve_istatistik_hesapla(yol, satir["ID"], spor, satir["State"])
+
+        if piyasa_v["sharp_uyari"]:
+            st.error(piyasa_v["sharp_uyari"])
+
+        if spor == "Futbol":
+            mat_sonuc = futbol_poisson_hesapla(
+                yol, satir["Ev Sahibi"], satir["Deplasman"], len(ev_eksikler), len(dep_eksikler),
+                satir["State"], satir["EvSkorInt"], satir["DepSkorInt"]
+            )
+            p_col1, p_col2, p_col3, p_col4 = st.columns(4)
+            p_col1.metric("Poisson MS (1-0-2)", f"%{mat_sonuc['ms1']} - %{mat_sonuc['ms0']} - %{mat_sonuc['ms2']}")
+            p_col2.metric("2.5 UST / KG VAR", f"%{mat_sonuc['ust25']} / %{mat_sonuc['kg_var']}")
+            p_col3.metric("En Olasi Skorlar", mat_sonuc["olasi_skorlar"].split(","))
+            p_col4.metric("Piyasa Baremi", f"{piyasa_v['guncel_barem'] or '2.5'} ({piyasa_v['handikap'] or '-'})")
+        else:
+            mat_sonuc = basketbol_tempo_hesapla(
+                yol, lig, satir["Ev Sahibi"], satir["Deplasman"], len(ev_eksikler), len(dep_eksikler), piyasa_v["guncel_barem"]
+            )
+            p_col1, p_col2, p_col3, p_col4 = st.columns(4)
+            p_col1.metric("Model Beklenen Skor", f"{mat_sonuc['toplam_beklenti']} Sayi")
+            p_col2.metric("Gercek Piyasa Baremi", f"{piyasa_v['guncel_barem'] or '-'}")
+            p_col3.metric("Value Fark / Handikap", f"{mat_sonuc['value_fark']:+.1f} | {piyasa_v['handikap'] or '-'}")
+            p_col4.metric("Canli Baskı / Tempo", baski_v["baski_etiketi"].split("(")[-1].replace(")", "") if satir["State"] == "in" else "Mac Onu")
+            if mat_sonuc["value_etiket"]:
+                st.success(mat_sonuc["value_etiket"])
+
+        if satir["State"] == "in":
+            st.info(f"📊 **Canli Saha & Boxscore:** {baski_v['baski_etiketi']} | {baski_v['istatistik_ozeti']}")
+
+        if gemini_api_key or st.secrets.get("GROQ_KEY", ""):
+            with st.spinner("Pro AI Karar Merkezi tum matematiksel verileri ve piyasa hareketlerini analiz ediyor..."):
+                saha_bilgi = canli_oyuncu_ve_olay_cek(satir.get("ID", ""), yol, spor)
+                paket = {
+                    "lig": lig,
+                    "mac": f"{satir['Ev Sahibi']} vs {satir['Deplasman']}",
+                    "durum": satir["Dakika / Ceyrek"],
+                    "skor": satir["Canli Skor"],
+                    "form": f"Ev: {satir['Ev Form']}, Dep: {satir['Dep Form']}",
+                    "eksikler": f"Ev: {', '.join(ev_eksikler) or 'Yok'} | Dep: {', '.join(dep_eksikler) or 'Yok'}",
+                    "matematik_model": mat_sonuc,
+                    "piyasa_oran_hareketi": piyasa_v,
+                    "canli_saha_ve_boxscore": f"{baski_v['istatistik_ozeti']} | {saha_bilgi}",
+                }
+                karar = yapilandirilmis_ai_karari_uret(gemini_api_key, st.secrets.get("GROQ_KEY", ""), paket)
+
+            k_c1, k_c2, k_c3 = st.columns(3)
+            renk_ikon = "🟢" if "OYNA" in karar["durum"] else ("🔴" if "PAS" in karar["durum"] else "🟡")
+            k_c1.metric("AI NET KARAR", f"{renk_ikon} {karar['durum']}")
+            k_c2.metric("ANA TERCIH", karar["secim"])
+            k_c3.metric("AI GUVEN PUANI", f"%{karar['guven']}")
+            st.success(f"🧠 **Taktik & Matematik Gerekcesi:** {karar['sebep']}\n\n⚠️ **En Buyuk Risk:** {karar['risk']}")
         piyasa_notu = ""
         try:
             if yol != "euroleague_resmi" and "/" in yol:
