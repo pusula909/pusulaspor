@@ -102,21 +102,21 @@ def yapilandirilmis_ai_karari_uret(gemini_key, groq_key, analiz_paketi):
     )
 
     ham_yanit = ""
-    if GEMINI_AKTIF and g_key:
-        try:
-            client = genai.Client(api_key=g_key, http_options={"api_version": "v1beta"})
-            for m in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
-                try:
-                    res = client.models.generate_content(model=m, contents=prompt)
-                    if res and res.text:
-                        ham_yanit = res.text.strip()
-                        break
-                except Exception:
-                    continue
-        except Exception:
-            pass
-
-    if not ham_yanit and q_key:
+    if g_key:
+        for m in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+            try:
+                g_url = f"https://googleapis.com{m}:generateContent?key={g_key}"
+                res = requests.post(g_url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=12).json()
+                cands = res.get("candidates", [])
+                if cands:
+                    parts = cands.pop(0).get("content", {}).get("parts", [])
+                    if parts:
+                        ham_yanit = parts.pop(0).get("text", "").strip()
+                        if ham_yanit:
+                            break
+            except Exception:
+                continue
+   if not ham_yanit and q_key:
         try:
             g_resp = requests.post(
                 "https://groq.com",
@@ -125,7 +125,7 @@ def yapilandirilmis_ai_karari_uret(gemini_key, groq_key, analiz_paketi):
                 timeout=12,
             ).json()
             if "choices" in g_resp and g_resp["choices"]:
-                ham_yanit = g_resp["choices"][0].get("message", {}).get("content", "").strip()
+                ham_yanit = g_resp["choices"].pop(0).get("message", {}).get("content", "").strip()
         except Exception:
             pass
 
