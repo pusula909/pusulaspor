@@ -500,6 +500,82 @@ def bulten_anlik_sonuc_kontrol(gonderilenler):
     if arsiv_degisti:
         with open("haftalik_arsiv.json", "w", encoding="utf-8") as f:
             json.dump(arsiv[-150:], f, ensure_ascii=False, indent=2)
+def sharp_para_ve_oran_radari(gonderilenler):
+    piyasa_dosya = "piyasa_hafiza.json"
+    kayitli_piyasa = {"tarih": tarih, "maclar": {}}
+    if os.path.exists(piyasa_dosya):
+        try:
+            with open(piyasa_dosya, "r", encoding="utf-8") as f:
+                eski_p = json.load(f)
+                if eski_p.get("tarih") == tarih:
+                    kayitli_piyasa = eski_p
+        except Exception:
+            pass
+
+    mac_sozluk = kayitli_piyasa.get("maclar", {})
+    sharp_alarmlar = list()
+
+    for s_adi, lig_sozluk in TUM_LIGLER.items():
+        for l_adi, l_yolu in lig_sozluk.items():
+            if l_yolu == "euroleague_resmi" or "/" not in l_yolu:
+                continue
+            try:
+                resp = requests.get(f"{url_basi}{l_yolu}/scoreboard?dates={tarih}", headers=basliklar, timeout=6).json()
+                for ev in resp.get("events", list()):
+                    if ev.get("status", {}).get("type", {}).get("state", "pre") != "pre":
+                        continue
+                    mac_id = str(ev.get("id", ""))
+                    comp = ev.get("competitions", list(({},))).pop(0)
+                    t_list = comp.get("competitors", list())
+                    if len(t_list) < 2:
+                        continue
+                    ev_ad = t_list.pop(0).get("team", {}).get("displayName", "Ev")
+                    dep_ad = t_list.pop(0).get("team", {}).get("displayName", "Dep")
+
+                    sj = requests.get(f"{url_basi}{l_yolu}/summary?event={mac_id}", headers=basliklar, timeout=5).json()
+                    pk_l = sj.get("pickcenter", list())
+                    if not pk_l:
+                        continue
+                    pk0 = pk_l.pop(0)
+                    ou_yeni = float(pk0.get("overUnder", 0) or 0)
+                    det_yeni = str(pk0.get("details", "")).strip()
+
+                    if ou_yeni <= 0 and not det_yeni:
+                        continue
+
+                    if mac_id not in mac_sozluk:
+                        mac_sozluk[mac_id] = {"ou": ou_yeni, "det": det_yeni, "ad": f"{ev_ad} - {dep_ad}", "lig": l_adi}
+                    else:
+                        eski_ou = float(mac_sozluk[mac_id].get("ou", 0) or 0)
+                        eski_det = str(mac_sozluk[mac_id].get("det", "")).strip()
+                        fark_ou = round(ou_yeni - eski_ou, 1) if (ou_yeni > 0 and eski_ou > 0) else 0.0
+                        esik = 3.5 if s_adi == "Basketbol" else 0.5
+
+                        sharp_anahtar = f"SHARP_{tarih}_{mac_id}"
+                        if sharp_anahtar not in gonderilenler:
+                            hareket_notu = ""
+                            if abs(fark_ou) >= esik:
+                                yon = "YUKARI FIRLADI (UST Parasi)" if fark_ou > 0 else "ASAGI DUSTU (ALT Parasi)"
+                                hareket_notu = f"Barem Kaymasi: {eski_ou} -> {ou_yeni} ({fark_ou:+} | {yon})"
+                            elif eski_det and det_yeni and eski_det != det_yeni:
+                                hareket_notu = f"Handikap / Favori Kaymasi: {eski_det} -> {det_yeni}"
+
+                            if hareket_notu:
+                                gonderilenler.add(sharp_anahtar)
+                                sharp_alarmlar.append(
+                                    f"🚨 [{l_adi}] {ev_ad} - {dep_ad}\n"
+                                    f"   📊 {hareket_notu}\n"
+                                    f"   💡 Piyasada sert para hareketi / gizli bilgi akisi tespit edildi!"
+                                )
+            except Exception:
+                pass
+
+    kayitli_piyasa["maclar"] = mac_sozluk
+    with open(piyasa_dosya, "w", encoding="utf-8") as f:
+        json.dump(kayitli_piyasa, f, ensure_ascii=False, indent=2)
+
+    if sharp_alarmlar:
+        telegram_gonder("🦈 SHARP PARA & ORAN DUSUSU RADARI\n\n" + "\n\n".join(sharp_alarmlar[:5]))            
 def canli_maclari_tara():
     hafiza = {"tarih": tarih, "uyarilar": list(), "son_update_id": 0}
     if os.path.exists("canli_uyarilar.json"):
