@@ -176,6 +176,86 @@ def en_guclu_tahmini_bul(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi):
         return "Form Analizi", 55, ""
 
 
+YILDIZLAR = (
+    "Giannis", "Jokic", "Doncic", "Tatum", "Curry", "LeBron", "Durant", "Embiid", "Shai", "Edwards",
+    "Brunson", "Mitchell", "Booker", "Davis", "Wembanyama", "Sengun", "Larkin", "Vezenkov", "Tavares",
+    "Campazzo", "Hezonja", "Lessort", "Nunn", "Sloukas", "Icardi", "Osimhen", "Dzeko", "Tadic", "Immobile",
+    "Rafa", "Haaland", "Salah", "Mbappe", "Vinicius", "Bellingham", "Kane", "Yamal", "Lewandowski", "Palmer", "Saka"
+)
+
+
+def piyasa_ve_sakatlik_kontrol(lig_yolu, mac_id):
+    sakat_ceza = 0
+    sakat_notlar = list()
+    piyasa_ozet = ""
+    if lig_yolu == "euroleague_resmi" or "/" not in lig_yolu or not mac_id:
+        return sakat_ceza, sakat_notlar, piyasa_ozet
+    try:
+        j = requests.get(f"{url_basi}{lig_yolu}/summary?event={mac_id}", headers=basliklar, timeout=6).json()
+        for grp in j.get("injuries", list()):
+            t_ad = grp.get("team", {}).get("displayName", "")
+            for inj in grp.get("injuries", list()):
+                durum = inj.get("status", "")
+                oyuncu = inj.get("athlete", {}).get("displayName", "")
+                if durum in ("Out", "Doubtful") and oyuncu:
+                    if any(y.lower() in oyuncu.lower() for y in YILDIZLAR):
+                        sakat_ceza += 8
+                        sakat_notlar.append(f"{t_ad}: {oyuncu} ({durum})")
+                    else:
+                        sakat_ceza += 2
+        for p in j.get("pickcenter", list())[:1]:
+            ou = p.get("overUnder", "")
+            det = p.get("details", "")
+            if ou or det:
+                piyasa_ozet = f"Piyasa: {det} | Barem: {ou}"
+    except Exception:
+        pass
+    return sakat_ceza, sakat_notlar[:3], piyasa_ozet
+
+
+def hakem_ai_tuzak_ele(aday_listesi):
+    if not aday_listesi:
+        return aday_listesi
+    aday_metin = "\n".join(
+        list(f"- ID:{m['id']} | [{m['lig']}] {m['mac']} -> {m['tahmin']} (Guven:%{m['guven']}) | {m.get('piyasa', '')} | Eksikler: {', '.join(m.get('eksikler', [])) or 'Yok'}" for m in aday_listesi)
+    )
+    soru = (
+        "Sen profesyonel bir spor risk analistisin. Asagidaki mac adaylarini incele. "
+        "Yildiz eksigi olan, tuzak olabilecek veya piyasa cizgisiyle celisen maclari ELE. "
+        "Sadece en saglam, en dusuk riskli EN FAZLA 4 macin ID numarasini ve her biri icin 1 cumlelik secim gerekcesini yaz.\n"
+        "Format TAM OLARAK soyle olsun:\n"
+        "ID:12345 | Gerekce: ...\n\n"
+        f"Adaylar:\n{aday_metin}"
+    )
+    yanit_metin = ""
+    if GEMINI_AKTIF and GEMINI_KEY:
+        try:
+            client = genai.Client(api_key=GEMINI_KEY, http_options={"api_version": "v1beta"})
+            for m_ad in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+                try:
+                    y = client.models.generate_content(model=m_ad, contents=soru)
+                    if y and y.text:
+                        yanit_metin = y.text.strip()
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    if not yanit_metin:
+        return aday_listesi[:4]
+
+    secilenler = list()
+    for satir in yanit_metin.splitlines():
+        if "ID:" in satir:
+            for aday in aday_listesi:
+                if f"ID:{aday['id']}" in satir and aday not in secilenler:
+                    gerekce = satir.split("Gerekce:")[-1].strip() if "Gerekce:" in satir else ""
+                    aday["ai_gerekce"] = gerekce
+                    secilenler.append(aday)
+    return secilenler[:4] if secilenler else aday_listesi[:4]
+
+
 def bulten_olustur_ve_gonder():
     firsatlar = list()
     for s_adi, lig_sozluk in TUM_LIGLER.items():
@@ -196,9 +276,10 @@ def bulten_olustur_ve_gonder():
                     ev_r = ev_t.get("records", list()).pop(0).get("summary", "1-1") if ev_t.get("records") else "1-1"
                     dep_r = dep_t.get("records", list()).pop(0).get("summary", "1-1") if dep_t.get("records") else "1-1"
                     saat = ev.get("status", {}).get("type", {}).get("shortDetail", "")
+                    mac_id = str(ev.get("id", ""))
                     tahmin, guven, deger = en_guclu_tahmini_bul(ev_ad, dep_ad, ev_r, dep_r, s_adi, l_adi)
                     firsatlar.append({
-                        "id": str(ev.get("id", "")),
+                        "id": mac_id,
                         "yol": l_yolu,
                         "tarih": tarih,
                         "tarih_guzel": tarih_guzel,
@@ -214,32 +295,35 @@ def bulten_olustur_ve_gonder():
             except Exception:
                 pass
 
-    en_iyiler = sorted(firsatlar, key=lambda x: x["guven"], reverse=True)[:5]
+    en_guclu_adaylar = sorted(firsatlar, key=lambda x: x["guven"], reverse=True)[:10]
+    filtrelenmis_adaylar = list()
+    for aday in en_guclu_adaylar:
+        ceza, eksikler, piyasa = piyasa_ve_sakatlik_kontrol(aday["yol"], aday["id"])
+        aday["guven"] = max(50, aday["guven"] - ceza)
+        aday["eksikler"] = eksikler
+        aday["piyasa"] = piyasa
+        if aday["guven"] >= 68:
+            filtrelenmis_adaylar.append(aday)
+
+    en_iyiler = hakem_ai_tuzak_ele(sorted(filtrelenmis_adaylar, key=lambda x: x["guven"], reverse=True)[:8])
     with open("son_bulten.json", "w", encoding="utf-8") as f:
         json.dump(en_iyiler, f, ensure_ascii=False, indent=2)
 
     if not en_iyiler:
-        mesaj = f"📅 {tarih_guzel} PusulaSpor AI Bulteni\nBugun icin bultende uygun mac bulunamadi."
+        mesaj = f"📅 {tarih_guzel} PusulaSpor Akilli Filtre Bulteni\nBugun tuzak filtresini gecen yuksek guvenli mac bulunamadi."
     else:
-        satirlar = list((f"🏆 {tarih_guzel} PUSULASPOR AI GUNUN BANKOLARI\n",))
+        satirlar = list((f"🏆 {tarih_guzel} PUSULASPOR AKILLI FILTRE BANKOLARI\n",))
         for idx, m in enumerate(en_iyiler, 1):
             etiket_ek = f" | {m['deger']}" if m.get("deger") else ""
-            satirlar.append(f"{idx}. [{m['lig']}] {m['mac']} ({m['saat']})\n   👉 Tahmin: {m['tahmin']} (Guven: %{m['guven']}){etiket_ek}")
-
-        if GEMINI_AKTIF and GEMINI_KEY:
-            try:
-                client = genai.Client(api_key=GEMINI_KEY, http_options={"api_version": "v1beta"})
-                ozet_istek = "Su maclar ve secilen tahminler icin 3 cumlelik kisa bir gunun bulten yorumu yaz: " + ", ".join(list(f"{x['mac']} ({x['tahmin']})" for x in en_iyiler))
-                yanit = client.models.generate_content(model="gemini-2.5-flash", contents=ozet_istek)
-                if yanit and yanit.text:
-                    satirlar.append(f"\n🤖 AI Gunun Ozeti:\n{yanit.text.strip()}")
-            except Exception:
-                pass
-
+            gerekce_ek = f"\n   🧠 Hakem AI: {m['ai_gerekce']}" if m.get("ai_gerekce") else ""
+            piyasa_ek = f"\n   💰 {m['piyasa']}" if m.get("piyasa") else ""
+            satirlar.append(
+                f"{idx}. [{m['lig']}] {m['mac']} ({m['saat']})\n"
+                f"   👉 Tahmin: {m['tahmin']} (Net Guven: %{m['guven']}){etiket_ek}{piyasa_ek}{gerekce_ek}"
+            )
         mesaj = "\n".join(satirlar)
 
     telegram_gonder(mesaj)
-
 
 def sonuc_raporu_kontrol_et():
     if not os.path.exists("son_bulten.json"):
