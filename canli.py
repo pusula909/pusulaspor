@@ -141,7 +141,7 @@ def gercek_oran_ve_istatistik_cek(yol, mac_id, ev_adi="", dep_adi=""):
     except Exception:
         pass
     return veri
-    def gercek_mac_tahmini_hesapla(ev, dep, spor, lig, veri, state="pre", ev_skor=0, dep_skor=0, dakika=0, ev_sot=0, dep_sot=0):
+def gercek_mac_tahmini_hesapla(ev, dep, spor, lig, veri, state="pre", ev_skor=0, dep_skor=0, dakika=0, ev_sot=0, dep_sot=0):
     lig_bonus = lig_basari_bonusu_getir(lig)
     sharp_bonus = 5.0 if veri.get("sharp_not") else 0.0
     ev_sezon = veri.get("ev_oran_yuzde")
