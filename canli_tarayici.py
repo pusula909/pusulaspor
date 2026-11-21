@@ -302,7 +302,7 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                 with open("son_bulten.json", "r", encoding="utf-8") as f:
                     b_list = json.load(f)
                 if b_list:
-                    satir = list(("🏆 KAYITLI GUNUN BULTENI\n",))
+                 satir = list(("🏆 KAYITLI GUNUN BULTENI\n",))
                  for i, m in enumerate(b_list, 1):
                      satir.append(f"{i}. [{m['lig']}] {m['mac']} -> {m['tahmin']} (%{m['guven']})")
                  telegram_gonder("\n".join(satir))
