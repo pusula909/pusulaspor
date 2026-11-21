@@ -1242,9 +1242,10 @@ else:
             if yol != "euroleague_resmi" and "/" in yol:
                 p_json = requests.get(f"{url_basi}{yol}/summary?event={satir['ID']}", headers=basliklar, timeout=5).json()
                 pick = p_json.get("pickcenter", [])
-                if pick:
-                    ou_val = pick.get("overUnder", "")
-                    det_val = pick.get("details", "")
+                for p in pick[:1]:
+                    ou_val = p.get("overUnder", "")
+                    det_val = p.get("details", "")
+                    
                     if ou_val or det_val:
                         piyasa_notu = f"Piyasa Baremi: {ou_val} | Handikap: {det_val}"
                         st.info(f"💰 Gercek Bahis Piyasasi Cizgisi -> Alt/Ust Baremi: **{ou_val}** | Favori/Handikap: **{det_val}**")
