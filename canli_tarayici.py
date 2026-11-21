@@ -308,7 +308,7 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                  telegram_gonder("\n".join(satir))
         else:
                  telegram_gonder("Henuz kayitli gunluk bulten yok.")
-         else:
+        else:
              telegram_gonder("Henuz kayitli gunluk bulten yok.")
                 
                
