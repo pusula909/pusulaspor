@@ -464,9 +464,17 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
 
             toplam_gol = ev_skor + dep_skor
             if state == "in":
+            dk_mevcut = max(1, int(locals().get("dakika", 45) or 45))
+            sut_toplam = int(locals().get("ev_sot", 0) or 0) + int(locals().get("dep_sot", 0) or 0)
+            kalan_dk = max(1, 90 - dk_mevcut)
+            tempo_hizi = (toplam_gol * 18 + sut_toplam * 6) / dk_mevcut
+            if dk_mevcut >= 78 and tempo_hizi < 1.15:
+                au_secenek = f"Canli Toplam {toplam_gol + 0.5} ALT (Mac Kilitli / Dusuk Tempo)"
+                au_guven = min(84, int(58 + (dk_mevcut - 75) * 1.4))
+            else:
                 hedef_barem = toplam_gol + 0.5
-                au_secenek = f"Canli Toplam {hedef_barem} UST"
-                au_guven = min(82, int(62 + (ev_g + dep_g) * 12))
+                au_secenek = f"Canli Toplam {hedef_barem} UST (Tempo: {round(tempo_hizi, 1)})"
+                au_guven = max(48, min(83, int(45 + tempo_hizi * 14 + (kalan_dk / 5))))
             elif ev_g >= 0.54 and dep_g >= 0.48:
                 au_secenek = "Toplam 2.5 UST"
                 au_guven = min(79, int(58 + (ev_g + dep_g) * 14))
