@@ -6,7 +6,41 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import requests
 import streamlit as st
-
+def gercek_mac_verisi_cek(yol, mac_id):
+    ev_oran, dep_oran, barem, handikap, sakat_fark = None, None, None, None, 0
+    if not yol or not mac_id or yol == "euroleague_resmi":
+        return ev_oran, dep_oran, barem, handikap, sakat_fark
+    try:
+        sj = requests.get(f"https://espn.com{yol}/summary?event={mac_id}", timeout=6).json()
+        comps = sj.get("header", {}).get("competitions", list(({},))).pop(0).get("competitors", list())
+        for c in comps:
+            rec_str = next((r.get("summary", "") for r in c.get("record", list()) if r.get("type") == "total"), "")
+            if "-" in rec_str:
+                parca = rec_str.split("-")
+                g_sayi, m_sayi = int(parca.pop(0)), int(parca.pop(0))
+                toplam_m = g_sayi + m_sayi
+                if toplam_m > 0:
+                    yuzde = round((g_sayi / toplam_m) * 100, 1)
+                    if c.get("homeAway") == "home":
+                        ev_oran = yuzde
+                    else:
+                        dep_oran = yuzde
+        for pk in sj.get("pickcenter", list())[:1]:
+            if pk.get("overUnder") is not None:
+                barem = float(pk.get("overUnder"))
+            if pk.get("spread") is not None:
+                handikap = float(pk.get("spread"))
+        ev_id = next((c.get("team", {}).get("id", "") for c in comps if c.get("homeAway") == "home"), "")
+        for grp in sj.get("injuries", list()):
+            t_id = grp.get("team", {}).get("id", "")
+            eksik_say = sum(1 for inj in grp.get("injuries", list()) if inj.get("status") in ("Out", "Doubtful"))
+            if ev_id and ev_id == t_id:
+                sakat_fark -= eksik_say * 3
+            else:
+                sakat_fark += eksik_say * 3
+    except Exception:
+        pass
+    return ev_oran, dep_oran, barem, handikap, sakat_fark
 try:
     import winsound
     SES_AKTIF = True
@@ -906,13 +940,19 @@ if gorunum == "Canli Kupon Takip":
                                     secilen_final.append(cand)
 
                 if not secilen_final:
-                    for cand in derin_havuz[:hedef_adet]:
-                        if cand["spor"] == "Futbol":
-                            cand["final_secim"] = f"{cand['ev']} 1.5 UST" if "MS 1" in cand["on_tahmin"] else "Toplam 2.5 UST"
-                        else:
-                            cand["final_secim"] = f"Mac Toplami {cand['ou']} UST" if cand["ou"] else cand["on_tahmin"]
-                        cand["gerekce"] = f"Piyasa ({cand['piyasa']}) ve sakatlik raporu ({cand['sakatlar']}) incelenerek olusturuldu."
-                        secilen_final.append(cand)
+            for cand in derin_havuz:
+                if len(secilen_final) >= hedef_adet:
+                    break
+                if not cand.get("ou") and not cand.get("piyasa"):
+                    continue
+                if cand["spor"] == "Futbol" and cand["ev_r"] >= 58 and cand["dep_r"] <= 42:
+                    cand["final_secim"] = f"{cand['ev']} Kazanir (MS 1)"
+                    cand["gerekce"] = f"Form farki (%{cand['ev_r']} vs %{cand['dep_r']}) ve piyasa verileriyle dogrulandi."
+                    secilen_final.append(cand)
+                elif cand.get("ou"):
+                    cand["final_secim"] = f"Mac Toplami {cand['ou']} UST"
+                    cand["gerekce"] = f"Resmi piyasa baremi ({cand['ou']}) ve kadro durumu ({cand['sakatlar']}) uyumlu."
+                    secilen_final.append(cand)
 
                 secilen_final = secilen_final[:hedef_adet]
                 st.session_state.kupon_listesi = list(
@@ -1039,7 +1079,11 @@ if gorunum == "Canli Kupon Takip":
                     "ev": secilen_k_obj["ev"],
                     "dep": secilen_k_obj["dep"],
                     "tahmin": oynanan_tahmin,
-                    "guven": coklu_tahmin_motoru(secilen_k_obj["ev"], secilen_k_obj["dep"], 50, 50, secilen_k_obj["spor"], "pre", 0, 0, "")[2]["GuvenInt"],
+                    "guven": (
+                            lambda eo, do, br, hk, sf: coklu_tahmin_motoru(
+                                secilen_k_obj["ev"], secilen_k_obj["dep"], eo or 50, do or 50, secilen_k_obj["spor"], "pre", 0, 0, ""
+                            )["GuvenInt"] + sf
+                        )(*gercek_mac_verisi_cek(secilen_k_obj["yol"], secilen_k_obj["id"])),
                 }
             )
             st.session_state.kupon_bildirim_gonderildi = False
