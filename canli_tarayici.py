@@ -400,7 +400,7 @@ def maca_1_saat_kala_kadro_kontrol(gonderilenler):
                     )
         except Exception:
             pass
-maca_1_saat_kala_kadro_kontrol(gonderilenler)            
+                            
 def bulten_anlik_sonuc_kontrol(gonderilenler):
     if not os.path.exists("son_bulten.json"):
         return
@@ -671,6 +671,8 @@ def canli_maclari_tara():
     if yeni_mesajlar:
         baslik = f"🚨 PUSULASPOR AI CANLI BAS ANALIST RAPORU ({saat_str})\n\n"
         telegram_gonder(baslik + "\n\n".join(yeni_mesajlar[:4]))
+    sharp_para_ve_oran_radari(gonderilenler)
+    maca_1_saat_kala_kadro_kontrol(gonderilenler)
     bulten_anlik_sonuc_kontrol(gonderilenler)
     telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri)
 
