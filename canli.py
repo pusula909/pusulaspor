@@ -939,20 +939,20 @@ if gorunum == "Canli Kupon Takip":
                                     cand["gerekce"] = gerekce_txt or f"{cand['piyasa']} ve kadro durumuna gore AI tarafindan secildi."
                                     secilen_final.append(cand)
 
-    if not secilen_final:
-            for cand in derin_havuz:
-                if len(secilen_final) >= hedef_adet:
-                    break
-                if not cand.get("ou") and not cand.get("piyasa"):
-                    continue
-                if cand["spor"] == "Futbol" and cand["ev_r"] >= 58 and cand["dep_r"] <= 42:
-                    cand["final_secim"] = f"{cand['ev']} Kazanir (MS 1)"
-                    cand["gerekce"] = f"Form farki (%{cand['ev_r']} vs %{cand['dep_r']}) ve piyasa verileriyle dogrulandi."
-                    secilen_final.append(cand)
-                elif cand.get("ou"):
-                    cand["final_secim"] = f"Mac Toplami {cand['ou']} UST"
-                    cand["gerekce"] = f"Resmi piyasa baremi ({cand['ou']}) ve kadro durumu ({cand['sakatlar']}) uyumlu."
-                    secilen_final.append(cand)
+        if not secilen_final:
+                for cand in derin_havuz:
+                    if len(secilen_final) >= hedef_adet:
+                        break
+                    if not cand.get("ou") and not cand.get("piyasa"):
+                        continue
+                    if cand["spor"] == "Futbol" and cand["ev_r"] >= 58 and cand["dep_r"] <= 42:
+                        cand["final_secim"] = f"{cand['ev']} Kazanir (MS 1)"
+                        cand["gerekce"] = f"Form farki (%{cand['ev_r']} vs %{cand['dep_r']}) ve piyasa verileriyle dogrulandi."
+                        secilen_final.append(cand)
+                    elif cand.get("ou"):
+                        cand["final_secim"] = f"Mac Toplami {cand['ou']} UST"
+                        cand["gerekce"] = f"Resmi piyasa baremi ({cand['ou']}) ve kadro durumu ({cand['sakatlar']}) uyumlu."
+                        secilen_final.append(cand)
 
                 secilen_final = secilen_final[:hedef_adet]
                 st.session_state.kupon_listesi = list(
