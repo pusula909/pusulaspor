@@ -340,7 +340,67 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
     except Exception:
         pass
     hafiza["son_update_id"] = son_update_id
+MAC_ONU_YILDIZLAR = (
+    "Giannis", "Jokic", "Doncic", "Tatum", "Curry", "LeBron", "Durant", "Embiid", "Shai", "Edwards",
+    "Brunson", "Mitchell", "Booker", "Davis", "Wembanyama", "Sengun", "Larkin", "Vezenkov", "Tavares",
+    "Campazzo", "Hezonja", "Lessort", "Nunn", "Sloukas", "Icardi", "Osimhen", "Dzeko", "Tadic", "Immobile",
+    "Rafa", "Haaland", "Salah", "Mbappe", "Vinicius", "Bellingham", "Kane", "Yamal", "Lewandowski", "Palmer", "Saka"
+)
 
+
+def maca_1_saat_kala_kadro_kontrol(gonderilenler):
+    if not os.path.exists("son_bulten.json"):
+        return
+    try:
+        with open("son_bulten.json", "r", encoding="utf-8") as f:
+            bulten_maclar = json.load(f)
+    except Exception:
+        return
+
+    for m in bulten_maclar:
+        mac_id = str(m.get("id", ""))
+        lig_yolu = m.get("yol", "")
+        alarm_anahtar = f"KADRO1SAAT_{m.get('tarih', tarih)}_{mac_id}"
+        if not mac_id or lig_yolu == "euroleague_resmi" or "/" not in lig_yolu or alarm_anahtar in gonderilenler:
+            continue
+
+        try:
+            j = requests.get(f"{url_basi}{lig_yolu}/summary?event={mac_id}", headers=basliklar, timeout=6).json()
+            header_comp = j.get("header", {}).get("competitions", list(({},))).pop(0)
+            st_code = header_comp.get("status", {}).get("type", {}).get("state", "pre")
+            if st_code != "pre":
+                continue
+
+            mac_tarih_str = header_comp.get("date", "")
+            if not mac_tarih_str:
+                continue
+
+            mac_zamani_utc = datetime.strptime(mac_tarih_str[:16], "%Y-%m-%dT%H:%M").replace(tzinfo=timezone.utc)
+            kalan_dakika = (mac_zamani_utc - suan_tr.astimezone(timezone.utc)).total_seconds() / 60
+
+            if 10 <= kalan_dakika <= 75:
+                eksik_yildizlar = list()
+                for grp in j.get("injuries", list()):
+                    t_ad = grp.get("team", {}).get("displayName", "")
+                    for inj in grp.get("injuries", list()):
+                        durum = inj.get("status", "")
+                        oyuncu = inj.get("athlete", {}).get("displayName", "")
+                        if durum in ("Out", "Doubtful") and oyuncu:
+                            if any(y.lower() in oyuncu.lower() for y in MAC_ONU_YILDIZLAR):
+                                eksik_yildizlar.append(f"{t_ad}: {oyuncu} ({durum})")
+
+                gonderilenler.add(alarm_anahtar)
+                if eksik_yildizlar:
+                    telegram_gonder(
+                        f"⚠️ SON DAKIKA KADRO ALARMI (Maca ~{int(kalan_dakika)} Dk Kala)\n"
+                        f"🏆 [{m.get('lig', '')}] {m.get('mac', '')}\n"
+                        f"🎯 Bulten Tahmini: {m.get('tahmin', '')}\n"
+                        f"❌ Kadroda Yok / Supheli: {', '.join(eksik_yildizlar)}\n"
+                        f"💡 Dikkat: Yildiz oyuncu eksigi nedeniyle bu maci tekrar gozden gecir!"
+                    )
+        except Exception:
+            pass
+maca_1_saat_kala_kadro_kontrol(gonderilenler)            
 def bulten_anlik_sonuc_kontrol(gonderilenler):
     if not os.path.exists("son_bulten.json"):
         return
