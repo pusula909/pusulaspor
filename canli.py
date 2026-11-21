@@ -1111,7 +1111,10 @@ if gorunum == "Canli Kupon Takip":
                         hepsi_bitti_ve_tuttu = False
                 else:
                     hepsi_bitti_ve_tuttu = False
-                    if tuttu_mu:
+                    if tuttu_mu and ("UST" in t or "KG VAR" in t):
+                    durum_ikon = "✅ TUTTU (Barem Asildi)"
+                    tekil_olasilik = 1.0
+                elif tuttu_mu:
                         durum_ikon = "🟢 Su An Tutuyor"
                         tekil_olasilik = 0.78
                     else:
