@@ -1301,7 +1301,8 @@ else:
                    
             if ai_yorum:
                 st.success(f"Gemini AI Taktik ve Kadro Yorumu: {ai_yorum}")
-                st.info("🟢 *ORTAK KARAR KONTROLÜ:* Tablo ve AI yorumu aynı yöndeyse (ikisi de ÜST veya ikisi de ALT diyorsa) *GÜÇLÜ SİNYAL, farklıysa **DİKKAT* demektir.") 
+                tablo_en_iyi = detayli_tahmin_satirlari["AI Tahmin Secenegi"]
+                st.warning(f"⚡ *NET ÖZET KARAR:* Matematiksel Tablon *{tablo_en_iyi}* diyor — Yapay Zeka ise yukarıdaki *NOKTA ATIŞI ANA KARAR* satırını öneriyor. İkisi aynı yönüyse *GÜÇLÜ SİNYAL, zıtsa **PAS GEÇ!*") 
         if h2h_verisi:
             st.info("*Son Kafa Kafaya (H2H) Maclar:* " + "  |  ".join(h2h_verisi))
         st.info(f"*Kadro Kaynagi:* {kaynak}")
