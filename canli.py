@@ -762,7 +762,7 @@ if gorunum == "Canli Kupon Takip":
         secilen_paket = "dortlu"
 
     if secilen_paket:
-        with st.spinner("Tum liglerin icine giriliyor: Sakatliklar, H2H gecmisi, piyasa cizgisi ve form derinlemesine analiz ediliyor..."):
+        with st.spinner("Tum liglerin icine giriliyor: Sakatliklar, piyasa handikaplari, baremler ve form derinlemesine analiz ediliyor..."):
             aday_dosyalari = list()
             for sp_ad, lg_dict in TUM_LIGLER.items():
                 for lg_ad, lg_yol in lg_dict.items():
@@ -787,22 +787,23 @@ if gorunum == "Canli Kupon Takip":
                             d_ad = dep_tk.get("team", {}).get("displayName", "Dep")
                             e_rc = ev_tk.get("records", list()).pop(0).get("summary", "1-1") if ev_tk.get("records") else "1-1"
                             d_rc = dep_tk.get("records", list()).pop(0).get("summary", "1-1") if dep_tk.get("records") else "1-1"
-                            _, _, en_g = coklu_tahmin_motoru(e_ad, d_ad, e_rc, d_rc, sp_ad, lg_ad, 0, 0, "pre", 0, 0)
+                            tum_sec, _, en_g = coklu_tahmin_motoru(e_ad, d_ad, e_rc, d_rc, sp_ad, lg_ad, 0, 0, "pre", 0, 0)
                             aday_dosyalari.append({
                                 "id": m_id_k, "yol": lg_yol, "spor": sp_ad, "lig": lg_ad,
                                 "ev": e_ad, "dep": d_ad, "ev_r": e_rc, "dep_r": d_rc,
+                                "tum_secenekler": " | ".join(list(f"{s['AI Tahmin Secenegi']} ({s['Guven Seviyesi']})" for s in tum_sec)),
                                 "on_tahmin": en_g["AI Tahmin Secenegi"], "on_guven": en_g["GuvenInt"]
                             })
                     except Exception:
                         pass
 
-            en_iyi_adaylar = sorted(aday_dosyalari, key=lambda x: x["on_guven"], reverse=True)[:14]
+            en_iyi_adaylar = sorted(aday_dosyalari, key=lambda x: x["on_guven"], reverse=True)[:15]
             derin_havuz = list()
             for m in en_iyi_adaylar:
                 sakat_list = list()
                 h2h_list = list()
                 piyasa_bilgi = "Standart Piyasa"
-                ev_oran, dep_oran = 0.0, 0.0
+                ou_v, det_v = "", ""
 
                 if m["yol"] != "euroleague_resmi" and "/" in m["yol"] and m["id"]:
                     try:
@@ -820,21 +821,17 @@ if gorunum == "Canli Kupon Takip":
                         pk_l = sj.get("pickcenter", list())
                         if pk_l:
                             pk0 = pk_l.pop(0)
-                            ou_v = pk0.get("overUnder", "")
-                            det_v = pk0.get("details", "")
-                            ml_h = pk0.get("homeTeamOdds", {}).get("moneyLine", 0)
-                            ml_a = pk0.get("awayTeamOdds", {}).get("moneyLine", 0)
-                            if ml_h:
-                                ev_oran = round((1 + (100 / abs(ml_h))) if ml_h < 0 else (1 + (ml_h / 100)), 2)
-                            if ml_a:
-                                dep_oran = round((1 + (100 / abs(ml_a))) if ml_a < 0 else (1 + (ml_a / 100)), 2)
-                            piyasa_bilgi = f"Ev Oran:{ev_oran} | Dep Oran:{dep_oran} | Barem:{ou_v} | Handikap:{det_v}"
+                            ou_v = str(pk0.get("overUnder", ""))
+                            det_v = str(pk0.get("details", ""))
+                            piyasa_bilgi = f"Handikap: {det_v or '-'} | Alt/Ust Baremi: {ou_v or '-'}"
                     except Exception:
                         pass
 
                 m["sakatlar"] = ", ".join(sakat_list[:4]) if sakat_list else "Eksik Yok"
                 m["h2h"] = ", ".join(h2h_list) if h2h_list else "Kayit Yok"
                 m["piyasa"] = piyasa_bilgi
+                m["ou"] = ou_v
+                m["handikap"] = det_v
                 derin_havuz.append(m)
 
             hedef_adet = 3 if secilen_paket == "uclu" else 4
@@ -843,24 +840,24 @@ if gorunum == "Canli Kupon Takip":
             if derin_havuz:
                 dosya_ozeti = "\n".join(
                     list(
-                        f"ID:{x['id']} | [{x['lig']}] {x['ev']} ({x['ev_r']}) vs {x['dep']} ({x['dep_r']}) | "
-                        f"Piyasa: {x['piyasa']} | Sakatliklar: {x['sakatlar']} | H2H: {x['h2h']} | On Analiz: {x['on_tahmin']}"
-                        for x in derin_havuz
+                        f"MAC_{idx+1} | [{x['lig']}] {x['ev']} ({x['ev_r']}) vs {x['dep']} ({x['dep_r']}) | "
+                        f"{x['piyasa']} | Sakatlar: {x['sakatlar']} | H2H: {x['h2h']} | Alternatifler: {x['tum_secenekler']}"
+                        for idx, x in enumerate(derin_havuz)
                     )
                 )
                 ai_soru = (
-                    f"Sen dunya capinda bir Spor Bas Analistisin. Hicbir oran kisitlamasina takilma; "
-                    f"orani ister 1.15 olsun, ister 1.70 olsun, ister 3.00 olsun—sakatliklar, H2H gecmisi, form ve piyasa handikaplarini "
-                    f"derinlemesine analiz ederek kazanma (WON) ihtimali en yuksek, kaya gibi saglam {hedef_adet} maci ve her biri icin EN DOGRU bahis secenegini sec.\n"
-                    f"Ciktiyi SADECE asagidaki formatta ver (baska hicbir giris/cikis yazisi yazma):\n"
-                    f"ID:12345 | SECIM: MS 1 | GEREKCE: 2 cumlelik derin saha gerekcesi\n\n"
-                    f"Mac Dosyalari:\n{dosya_ozeti}"
+                    f"Sen dunya capinda bir Spor Bas Analistisin. Amacin kullaniciya gercekten kazanacak (WON), kaya gibi saglam ve akillica {hedef_adet} maclik bir kombine cikarmak.\n"
+                    f"ONEMLI KURAL: Iddaa'da orani bile acilmayan (1.02 - 1.10 gibi) ezici favori maclarda duz MS 1 / MS 2 yazip gecme! O maclarda piyasa handikapini, takim toplam gol/sayi baremini veya mac alt/ust baremini kullan (Ornegin: Ev Sahibi 1.5 UST, Toplam 2.5 UST, Ev Sahibi -8.5 Handikap, Mac Toplami 222.5 UST gibi).\n"
+                    f"Sakatliklari, H2H gecmisini ve formu derinlemesine analiz ederek en guvendigin {hedef_adet} maci sec.\n"
+                    f"Ciktiyi HER MAC ICIN TAM OLARAK su formatta yaz:\n"
+                    f"MAC_1 | SECIM: (Net bahis secenegi) | GEREKCE: (Sakatlik, form ve piyasa verilerine dayali 2 cumlelik ikna edici uzman analizi)\n\n"
+                    f"Maclar:\n{dosya_ozeti}"
                 )
                 ai_cevap = ""
                 if GEMINI_AKTIF and gemini_api_key:
                     try:
                         cl = genai.Client(api_key=gemini_api_key.strip(), http_options={"api_version": "v1beta"})
-                        for mod in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+                        for mod in ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash"):
                             try:
                                 r_ai = cl.models.generate_content(model=mod, contents=ai_soru)
                                 if r_ai and r_ai.text:
@@ -878,8 +875,8 @@ if gorunum == "Canli Kupon Takip":
                             gr = requests.post(
                                 "https://groq.com",
                                 headers={"Authorization": f"Bearer {g_k}", "Content-Type": "application/json"},
-                                json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": ai_soru}], "temperature": 0.3},
-                                timeout=12,
+                                json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": ai_soru}], "temperature": 0.35, "max_tokens": 700},
+                                timeout=15,
                             ).json()
                             if "choices" in gr and gr["choices"]:
                                 ai_cevap = gr["choices"].pop(0).get("message", {}).get("content", "").strip()
@@ -887,21 +884,25 @@ if gorunum == "Canli Kupon Takip":
                         pass
 
                 for sat in ai_cevap.splitlines():
-                    if "ID:" in sat and "SECIM:" in sat:
-                        for cand in derin_havuz:
-                            if f"ID:{cand['id']}" in sat and cand not in secilen_final:
+                    if "MAC_" in sat and "|" in sat:
+                        for idx, cand in enumerate(derin_havuz):
+                            etiket_m = f"MAC_{idx+1}"
+                            if etiket_m in sat and cand not in secilen_final:
                                 parcalar = sat.split("|")
-                                secim_txt = next((p.replace("SECIM:", "").strip() for p in parcalar if "SECIM:" in p), cand["on_tahmin"])
-                                gerekce_txt = next((p.replace("GEREKCE:", "").strip() for p in parcalar if "GEREKCE:" in p), "Derin istatistik ve kadro avantaji.")
-                                cand["final_secim"] = secim_txt
-                                cand["gerekce"] = gerekce_txt
-                                secilen_final.append(cand)
+                                secim_txt = next((p.replace("SECIM:", "").strip() for p in parcalar if "SECIM:" in p), "")
+                                gerekce_txt = next((p.replace("GEREKCE:", "").strip() for p in parcalar if "GEREKCE:" in p), "")
+                                if secim_txt:
+                                    cand["final_secim"] = secim_txt
+                                    cand["gerekce"] = gerekce_txt or f"{cand['piyasa']} ve kadro durumuna gore AI tarafindan secildi."
+                                    secilen_final.append(cand)
 
                 if not secilen_final:
                     for cand in derin_havuz[:hedef_adet]:
-                        t_h = cand["on_tahmin"]
-                        cand["final_secim"] = "MS 1" if "(MS 1)" in t_h else ("MS 2" if "(MS 2)" in t_h else t_h)
-                        cand["gerekce"] = f"Form ({cand['ev_r']} vs {cand['dep_r']}) ve kadro avantajina gore secildi."
+                        if cand["spor"] == "Futbol":
+                            cand["final_secim"] = f"{cand['ev']} 1.5 UST" if "MS 1" in cand["on_tahmin"] else "Toplam 2.5 UST"
+                        else:
+                            cand["final_secim"] = f"Mac Toplami {cand['ou']} UST" if cand["ou"] else cand["on_tahmin"]
+                        cand["gerekce"] = f"Piyasa ({cand['piyasa']}) ve sakatlik raporu ({cand['sakatlar']}) incelenerek olusturuldu."
                         secilen_final.append(cand)
 
                 secilen_final = secilen_final[:hedef_adet]
@@ -910,28 +911,6 @@ if gorunum == "Canli Kupon Takip":
                     for x in secilen_final
                 )
                 st.session_state.kupon_gerekceleri = secilen_final
-                st.session_state.kupon_bildirim_gonderildi = False
-
-                tg_rapor = (
-                    f"🧠 KAYA GIBI SAGLAM DERIN ANALIZ {hedef_adet}'LU KOMBINE!\n\n"
-                    + "\n\n".join(
-                        list(
-                            f"🏆 [{x['lig']}] {x['ev']} - {x['dep']}\n"
-                            f"🎯 AI Secimi: {x['final_secim']} ({x['piyasa']})\n"
-                            f"📝 Gerekce: {x['gerekce']}"
-                            for x in secilen_final
-                        )
-                    )
-                )
-                telegram_mesaj_gonder(tg_token, tg_chat_id, tg_rapor)
-                st.rerun()
-            else:
-                st.warning("Su an analiz edilecek baslamamis mac bulunamadi.")
-
-    if "kupon_gerekceleri" in st.session_state and st.session_state.kupon_gerekceleri and st.session_state.kupon_listesi:
-        st.subheader("🧠 Bas Analist AI Secim Gerekceleri")
-        for g_item in st.session_state.kupon_gerekceleri:
-            st.info(f"**[{g_item['lig']}] {g_item['ev']} vs {g_item['dep']} -> {g_item['final_secim']}**\n\n{g_item['gerekce']}")
     c1, c2, c3 = st.columns(3)
     k_spor = c1.selectbox("Spor", ("Basketbol", "Futbol"), key="k_spor")
     k_lig = c2.selectbox("Lig", list(TUM_LIGLER[k_spor].keys()), key="k_lig")
