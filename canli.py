@@ -467,13 +467,13 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
         ev_p = [int(x) for x in str(ev_rec).split("-") if x.strip().isdigit()]
         dep_p = [int(x) for x in str(dep_rec).split("-") if x.strip().isdigit()]
         if len(ev_p) >= 2 and sum(ev_p) > 0:
-            ev_oran = ev_p[0] / sum(ev_p)
+            ev_oran = ev_p.pop(0) / sum(ev_p)
         elif str(ev_rec).replace(".", "", 1).isdigit():
             ev_oran = float(ev_rec) / 100.0
         else:
             ev_oran = 0.50
         if len(dep_p) >= 2 and sum(dep_p) > 0:
-            dep_oran = dep_p[0] / sum(dep_p)
+            dep_oran = dep_p.pop(0) / sum(dep_p)
         elif str(dep_rec).replace(".", "", 1).isdigit():
             dep_oran = float(dep_rec) / 100.0
         else:
