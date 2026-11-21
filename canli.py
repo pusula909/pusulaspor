@@ -1114,7 +1114,7 @@ if gorunum == "Canli Kupon Takip":
                     if tuttu_mu and ("UST" in t or "KG VAR" in t):
                         durum_ikon = "✅ TUTTU (Barem Asildi)"
                         tekil_olasilik = 1.0
-                elif tuttu_mu:
+                    elif tuttu_mu:
                         durum_ikon = "🟢 Su An Tutuyor"
                         tekil_olasilik = 0.78
                     else:
