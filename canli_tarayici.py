@@ -298,18 +298,20 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                 telegram_gonder("Su an canli oynanan mac bulunmuyor.")
 
         if "bulten" in istenen_komutlar:
+            if os.path.exists("son_bulten.json"):
                 with open("son_bulten.json", "r", encoding="utf-8") as f:
                     b_list = json.load(f)
-            if os.path.exists("son_bulten.json"):
                 if b_list:
                     satir = list(("🏆 KAYITLI GUNUN BULTENI\n",))
-                    for i, m in enumerate(b_list, 1):
-                        satir.append(f"{i}. [{m['lig']}] {m['mac']} -> {m['tahmin']} (%{m['guven']})")
-                    telegram_gonder("\n".join(satir))
-                else:
-                    telegram_gonder("Henuz kayitli gunluk bulten yok.")
+                 for i, m in enumerate(b_list, 1):
+                     satir.append(f"{i}. [{m['lig']}] {m['mac']} -> {m['tahmin']} (%{m['guven']})")
+                 telegram_gonder("\n".join(satir))
             else:
-                telegram_gonder("Henuz kayitli gunluk bulten yok.")
+                 telegram_gonder("Henuz kayitli gunluk bulten yok.")
+         else:
+             telegram_gonder("Henuz kayitli gunluk bulten yok.")
+                
+               
 
         if "karne" in istenen_komutlar:
             if os.path.exists("haftalik_arsiv.json"):
