@@ -228,7 +228,7 @@ gemini_api_key = gizli_gemini_key
 st.sidebar.header("Kontrol Merkezi")
 gorunum = st.sidebar.radio(
     "Mod Secimi",
-    ["Maclar ve Canli AI Analiz", "Canli Kupon Takip", "AI Gunun Radari (Tum Ligler)", "Puan Durumu"],
+    ["Maclar ve Canli AI Analiz", "Canli Kupon Takip", "AI Gunun Radari (Tum Ligler)", "Puan Durumu","AI Dogruluk Karnesi"],
 )
 tarih_obj = st.sidebar.date_input("Tarih", datetime.now())
 tarih = tarih_obj.strftime("%Y%m%d")
@@ -1009,7 +1009,38 @@ if gorunum == "Canli Kupon Takip":
                 )
                 telegram_mesaj_gonder(tg_token, tg_chat_id, ozet_msj)
                 st.session_state.kupon_bildirim_gonderildi = True
+elif gorunum == "AI Dogruluk Karnesi":
+    st.subheader("📊 AI Dogruluk Karnesi & Lig Bazli Basari Analizi")
+    import json, os
+    if os.path.exists("haftalik_arsiv.json"):
+        with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
+            arsiv_veri = json.load(f)
+        if arsiv_veri:
+            df_arsiv = pd.DataFrame(arsiv_veri)
+            toplam_mac = len(df_arsiv)
+            toplam_isabet = int(df_arsiv["tuttu"].sum())
+            genel_oran = int((toplam_isabet / toplam_mac) * 100)
 
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Toplam Analiz Edilen Mac", f"{toplam_mac} Mac")
+            m2.metric("Basarili AI Tahmini", f"{toplam_isabet} Isabet")
+            m3.metric("Genel AI Isabet Orani", f"%{genel_oran}")
+
+            st.divider()
+            st.subheader("🏆 Lig Bazinda AI Basari Yuzdesi (%)")
+            lig_grup = df_arsiv.groupby("lig").agg(
+                Toplam_Mac=("tuttu", "count"),
+                Tutan_Tahmin=("tuttu", "sum")
+            ).reset_index()
+            lig_grup["Basari_Orani (%)"] = ((lig_grup["Tutan_Tahmin"] / lig_grup["Toplam_Mac"]) * 100).round(1)
+            lig_grup = lig_grup.sort_values(by="Basari_Orani (%)", ascending=False)
+
+            st.bar_chart(lig_grup.set_index("lig")["Basari_Orani (%)"], color="#16A34A")
+            st.dataframe(lig_grup, use_container_width=True, hide_index=True)
+        else:
+            st.info("Henuz tamamlanmis bulten kaydi bulunmuyor. Maclar bittikce grafik otomatik dolacaktir.")
+    else:
+        st.info("Henuz arsiv dosyasi olusmadi. Gunun bultenindeki maclar tamamlandikca veriler burada birikecektir.")
 elif gorunum == "Puan Durumu":
     st.subheader(f"{lig} - Guncel Puan Durumu")
     try:
@@ -1164,7 +1195,7 @@ else:
 
         iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
         baski_uyari = son_dakika_baski_kontrol(spor, state, durum_detay, ev_ad, dep_ad, ev_s_int, dep_s_int, ev_rec, dep_rec)
-        baski_anahtar = f"BASKI_{mac_id}_{baski_uyari}"
+        baski_anahtar = f"BASKI_{mac_id}"
         if baski_uyari and baski_anahtar not in st.session_state.gonderilen_kritik_uyarilar:
             if telegram_mesaj_gonder(tg_token, tg_chat_id, baski_uyari):
                 st.session_state.gonderilen_kritik_uyarilar.append(baski_anahtar)
