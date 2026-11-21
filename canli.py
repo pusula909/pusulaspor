@@ -477,12 +477,12 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
         elif ev_g >= 0.54 and dep_g >= 0.48:
             au_secenek = "Toplam 2.5 UST"
             au_guven = min(79, int(58 + (ev_g + dep_g) * 14))
-            elif ev_g <= 0.36 and dep_g <= 0.36:
-                au_secenek = "Toplam 2.5 ALT"
-                au_guven = min(76, int(60 + (1 - (ev_g + dep_g)) * 16))
-            else:
-                au_secenek = "Toplam 1.5 UST"
-                au_guven = min(84, int(68 + (ev_g + dep_g) * 10))
+        elif ev_g <= 0.36 and dep_g <= 0.36:
+            au_secenek = "Toplam 2.5 ALT"
+            au_guven = min(76, int(60 + (1 - (ev_g + dep_g)) * 16))
+        else:
+            au_secenek = "Toplam 1.5 UST"
+            au_guven = min(84, int(68 + (ev_g + dep_g) * 10))
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Toplam Gol Baremi", "AI Tahmin Secenegi": au_secenek, "Guven Seviyesi": f"%{au_guven}", "GuvenInt": au_guven})
 
             if (state == "in" and ev_skor > 0 and dep_skor > 0) or (ev_g >= 0.45 and dep_g >= 0.45):
