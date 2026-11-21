@@ -511,7 +511,7 @@ def canli_maclari_tara():
                         elif "Q4" not in detay_sure and "4C" not in detay_sure and ev_g >= 0.65 and 6 <= (dep_s - ev_s) <= 14:
                             uyari_tipi = f"🔥 FAVORI GERIDE ({ev_ad} Takipte)"
                         elif "Q4" not in detay_sure and "4C" not in detay_sure and dep_g >= 0.65 and 6 <= (ev_s - dep_s) <= 14:
-                            uyari_tipi = f"🔥 FAVORI GERIDE ({dep_ad} Takipte
+                            uyari_tipi = f"🔥 FAVORI GERIDE ({dep_ad} Takipte)"
                     else:
                         rakamlar = "".join(c for c in detay_sure if c.isdigit())
                         dk = int(rakamlar) if rakamlar else 0
