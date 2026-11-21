@@ -204,6 +204,31 @@ def derin_saha_ve_istatistik_cek(mac_id, lig_yolu, tarih_str):
                 secilen = []
                 for s in t_stat.get("statistics", []):
                     etk = s.get("label", s.get("name", ""))
+                    deg = s.get("displayValue", "")
+                    if any(k in etk.lower() for k in ("fg%", "3p%", "rebounds", "turnovers", "shots", "possession", "corners")):
+                        secilen.append(f"{etk}: {deg}")
+                if secilen:
+                    detay_ozet.append(f"{t_ad} Istatistikleri [{', '.join(secilen[:5])}]")
+            for item in j.get("keyEvents", [])[-5:]:
+                dk = item.get("clock", {}).get("displayValue", "")
+                txt = item.get("text", "")
+                if txt:
+                    detay_ozet.append(f"[{dk}] {txt}")
+            for box_t in j.get("boxscore", {}).get("players", [])[:2]:
+                t_ad = box_t.get("team", {}).get("displayName", "")
+                stats_grp = box_t.get("statistics", [])
+                if stats_grp:
+                    aktifler = []
+                    for a in stats_grp[0].get("athletes", [])[:5]:
+                        a_ad = a.get("athlete", {}).get("displayName", "")
+                        st_vals = a.get("stats", [])
+                        if a_ad and st_vals:
+                            aktifler.append(f"{a_ad}({'/'.join(st_vals[:3])})")
+                    if aktifler:
+                        detay_ozet.append(f"{t_ad} Rotasyon: {', '.join(aktifler)}")
+    except Exception:
+        pass
+    return " | ".join(detay_ozet) if detay_ozet else "Canli saha istatistigi bekleniyor."
 if "eski_skorlar" not in st.session_state:
     st.session_state.eski_skorlar = {}
 if "radar_sonuclari" not in st.session_state:
