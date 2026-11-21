@@ -513,7 +513,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
 
             en_iyi = sorted(satirlar, key=lambda x: x["GuvenInt"], reverse=True).pop(0)
         ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
-            return satirlar, ozet_metin, en_iyi
+        return satirlar, ozet_metin, en_iyi
         if spor_turu != "Futbol":
             if ev_g >= dep_g:
                 ms_secenek = f"{ev_ad} Kazanir (MS 1)"
