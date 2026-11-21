@@ -1247,7 +1247,7 @@ else:
 
         if spor == "Futbol":
             mat_sonuc = futbol_poisson_hesapla(
-                yol, satir["Ev Sahibi"], satir["Deplasman"], 0,0
+                yol, satir["Ev Sahibi"], satir["Deplasman"], 0,0,
                 satir["State"], satir["EvSkorInt"], satir["DepSkorInt"]
             )
             p_col1, p_col2, p_col3, p_col4 = st.columns(4)
