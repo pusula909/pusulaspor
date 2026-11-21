@@ -1083,7 +1083,7 @@ if gorunum == "Canli Kupon Takip":
             t = item["tahmin"]
             toplam_s = ev_s + dep_s
             durum_ikon = "⏳ Beklemede"
-            tekil_olasilik = 0.58
+            tekil_olasilik = round(float(item.get("guven", 64)) / 100.0, 2)
 
             if state_k in ("in", "post"):
                 tuttu_mu = False
