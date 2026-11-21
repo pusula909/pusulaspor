@@ -223,12 +223,7 @@ gizli_tg_token = st.secrets.get("TG_TOKEN", "")
 gizli_tg_chat_id = st.secrets.get("TG_CHAT_ID", "")
 gizli_gemini_key = st.secrets.get("GEMINI_KEY", "")
 
-gemini_api_key = st.sidebar.text_input(
-    "Gemini API Anahtari (Opsiyonel)",
-    value=gizli_gemini_key,
-    type="password",
-    help="Google AI Studio'dan aldiginiz ucretsiz API anahtarini girerseniz maclara ozel gercek yapay zeka yorumu uretilir.",
-)
+gemini_api_key = gizli_gemini_key
 
 st.sidebar.header("Kontrol Merkezi")
 gorunum = st.sidebar.radio(
@@ -240,8 +235,8 @@ tarih = tarih_obj.strftime("%Y%m%d")
 
 st.sidebar.divider()
 st.sidebar.subheader("Telegram Bildirim Ayari")
-tg_token = st.sidebar.text_input("Telegram Bot Token", value=gizli_tg_token, type="password")
-tg_chat_id = st.sidebar.text_input("Telegram Chat ID", value=gizli_tg_chat_id)
+tg_token = gizli_tg_token
+tg_chat_id = gizli_tg_chat_id
 
 
 def telegram_mesaj_gonder(token, chat_id, mesaj):
