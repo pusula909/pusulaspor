@@ -188,8 +188,9 @@ def piyasa_ve_sakatlik_kontrol(lig_yolu, mac_id):
     sakat_ceza = 0
     sakat_notlar = list()
     piyasa_ozet = ""
+    hava_uyari = ""
     if lig_yolu == "euroleague_resmi" or "/" not in lig_yolu or not mac_id:
-        return sakat_ceza, sakat_notlar, piyasa_ozet
+        return sakat_ceza, sakat_notlar, piyasa_ozet, hava_uyari
     try:
         j = requests.get(f"{url_basi}{lig_yolu}/summary?event={mac_id}", headers=basliklar, timeout=6).json()
         for grp in j.get("injuries", list()):
@@ -208,9 +209,14 @@ def piyasa_ve_sakatlik_kontrol(lig_yolu, mac_id):
             det = p.get("details", "")
             if ou or det:
                 piyasa_ozet = f"Piyasa: {det} | Barem: {ou}"
+
+        w_obj = j.get("gameInfo", {}).get("weather", {})
+        w_durum = str(w_obj.get("displayValue", "")).lower()
+        if any(k in w_durum for k in ("rain", "storm", "snow", "heavy", "wind")):
+            hava_uyari = f"Agir Hava/Zemin ({w_obj.get('displayValue', '')})"
     except Exception:
         pass
-    return sakat_ceza, sakat_notlar[:3], piyasa_ozet
+    return sakat_ceza, sakat_notlar[:3], piyasa_ozet, hava_uyari
 
 
 def hakem_ai_tuzak_ele(aday_listesi):
@@ -298,7 +304,10 @@ def bulten_olustur_ve_gonder():
     en_guclu_adaylar = sorted(firsatlar, key=lambda x: x["guven"], reverse=True)[:10]
     filtrelenmis_adaylar = list()
     for aday in en_guclu_adaylar:
-        ceza, eksikler, piyasa = piyasa_ve_sakatlik_kontrol(aday["yol"], aday["id"])
+        ceza, eksikler, piyasa, hava = piyasa_ve_sakatlik_kontrol(aday["yol"], aday["id"])
+        if hava and "UST" in aday["tahmin"]:
+            aday["tahmin"] = "Toplam 2.5 ALT"
+            piyasa = f"{piyasa} | 🌧️ {hava}" if piyasa else f"🌧️ {hava}"
         aday["guven"] = max(50, aday["guven"] - ceza)
         aday["eksikler"] = eksikler
         aday["piyasa"] = piyasa
