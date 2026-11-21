@@ -1300,13 +1300,8 @@ else:
             
                    
             if ai_yorum:
-                        st.success(f"Gemini AI Taktik ve Kadro Yorumu: {ai_yorum}")
-                        ust_var = ("UST" in ai_yorum.upper() and any("UST" in x["AI Tahmin Secenegi"] for x in detayli_tahmin_satirlari))
-                        alt_var = ("ALT" in ai_yorum.upper() and any("ALT" in x["AI Tahmin Secenegi"] for x in detayli_tahmin_satirlari))
-                if ust_var or alt_var:
-                        st.info("🟢 **ORTAK KARAR SİNYALİ:** Senin matematiksel tablon ile Yapay Zeka (Gemini) bu maçta **AYNI YÖNDE** birleşti! (Güvenilir Senaryo)")
-                else:
-                        st.warning("🟡 **ORTAK KARAR SİNYALİ:** Matematiksel tablo ile Yapay Zeka arasında **FARKLI YORUM** var, maç içi canlı gidişatı beklemek daha güvenli.")
+                st.success(f"Gemini AI Taktik ve Kadro Yorumu: {ai_yorum}")
+                st.info("🟢 *ORTAK KARAR KONTROLÜ:* Tablo ve AI yorumu aynı yöndeyse (ikisi de ÜST veya ikisi de ALT diyorsa) *GÜÇLÜ SİNYAL, farklıysa **DİKKAT* demektir.") güvenli.")
         if h2h_verisi:
             st.info("*Son Kafa Kafaya (H2H) Maclar:* " + "  |  ".join(h2h_verisi))
         st.info(f"*Kadro Kaynagi:* {kaynak}")
