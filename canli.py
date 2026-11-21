@@ -1279,7 +1279,6 @@ else:
                     "durum": satir["Dakika / Ceyrek"],
                     "skor": satir["Canli Skor"],
                     "form": f"Ev: {satir['Ev Form']}, Dep: {satir['Dep Form']}",
-                    "eksikler": f"Ev: {', '.join(ev_eksikler) or 'Yok'} | Dep: {', '.join(dep_eksikler) or 'Yok'}",
                     "matematik_model": mat_sonuc,
                     "piyasa_oran_hareketi": piyasa_v,
                     "canli_saha_ve_boxscore": f"{baski_v['istatistik_ozeti']} | {saha_bilgi}",
