@@ -939,7 +939,7 @@ if gorunum == "Canli Kupon Takip":
                                     cand["gerekce"] = gerekce_txt or f"{cand['piyasa']} ve kadro durumuna gore AI tarafindan secildi."
                                     secilen_final.append(cand)
 
-                if not secilen_final:
+    if not secilen_final:
             for cand in derin_havuz:
                 if len(secilen_final) >= hedef_adet:
                     break
