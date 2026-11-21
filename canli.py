@@ -444,7 +444,121 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
                 ms_secenek, ms_guven = f"{ev_ad} Kazanir (MS 1)", min(89, int(54 + fark * 48))
             else:
                 ms_secenek, ms_guven = f"{dep_ad} Kazanir (MS 2)", min(88, int(54 + fark * 48))
-if gorunum == "VIP Bulten & AI Karne":
+            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Sonucu (MS)", "AI Tahmin Secenegi": ms_secenek, "Guven Seviyesi": f"%{ms_guven}", "GuvenInt": ms_guven})
+
+            model_beklenti = round(154 + (ev_g + dep_g) * 14) + 0.5 if lig_adi == "EuroLeague" else round(212 + (ev_g + dep_g) * 14) + 0.5
+            aktif_barem = piyasa_barem if (piyasa_barem and state == "pre") else model_beklenti
+            if state == "in" and (ev_skor + dep_skor) > 150:
+                aktif_barem = (ev_skor + dep_skor) + 36.5
+
+            if (piyasa_barem and model_beklenti - piyasa_barem >= 5) or (not piyasa_barem and (ev_g + dep_g) >= 1.05):
+                au_secenek = f"Mac Toplami {aktif_barem} UST" + (" 💎 VALUE" if (piyasa_barem and model_beklenti - piyasa_barem >= 6) else "")
+                au_guven = min(84, int(60 + (ev_g + dep_g) * 15))
+            else:
+                au_secenek = f"Mac Toplami {aktif_barem} ALT" + (" 💎 VALUE" if (piyasa_barem and piyasa_barem - model_beklenti >= 6) else "")
+                au_guven = min(80, int(70 - (ev_g + dep_g) * 10))
+            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Toplam Sayi", "AI Tahmin Secenegi": au_secenek, "Guven Seviyesi": f"%{au_guven}", "GuvenInt": au_guven})
+
+        en_iyi = sorted(satirlar, key=lambda x: x["GuvenInt"], reverse=True).pop(0)
+        ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
+        return satirlar, ozet_metin, en_iyi
+    except Exception:
+        varsayilan = [{"Analiz Tipi": "Genel", "Bahis Kategorisi": "Genel Analiz", "AI Tahmin Secenegi": "Form Verisi Bekleniyor", "Guven Seviyesi": "%55", "GuvenInt": 55}]
+        return varsayilan, "Veri Bekleniyor (%55)", varsayilan.pop(0)
+
+
+@st.cache_data(ttl=120)
+def ai_kadro_ve_eksik_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu):
+    ev_sakatlar, dep_sakatlar, ev_ilk_kadro, dep_ilk_kadro = [], [], [], []
+    if lig_yolu == "euroleague_resmi":
+        return ev_ilk_kadro, dep_ilk_kadro, ev_sakatlar, dep_sakatlar, "EuroLeague Resmi Veri Akisi"
+    try:
+        sum_url = f"{url_basi}{lig_yolu}/summary?event={mac_id}"
+        s_veri = requests.get(sum_url, headers=basliklar, timeout=8).json()
+        for grup in s_veri.get("injuries", []):
+            t_id = str(grup.get("team", {}).get("id", ""))
+            for sakat in grup.get("injuries", []):
+                ad = sakat.get("athlete", {}).get("displayName", "")
+                durum = sakat.get("status", "Eksik")
+                if ad:
+                    if t_id == str(ev_id):
+                        ev_sakatlar.append(f"{ad} ({durum})")
+                    else:
+                        dep_sakatlar.append(f"{ad} ({durum})")
+        for roster in s_veri.get("rosters", []):
+            t_id = str(roster.get("team", {}).get("id", ""))
+            isimler = [r.get("athlete", {}).get("displayName", "") for r in roster.get("roster", [])[:11] if r.get("athlete", {}).get("displayName")]
+            if t_id == str(ev_id):
+                ev_ilk_kadro = isimler
+            else:
+                dep_ilk_kadro = isimler
+    except Exception:
+        pass
+    return ev_ilk_kadro, dep_ilk_kadro, ev_sakatlar, dep_sakatlar, "ESPN Resmi Kadro & Sakatlik Havuzu"
+
+
+@st.cache_data(ttl=180)
+def h2h_ve_form_getir(lig_yolu, mac_id, ev_ad, dep_ad):
+    if lig_yolu == "euroleague_resmi":
+        return []
+    try:
+        s_veri = requests.get(f"{url_basi}{lig_yolu}/summary?event={mac_id}", headers=basliklar, timeout=6).json()
+        sonuclar = []
+        for g in s_veri.get("againstTheSpread", [])[:2]:
+            for m in g.get("games", [])[:3]:
+                sonuclar.append(f"{m.get('awayTeam', {}).get('abbreviation', '')} {m.get('awayScore', '')}-{m.get('homeScore', '')} {m.get('homeTeam', {}).get('abbreviation', '')}")
+        return sonuclar[:5]
+    except Exception:
+        return []
+
+
+@st.cache_data(ttl=90, show_spinner=False)
+def gemini_taktik_yorumu_uret(api_key, spor_turu, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, ev_eksik, dep_eksik, durum_metni):
+    soru = (
+        f"Sen dunya capinda bir {spor_turu} Bas Analisti ve Basantrenor Danismanisin. "
+        f"Duz istatistik ezberine ASLA dusme! "
+        f"Mac: {lig_adi} | {ev_ad} (Form: {ev_rec}) vs {dep_ad} (Form: {dep_rec}). "
+        f"Anlik Durum, Piyasa Baremi, Boxscore Istatistikleri ve Sahadaki Oyuncular: {durum_metni}. "
+        f"{ev_ad} Eksikler: {ev_eksik}. {dep_ad} Eksikler: {dep_eksik}. "
+        f"SIKI KURAL: Hafizandaki eski yillarin kadrolarini ASLA yazma! Yalnizca verilen Kadro Havuzu ve Canli Saha listesindeki oyunculari kullan.\n\n"
+        f"Ciktiyi Turkce olarak TAM OLARAK su 3 baslikta yaz:\n"
+        f"🎯 NOKTA ATISI ANA KARAR: (Tek bir net secenek ve piyasa baremine gore mantikli karar)\n"
+        f"🧠 KOC, ROTASYON VE OYUN OKUMASI: (Sahadaki istatistikler, piyasa baremi ve koc hamlesiyle acikla)\n"
+        f"⚠️ EN BUYUK RISK / DIKKAT NOKTASI: (Bu tahmini bozabilecek tek kritik senaryo)"
+    )
+    if GEMINI_AKTIF and api_key:
+        try:
+            client = genai.Client(api_key=api_key.strip(), http_options={"api_version": "v1beta"})
+            for m in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+                try:
+                    yanit = client.models.generate_content(model=m, contents=soru)
+                    if yanit and yanit.text:
+                        return yanit.text
+                except Exception:
+                    continue
+        except Exception:
+            pass
+    groq_anahtar = st.secrets.get("GROQ_KEY", "").strip()
+    if groq_anahtar:
+        try:
+            g_resp = requests.post(
+                "https://groq.com",
+                headers={"Authorization": f"Bearer {groq_anahtar}", "Content-Type": "application/json"},
+                json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": soru}], "temperature": 0.4, "max_tokens": 450},
+                timeout=12,
+            ).json()
+            if "choices" in g_resp and g_resp["choices"]:
+                return g_resp["choices"].get("message", {}).get("content", "").strip()
+        except Exception:
+            pass
+    return "AI yorumu icin API anahtari bekleniyor."
+
+
+def excel_dosyasi_olustur(df):
+    tampon = io.BytesIO()
+    with pd.ExcelWriter(tampon, engine="openpyxl") as yazici:
+        df.to_excel(yazici, index=False, sheet_name="AI_Analiz")
+    return tampon.getvalue()if gorunum == "VIP Bulten & AI Karne":
     st.subheader("🌅 Gunun VIP AI Bulteni & Haftalik Performans Karnesi")
     col_b, col_k = st.columns(2)
 
