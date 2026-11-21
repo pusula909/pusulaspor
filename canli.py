@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import requests
 import streamlit as st
-
 try:
     import winsound
     SES_AKTIF = True
