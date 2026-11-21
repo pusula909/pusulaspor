@@ -464,12 +464,22 @@ def koc_ve_rotasyon_etkisi_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu, ev_
 
 def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_eksik=0, dep_eksik=0, state="pre", ev_skor=0, dep_skor=0):
     try:
-        ev_p = list(int(x) for x in ev_rec.split("-"))
-        dep_p = list(int(x) for x in dep_rec.split("-"))
-        ev_top = sum(ev_p) if sum(ev_p) > 0 else 1
-        dep_top = sum(dep_p) if sum(dep_p) > 0 else 1
-        ev_g = max(0.08, min(0.92, (ev_p.pop(0) / ev_top) + 0.06 - (ev_eksik * 0.03)))
-        dep_g = max(0.08, min(0.92, (dep_p.pop(0) / dep_top) - (dep_eksik * 0.03)))
+        ev_p = [int(x) for x in str(ev_rec).split("-") if x.strip().isdigit()]
+        dep_p = [int(x) for x in str(dep_rec).split("-") if x.strip().isdigit()]
+        if len(ev_p) >= 2 and sum(ev_p) > 0:
+            ev_oran = ev_p[0] / sum(ev_p)
+        elif str(ev_rec).replace(".", "", 1).isdigit():
+            ev_oran = float(ev_rec) / 100.0
+        else:
+            ev_oran = 0.50
+        if len(dep_p) >= 2 and sum(dep_p) > 0:
+            dep_oran = dep_p[0] / sum(dep_p)
+        elif str(dep_rec).replace(".", "", 1).isdigit():
+            dep_oran = float(dep_rec) / 100.0
+        else:
+            dep_oran = 0.50
+        ev_g = max(0.08, min(0.92, ev_oran + 0.05 - (ev_eksik * 0.03)))
+        dep_g = max(0.08, min(0.92, dep_oran - (dep_eksik * 0.03)))
 
         if state == "in":
             skor_farki = ev_skor - dep_skor
