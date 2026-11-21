@@ -298,9 +298,9 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                 telegram_gonder("Su an canli oynanan mac bulunmuyor.")
 
         if "bulten" in istenen_komutlar:
-            if os.path.exists("son_bulten.json"):
                 with open("son_bulten.json", "r", encoding="utf-8") as f:
                     b_list = json.load(f)
+            if os.path.exists("son_bulten.json"):
                 if b_list:
                     satir = list(("🏆 KAYITLI GUNUN BULTENI\n",))
                     for i, m in enumerate(b_list, 1):
