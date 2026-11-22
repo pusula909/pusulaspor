@@ -282,6 +282,8 @@ st.sidebar.divider()
 st.sidebar.subheader("Gercek Yapay Zeka (Gemini)")
 st.sidebar.divider()
 spor = st.sidebar.selectbox("Spor Dali", ["Basketbol", "Futbol"])
+lig = st.sidebar.selectbox("Lig Secimi", ["Tumu (Butun Ligler)"] + list(TUM_LIGLER[spor].keys()))
+yol = "" if lig == "Tumu (Butun Ligler)" else TUM_LIGLER[spor][lig]
 yol = "" if lig == "Tumu (Butun Ligler)" else TUM_LIGLER[spor][lig]
 durum_filtre = st.sidebar.radio("Mac Durumu", ["Tumu", "Sadece Canli Maclar", "Oynanacak Maclar", "Biten Maclar"])
 favori = st.sidebar.text_input("Favori Takim", "").strip().lower()
