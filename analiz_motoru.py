@@ -44,15 +44,16 @@ class PusulaAnalizBeyni:
                             "temperature": 0.3,
                             "max_tokens": max_tokens,
                         },
-                        timeout=12,
+                        timeout=15,
                     ).json()
-                    if "choices" in r and r["choices"]:
-                        txt = r["choices"].get("message", {}).get("content", "").strip()
+                    secenekler = r.get("choices", list())
+                    if secenekler:
+                        txt = secenekler.pop(0).get("message", {}).get("content", "").strip()
                         if txt:
                             return txt
                 except Exception:
                     continue
-        return f"AI Durum: Gemini={bool(self.gemini_key)}, Groq={bool(self.groq_key)}"
+        return ""
 
     def _evrim_hafizasi_oku(self):
         if os.path.exists(self.evrim_dosya):
