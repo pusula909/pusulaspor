@@ -34,7 +34,7 @@ class PusulaAnalizBeyni:
         if self.groq_key:
             g_base = "https://groq.com"
             g_headers = {"Authorization": f"Bearer {self.groq_key}", "Content-Type": "application/json"}
-            for m in ("openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"):
+            for m in ("llama-3.3-70b-versatile", "llama-3.1-8b-instant"):
                 try:
                     r = requests.post(
                         f"{g_base}/chat/completions",
