@@ -1260,7 +1260,7 @@ else:
                 if state == "pre":
                  deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
                  if not deger_rapor["tuzak_notu"]:
-                     banko_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "tahmin": f"{deger_rapor['ana_tercih']} | {deger_rapor['barem_tercih']}", "guven": f"%{deger_rapor['guven']} | Deger: {deger_rapor['deger_puani']}/10", "guven_int": deger_rapor["deger_puani"]})
+                     banko_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "lig": aktif_lig_ad, "ev": ev_ad, "dep": dep_ad, "ozet": f"{deger_rapor['ana_tercih']} | {deger_rapor['barem_tercih']} | Deger: {deger_rapor['deger_puani']}/10", "guven": f"%{deger_rapor['guven']} | Deger: {deger_rapor['deger_puani']}/10", "guven_int": deger_rapor["deger_puani"]})
                     
                 maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": is_fav, "Dakika / Ceyrek": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Deplasman": dep_ad, "IY / Ceyrek Skorlari": iy_ceyrek_str, "Ev Form": ev_rec, "Dep Form": dep_rec, "Hizli AI Ozet": ozet_tahmin, "Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)})
             except Exception:
@@ -1269,10 +1269,14 @@ else:
     if maclar:
         en_iyi_kartlar = sorted(banko_havuzu, key=lambda x: x["guven_int"], reverse=True)[:3]
         if en_iyi_kartlar:
-            st.subheader(f"{lig} | Gunun En Yuksek Guvenli AI Tahminleri")
-            cols = st.columns(len(en_iyi_kartlar))
-            for i, k in enumerate(en_iyi_kartlar):
-                cols[i].metric(label=k["mac"], value=k["tahmin"], delta=f"Guven: {k['guven']}")
+         st.subheader(f"{lig} | AI Bas Analist & Canli Istihbarat Onerileri")
+         cols = st.columns(len(en_iyi_kartlar))
+         for i, k in enumerate(en_iyi_kartlar):
+             with cols[i].container(border=True):
+                 st.markdown(f"**🏆 {k['mac']}**")
+                 st.caption(f"Lig: {k['lig']} | {k['guven']}")
+                 ai_rapor = beyin.ai_karar_ve_onay(spor, k["lig"], k["ev"], k["dep"], k["ozet"])
+                 st.info(ai_rapor if ai_rapor else k["ozet"])
 
         st.subheader(f"{lig} | Canli Skor, IY / Ceyrek Detaylari ve AI Analiz")
         df_ham = pd.DataFrame(maclar)
