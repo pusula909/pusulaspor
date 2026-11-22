@@ -282,7 +282,7 @@ st.sidebar.divider()
 st.sidebar.subheader("Gercek Yapay Zeka (Gemini)")
 st.sidebar.divider()
 spor = st.sidebar.selectbox("Spor Dali", ["Basketbol", "Futbol"])
-lig = st.sidebar.selectbox("Lig Secimi", list(TUM_LIGLER[spor].keys()))
+yol = "" if lig == "Tumu (Butun Ligler)" else TUM_LIGLER[spor][lig]
 durum_filtre = st.sidebar.radio("Mac Durumu", ["Tumu", "Sadece Canli Maclar", "Oynanacak Maclar", "Biten Maclar"])
 favori = st.sidebar.text_input("Favori Takim", "").strip().lower()
 otomatik_yenile = st.sidebar.checkbox("Canli Otomatik Yenileme & Alarm (30 sn)", value=False)
@@ -1211,15 +1211,21 @@ elif gorunum == "AI Gunun Radari (Tum Ligler)":
             file_name=f"AI_Radar_{tarih}.xlsx",
         )
 
-else:
-    r = (
-        _el_get(tarih)
-        if yol == "euroleague_resmi"
-        else requests.get(f"{url_basi}{yol}/scoreboard?dates={tarih}", headers=basliklar, timeout=8).json()
-    )
+
+   else:
+    secili_ligler = list(TUM_LIGLER[spor].items()) if lig == "Tumu (Butun Ligler)" else [(lig, yol)]
     maclar = list()
     banko_havuzu = list()
-    for ev in r.get("events", list()):
+    for aktif_lig_ad, aktif_yol in secili_ligler:
+        try:
+            r = (
+                _el_get(tarih)
+                if aktif_yol == "euroleague_resmi"
+                else requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
+            )
+        except Exception:
+            r = {}
+        for ev in r.get("events", list()):
         mac_id = ev.get("id", "")
         comp = ev.get("competitions", list()).pop(0)
         takim_listesi = comp.get("competitors", list())
