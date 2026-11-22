@@ -326,18 +326,18 @@ class PusulaAnalizBeyni:
         karne_dersi = self._karne_oz_ogrenme_ozeti(lig_adi)
         web_istihbarat = self.canli_web_istihbarati(ev_ad, dep_ad, spor_turu)
 
-        prompt = (
-            f"Sen kendi kendini gelistiren (v{hafiza.get('versiyon', 1)}.0) {spor_turu} Bas Analisti ve Istihbarat Sefisin.\n"
+       prompt = (
+            f"Sen v{hafiza.get('versiyon', 1)}.0 {spor_turu} Bas Analistisin.\n"
             f"Mac: [{lig_adi}] {ev_ad} vs {dep_ad}\n"
-            f"Istatistik & Piyasa Ozeti: {analiz_ozeti}\n"
-            f"Canli Saha Verisi: {saha_verisi}\n"
-            f"Kendi Gecmis Karne & Hata Hafizan (OZ-OGRENME KALIBRASYONU): {karne_dersi}\n"
-            f"Internetten Toplanan Resmi Ilk 11 / Ilk 5, Yedek Yildizlar, Sakatlik, Yorgunluk, Hakem & Hava Durumu Istihbarati:\n{web_istihbarat}\n\n"
-            f"Gecmis Hatalarindan Ogrenip Kendi Yazdigin Kurallar (BUNLARA KESIN UY):\n{kural_metni}\n\n"
-            "Gorevin: Ezbere konusma; yukaridaki resmi ilk 11/ilk 5 bilgisini, yedek baslayan yildizlari, kadro/yorgunluk/hava-hakem etkisini, "
-            "gecmis karne derslerini ve istatistikleri carpistirarak kullaniciya gercek kanitlarla guven veren TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
-            "🎯 ANA KARAR: (En degerli ve en ustun tek bahis secenegi)\n"
-            "🕵️ İSTİHBARAT & KANIT: (Resmi ilk 11/ilk 5, yedek kalan yildiz, sakatlik veya form gercegiyle neden bu secenegin ustun oldugu - 1-2 net cumle)\n"
-            "⚠️ KRİTİK RİSK: (Bu tahmini bozabilecek en somut tehlike)"
+            f"Ozet: {analiz_ozeti}\n"
+            f"Saha: {saha_verisi}\n"
+            f"Karne Dersi: {karne_dersi}\n"
+            f"Resmi Ilk 11, Yedekler, Sakatlik, Hakem & Hava Istihbarati:\n{web_istihbarat}\n"
+            f"Kurallar:\n{kural_metni}\n"
+            "Yukaridaki resmi ilk 11/ilk 5, yedek kalan yildiz, sakatlik ve karne derslerini carpistirarak "
+            "TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
+            "🎯 ANA KARAR: (En degerli tek bahis secenegi)\n"
+            "🕵️ İSTİHBARAT & KANIT: (Ilk 11/ilk 5, yedek yildiz veya sakatlik kaniti - 1-2 cumle)\n"
+            "⚠️ KRİTİK RİSK: (En somut tehlike)"
         )
         return self._ai_sor(prompt, max_tokens=450)
