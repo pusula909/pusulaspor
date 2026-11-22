@@ -991,9 +991,50 @@ if gorunum == "Canli Kupon Takip":
 
         st.dataframe(pd.DataFrame(kupon_tablosu), use_container_width=True, hide_index=True)
 
-        k1, k2 = st.columns(2)
-        k1.metric("Kuponun Canli Tutma Ihtimali", f"%{int(genel_ihtimal * 100)}")
-        if k2.button("Kuponu Temizle"):
+        st.divider()
+        kupon_turu = st.radio(
+            "Kupon Tipi Secimi",
+            ["Kombine Kupon", "Tekli (Ayri Ayri) Kupon"],
+            horizontal=True,
+            key="kupon_turu_secim"
+        )
+
+        k1, k2, k3 = st.columns([2, 2, 1])
+
+        if kupon_turu == "Kombine Kupon":
+            k1.metric("Kombine Canli Tutma Ihtimali", f"%{int(genel_ihtimal * 100)}")
+        else:
+            ort_ihtimal = int((sum(float(x["Canli Ihtimal"].replace("%", "")) for x in kupon_tablosu) / len(kupon_tablosu))) if kupon_tablosu else 0
+            k1.metric("Tekli Maclar Ortalama Ihtimal", f"%{ort_ihtimal}")
+
+        if k2.button("📲 Kuponu Kaydet & Telegram'a Gonder", use_container_width=True):
+            tarih_etiket = datetime.now(timezone(timedelta(hours=3))).strftime("%d.%m.%Y %H:%M")
+            baslik_ikon = "🔗" if kupon_turu == "Kombine Kupon" else "🎯"
+
+            mesaj_satirlari = [
+                f"{baslik_ikon} YENI {kupon_turu.upper()} KAYDEDILDI ({tarih_etiket})",
+                f"📋 Toplam Mac Sayisi: {len(kupon_tablosu)}",
+                "--------------------------------"
+            ]
+
+            for idx_m, satir_m in enumerate(kupon_tablosu, 1):
+                mesaj_satirlari.append(
+                    f"{idx_m}. {satir_m['Mac']}\n"
+                    f"   👉 Tahmin: {satir_m['Oynanan']} | Skor: {satir_m['Skor']} ({satir_m['Durum']})"
+                )
+
+            mesaj_satirlari.append("--------------------------------")
+            if kupon_turu == "Kombine Kupon":
+                mesaj_satirlari.append(f"📊 Kombine Tutma Ihtimali: %{int(genel_ihtimal * 100)}")
+            else:
+                mesaj_satirlari.append("💡 Tekli kupon olarak kaydedildi. Her mac bagimsiz takip edilir.")
+
+            if telegram_mesaj_gonder(tg_token, tg_chat_id, "\n".join(mesaj_satirlari)):
+                st.success("✅ Kupon kaydedildi ve detaylari Telegram ekranina gonderildi!")
+            else:
+                st.error("❌ Telegram gonderilemedi! Sol menuden TG_TOKEN ve TG_CHAT_ID ayarlarini kontrol et.")
+
+        if k3.button("🗑️ Temizle", use_container_width=True):
             st.session_state.kupon_listesi = list()
             st.session_state.kupon_bildirim_gonderildi = False
             st.rerun()
