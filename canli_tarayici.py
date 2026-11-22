@@ -317,7 +317,7 @@ def tek_takim_derin_analiz(aranan_takim):
                         )
                         rapor = beyin.mac_deger_analizi(
                     spor_turu=s_tur, lig_adi=l_adi, ev_ad=ev_ad, dep_ad=dep_ad,
-                    ev_rec=ev_r, dep_rec=dep_r, state="pre
+                    ev_rec=ev_r, dep_rec=dep_r, state="pre",
                     ev_skor=int(ev_s or 0), dep_skor=int(dep_s or 0), detay_sure=detay_sure
                 )
                 ai_yanit = beyin.ai_karar_ve_onay(
