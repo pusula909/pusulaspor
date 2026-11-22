@@ -387,7 +387,7 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                  telegram_gonder("\n".join(satir))
             else:
                    telegram_gonder("Henuz kayitli gunluk bulten yok.")
-        if "kombin" in istenen_komutlar:
+    if "kombin" in istenen_komutlar:
         if os.path.exists("son_bulten.json"):
             with open("son_bulten.json", "r", encoding="utf-8") as f:
                 b_list = json.load(f)
@@ -408,7 +408,7 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                 
                
 
-        if "karne" in istenen_komutlar:
+    if "karne" in istenen_komutlar:
             if os.path.exists("haftalik_arsiv.json"):
                 with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
                     arsiv = json.load(f)
