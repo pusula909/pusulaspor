@@ -17,11 +17,10 @@ class PusulaAnalizBeyni:
         self.arsiv_dosya = "haftalik_arsiv.json"
         self.evrim_dosya = "ai_evrim_hafizasi.json"
 
-    def _ai_sor(self, prompt, max_tokens=400):
-        if GEMINI_AKTIF and self.gemini_key:
-            try:
-                client = genai.Client(api_key=self.gemini_key, http_options={"api_version": "v1beta"})
-                for m in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+    if GEMINI_AKTIF and self.gemini_key:
+         try:
+             client = genai.Client(api_key=self.gemini_key)
+             for m in ("gemini-2.5-flash", "gemini-2.0-flash"):
                     try:
                         yanit = client.models.generate_content(model=m, contents=prompt)
                         if yanit and yanit.text:
