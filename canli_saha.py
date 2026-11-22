@@ -114,7 +114,7 @@ def _espn_canli_aksiyon_cek(spor_turu, lig_yolu, mac_id):
     except Exception:
         pass
     return sonuc
-    def canli_saha_goster(spor_turu, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor="0", dep_skor="0", sure=""):
+def canli_saha_goster(spor_turu, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor="0", dep_skor="0", sure=""):
     try:
         veri = _espn_canli_aksiyon_cek(spor_turu, lig_yolu, mac_id)
         taraf = veri["taraf"]
