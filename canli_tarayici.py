@@ -448,4 +448,4 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
 
 
 if __name__ == "__main__":
-    canli_maclari_tara()
+    telegram_komutlari_isle(hafiza_oku(), [], [])
