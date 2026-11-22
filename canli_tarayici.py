@@ -264,82 +264,63 @@ def _el_get(t):
 def tek_takim_derin_analiz(aranan_takim):
     aranan = aranan_takim.strip().lower()
     if len(aranan) < 3:
-        return "Lutfen en az 3 harfli bir takim adi yazin (Ornek: /analiz Lakers)"
+        return "Lutfen en az 3 harfli bir takim adi yazin (Ornek: /sor Liverpool)"
 
-    for s_adi, lig_sozluk in TUM_LIGLER.items():
-        for l_adi, l_yolu in lig_sozluk.items():
-            try:
-                resp = (
-                    _el_get(tarih)
-                    if l_yolu == "euroleague_resmi"
-                    else requests.get(f"{url_basi}{l_yolu}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=7).json()
-                )
-                for ev in resp.get("events", list()):
-                    comp = ev.get("competitions", list()).pop(0)
-                    t_list = comp.get("competitors", list())
-                    if len(t_list) < 2:
-                        continue
-                    t1, t2 = t_list.pop(0), t_list.pop(0)
-                    ev_t = t1 if t1["homeAway"] == "home" else t2
-                    dep_t = t2 if t1["homeAway"] == "home" else t1
-                    ev_ad = ev_t["team"]["displayName"]
-                    dep_ad = dep_t["team"]["displayName"]
+    simdi = datetime.now(timezone(timedelta(hours=3)))
+    tarihler = [simdi.strftime("%Y%m%d"), (simdi + timedelta(days=1)).strftime("%Y%m%d")]
 
-                    if aranan in ev_ad.lower() or aranan in dep_ad.lower():
-                        mac_id = str(ev.get("id", ""))
-                        detay_sure = ev.get("status", {}).get("type", {}).get("shortDetail", "")
-                        ev_s = int(float(ev_t.get("score", 0) or 0))
-                        dep_s = int(float(dep_t.get("score", 0) or 0))
-                        ev_r = ev_t.get("records", list()).pop(0).get("summary", "0-0") if ev_t.get("records") else "0-0"
-                        dep_r = dep_t.get("records", list()).pop(0).get("summary", "0-0") if dep_t.get("records") else "0-0"
+    for tarih in tarihler:
+        for s_tur, lig_sozluk in TUM_LIGLER.items():
+            for l_adi, l_yolu in lig_sozluk.items():
+                try:
+                    resp = (
+                        _el_get(tarih)
+                        if l_yolu == "euroleague_resmi"
+                        else requests.get(f"{url_basi}{l_yolu}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=7).json()
+                    )
+                    for ev in resp.get("events", list()):
+                        comp = ev.get("competitions", list())
+                        t_list = comp.get("competitors", list())
+                        if len(t_list) < 2:
+                            continue
+                        t1, t2 = t_list, t_list
+                        ev_t = t1 if t1.get("homeAway") == "home" else t2
+                        dep_t = t2 if t1.get("homeAway") == "home" else t1
+                        ev_ad = ev_t["team"]["displayName"]
+                        dep_ad = dep_t["team"]["displayName"]
 
-                        sakat_not = list()
-                        piyasa_not = ""
-                        if l_yolu != "euroleague_resmi" and "/" in l_yolu and mac_id:
-                            try:
-                                sj = requests.get(f"{url_basi}{l_yolu}/summary?event={mac_id}", headers=basliklar, timeout=5).json()
-                                for grp in sj.get("injuries", list()):
-                                    t_nm = grp.get("team", {}).get("displayName", "")
-                                    for inj in grp.get("injuries", list()):
-                                        if inj.get("status", "") in ("Out", "Doubtful"):
-                                            sakat_not.append(f"{t_nm}: {inj.get('athlete', {}).get('displayName', '')}")
-                                for pk in sj.get("pickcenter", list())[:1]:
-                                    piyasa_not = f"Piyasa Barem: {pk.get('overUnder', '-')} | Handikap: {pk.get('details', '-')}"
-                            except Exception:
-                                pass
+                        if aranan in ev_ad.lower() or aranan in dep_ad.lower():
+                            detay_sure = ev.get("status", {}).get("type", {}).get("shortDetail", "")
+                            state = ev.get("status", {}).get("type", {}).get("state", "pre")
+                            ev_s = int(float(ev_t.get("score", 0) or 0))
+                            dep_s = int(float(dep_t.get("score", 0) or 0))
+                            ev_r = ev_t.get("records", list()).get("summary", "1-1") if ev_t.get("records") else "1-1"
+                            dep_r = dep_t.get("records", list()).get("summary", "1-1") if dep_t.get("records") else "1-1"
 
-                        soru = (
-                            f"Sen dunya capinda bir {s_adi} Bas Analistisin. Kullanici su mac icin ozel derin analiz istedi:\n"
-                            f"Lig: {l_adi} | Mac: {ev_ad} ({ev_r}) vs {dep_ad} ({dep_r}) | Durum: {detay_sure} (Skor: {ev_s}-{dep_s})\n"
-                            f"{piyasa_not} | Eksikler: {', '.join(sakat_not[:5]) or 'Eksik Yok'}\n"
-                            f"Bu mac icin en mantikli, kazanma ihtimali en yuksek 1 ana tahmin ve 1 alternatif tahmin oner; "
-                            f"gerekcesini 3 kisa madde halinde Turkce yaz."
-                        )
-                        rapor = beyin.mac_deger_analizi(
-                    spor_turu=s_tur, lig_adi=l_adi, ev_ad=ev_ad, dep_ad=dep_ad,
-                    ev_rec=ev_r, dep_rec=dep_r, state="pre",
-                    ev_skor=int(ev_s or 0), dep_skor=int(dep_s or 0), detay_sure=detay_sure
-                )
-                ai_yanit = beyin.ai_karar_ve_onay(
-                    s_tur, l_adi, ev_ad, dep_ad,
-                    f"{rapor['ana_tercih']} | Deger: {rapor['deger_puani']}/10 | Tuzak: {rapor['tuzak_notu'] or 'Temiz'}",
-                    f"Formlar: {ev_r} vs {dep_r} | Eksikler: {sakat_not} | Piyasa: {piyasa_not}"
-                )
-                tuzak_satir = f"⚠️ {rapor['tuzak_notu']}\n" if rapor["tuzak_notu"] else ""
-                return (
-                    f"🔎 OZEL MAC ANALIZ RAPORU\n"
-                    f"🏆 [{l_adi}] {ev_ad} - {dep_ad} ({detay_sure})\n"
-                    f"📊 Formlar: {ev_r} vs {dep_r} | {piyasa_not}\n"
-                    f"💎 Deger Puani: {rapor['deger_puani']}/10 | Guven: %{rapor['guven']}\n"
-                    f"✅ Merkez Karar: {rapor['ana_tercih']}\n"
-                    f"{tuzak_satir}"
-                    f"🏥 Eksikler: {', '.join(sakat_not) or 'Yok'}\n\n"
-                    f"{ai_yanit}"
-                )
-                
-            except Exception:
-                pass
-    return f"Bugunun bulteninde '{aranan_takim}' adinda bir takimin maci bulunamadi."
+                            rapor = beyin.mac_deger_analizi(
+                                spor_turu=s_tur, lig_adi=l_adi, ev_ad=ev_ad, dep_ad=dep_ad,
+                                ev_rec=ev_r, dep_rec=dep_r, state=state,
+                                ev_skor=ev_s, dep_skor=dep_s, detay_sure=detay_sure
+                            )
+                            ai_yanit = beyin.ai_karar_ve_onay(
+                                s_tur, l_adi, ev_ad, dep_ad,
+                                f"{rapor['ana_tercih']} | Deger: {rapor['deger_puani']}/10 | Tuzak: {rapor['tuzak_notu'] or 'Temiz'}",
+                                f"Durum: {detay_sure} | Skor: {ev_s}-{dep_s} | Form: {ev_r} vs {dep_r}"
+                            )
+                            tuzak_satir = f"⚠️ {rapor['tuzak_notu']}\n" if rapor["tuzak_notu"] else ""
+                            return (
+                                f"🔎 OZEL MAC ANALIZ RAPORU\n"
+                                f"🏆 [{l_adi}] {ev_ad} - {dep_ad}\n"
+                                f"⏱️ Durum: {detay_sure} ({ev_s}-{dep_s}) | Form: {ev_r} vs {dep_r}\n"
+                                f"💎 Deger Puani: {rapor['deger_puani']}/10 | Guven: %{rapor['guven']}\n"
+                                f"✅ Merkez Karar: {rapor['ana_tercih']}\n"
+                                f"{tuzak_satir}\n"
+                                f"{ai_yanit}"
+                            )
+                except Exception:
+                    continue
+
+    return f"Bugunun ve yarinin bulteninde '{aranan_takim}' adinda bir takimin maci bulunamadi."
 def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
     if not TG_TOKEN or not TG_CHAT_ID:
         return
