@@ -155,7 +155,11 @@ class PusulaAnalizBeyni:
         state="pre",
         ev_skor=0,
         dep_skor=0,
-        detay_sure=""
+        detay_sure="",
+        ev_yorgun=False,
+        dep_yorgun=False,
+        piyasa_tuzak_notu="",
+        kotu_hava=False
     ):
         ev_guc = self._oran_coz(ev_rec)
         dep_guc = self._oran_coz(dep_rec)
@@ -165,8 +169,11 @@ class PusulaAnalizBeyni:
         versiyon = hafiza.get("versiyon", 1)
 
         ev_avantaj = 0.05 if spor_turu == "Futbol" else 0.04
-        ev_net = max(0.08, min(0.92, ev_guc + ev_avantaj - (ev_eksik_puan * 0.025)))
-        dep_net = max(0.08, min(0.92, dep_guc - (dep_eksik_puan * 0.025)))
+        ev_yorgun_ceza = 0.09 if ev_yorgun else 0.0
+        dep_yorgun_ceza = 0.11 if dep_yorgun else 0.0
+
+        ev_net = max(0.08, min(0.92, ev_guc + ev_avantaj - (ev_eksik_puan * 0.025) - ev_yorgun_ceza))
+        dep_net = max(0.08, min(0.92, dep_guc - (dep_eksik_puan * 0.025) - dep_yorgun_ceza))
 
         if state == "in":
             fark = ev_skor - dep_skor
@@ -207,6 +214,14 @@ class PusulaAnalizBeyni:
         guven = max(48, min(90, ham_guven + kalibrasyon_puani))
         if kalibrasyon_puani <= -8 and not tuzak_notu:
             tuzak_notu = f"Oto-Evrim (v{versiyon}.0): Bu ligde son donemde dusuk isabet nedeniyle risk kirildi."
+        if piyasa_tuzak_notu:
+         tuzak_notu = f"🚨 PIYASA TUZAGI: {piyasa_tuzak_notu}"
+     elif ev_yorgun and guc_farki > 0:
+         tuzak_notu = f"⚠️ YORGUNLUK ALARMI: {ev_ad} dun mac yapti (Back-to-Back), surpriz riski yuksek!"
+     elif dep_yorgun and guc_farki < 0:
+         tuzak_notu = f"⚠️ YORGUNLUK ALARMI: {dep_ad} dun mac yapti (Deplasman Back-to-Back), riskli!"
+     elif kotu_hava and spor_turu == "Futbol":
+         tuzak_notu = "🌧️ HAVA & ZEMIN UYARISI: Kotu hava kosullari nedeniyle UST yerine ALT odaklanilmali."
 
         toplam_skor = ev_skor + dep_skor
         if spor_turu == "Futbol":
