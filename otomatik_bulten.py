@@ -256,12 +256,12 @@ def bulten_olustur_ve_gonder():
         ceza, eksikler, piyasa, hava = piyasa_ve_sakatlik_kontrol(aday["yol"], aday["id"])
         if hava and "UST" in aday["tahmin"]:
             aday["tahmin"] = "Toplam 2.5 ALT"
-            piyasa = f"{piyasa} | 🌧️ {hava}" if piyasa else f"🌧️ {hava}"
+            piyasa = f"{piyasa} | {hava}" if piyasa else f"{hava}"
         lig_bonus = lig_basari_bonusu_getir(aday["lig"])
         sharp_bonus, sharp_not = sharp_piyasa_durumu_getir(aday["id"])
         aday["guven"] = max(50, min(96, aday["guven"] - ceza + lig_bonus + sharp_bonus))
-     if sharp_not:
-         piyasa = f"{piyasa} | 🦈 {sharp_not}" if piyasa else f"🦈 {sharp_not}"
+        if sharp_not:
+            piyasa = f"{piyasa} | {sharp_not}" if piyasa else f"{sharp_not}"
         aday["eksikler"] = eksikler
         aday["piyasa"] = piyasa
         if aday["guven"] >= 62:
