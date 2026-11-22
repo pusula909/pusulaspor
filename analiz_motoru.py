@@ -266,30 +266,57 @@ class PusulaAnalizBeyni:
             "dep_guc_yuzde": int(dep_net * 100),
         }
 
+   def _karne_oz_ogrenme_ozeti(self, lig_adi):
+        try:
+            if not os.path.exists("haftalik_arsiv.json"):
+                return "Henuz yeterli gecmis karne verisi yok."
+            with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
+                arsiv = json.load(f)
+            if not arsiv:
+                return "Henuz yeterli gecmis karne verisi yok."
+            genel_top = len(arsiv)
+            genel_hit = sum(1 for k in arsiv if k.get("tuttu"))
+            lig_maclar = [k for k in arsiv if k.get("lig", "").lower() == str(lig_adi).lower()]
+            yatan_ornekler = [
+                f"{k.get('mac')} ({k.get('tahmin')} -> Skor {k.get('skor')})"
+                for k in arsiv[-25:] if not k.get("tuttu")
+            ][-3:]
+            ozet = f"Genel AI Karnesi: {genel_top} macta {genel_hit} isabet (%{int((genel_hit/genel_top)*100)}). "
+            if lig_maclar:
+                l_hit = sum(1 for k in lig_maclar if k.get("tuttu"))
+                ozet += f"{lig_adi} ligi ozelinde {len(lig_maclar)} macta {l_hit} isabet (%{int((l_hit/len(lig_maclar))*100)}). "
+            if yatan_ornekler:
+                ozet += f"Son yatan tuzak ornekleri (bunlardan ders cikar): {', '.join(yatan_ornekler)}."
+            return ozet
+        except Exception:
+            return "Karne verisi okunamadi."
+
     def canli_web_istihbarati(self, ev_ad, dep_ad, spor_turu):
         bulgular = list()
         try:
             from duckduckgo_search import DDGS
             sorgular = [
-                f"{ev_ad} {dep_ad} sakat cezali son dakika kadro",
-                f"{ev_ad} vs {dep_ad} injury news lineup"
+                f"{ev_ad} {dep_ad} sakat cezali son dakika kadro rotasyon",
+                f"{ev_ad} vs {dep_ad} injury news lineup fatigue referee weather",
+                f"{ev_ad} {dep_ad} maci hakemi hava durumu fikstur yogunlugu",
             ]
             with DDGS() as ddgs:
                 for q in sorgular:
-                    sonuclar = list(ddgs.text(q, max_results=3))
+                    sonuclar = list(ddgs.text(q, max_results=2))
                     for s in sonuclar:
                         baslik = s.get("title", "")
                         ozet = s.get("body", "")
                         if baslik or ozet:
-                            bulgular.append(f"- {baslik}: {ozet[:180]}")
+                            bulgular.append(f"- {baslik}: {ozet[:170]}")
         except Exception:
             pass
-        return "\n".join(bulgular[:5]) if bulgular else "Canli web aramasinda ek son dakika haberi bulunamadi."
+        return "\n".join(bulgular[:6]) if bulgular else "Canli web aramasinda ek son dakika haberi bulunamadi."
 
     def ai_karar_ve_onay(self, spor_turu, lig_adi, ev_ad, dep_ad, analiz_ozeti, saha_verisi=""):
         hafiza = self._evrim_hafizasi_oku()
         ogrenilenler = hafiza.get("ogrenilen_kurallar", list())[-5:]
         kural_metni = "\n".join(ogrenilenler) if ogrenilenler else "Henuz ek ozel kural yok."
+        karne_dersi = self._karne_oz_ogrenme_ozeti(lig_adi)
         web_istihbarat = self.canli_web_istihbarati(ev_ad, dep_ad, spor_turu)
 
         prompt = (
@@ -297,12 +324,13 @@ class PusulaAnalizBeyni:
             f"Mac: [{lig_adi}] {ev_ad} vs {dep_ad}\n"
             f"Istatistik & Piyasa Ozeti: {analiz_ozeti}\n"
             f"Canli Saha Verisi: {saha_verisi}\n"
-            f"Internetten Toplanan Son Dakika Haber & Sakatlik Istihbarati:\n{web_istihbarat}\n\n"
+            f"Kendi Gecmis Karne & Hata Hafizan (OZ-OGRENME KALIBRASYONU): {karne_dersi}\n"
+            f"Internetten Toplanan Kadro, Sakatlik, Fikstur Yorgunlugu, Hakem & Hava Durumu Istihbarati:\n{web_istihbarat}\n\n"
             f"Gecmis Hatalarindan Ogrenip Kendi Yazdigin Kurallar (BUNLARA KESIN UY):\n{kural_metni}\n\n"
-            f"Gorevin: Ezbere konusma; yukaridaki istihbarati, kadro eksiklerini ve istatistikleri carpistirarak "
-            f"kullaniciya gercek kanitlarla guven veren TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
-            f"🎯 ANA KARAR: (En degerli ve en ustun tek bahis secenegi)\n"
-            f"🕵️ ISTIHBARAT & KANIT: (Web aramasindan buldugun kadro/sakatlik/form gercegiyle neden bu secenegin ustun oldugu - 1-2 net cumle)\n"
-            f"⚠️ KRITIK RISK: (Bu tahmini bozabilecek tek somut tehlike)"
+            "Gorevin: Ezbere konusma; yukaridaki istihbarati, kadro/yorgunluk/hava-hakem etkisini, gecmis karne derslerini ve istatistikleri carpistirarak "
+            "kullaniciya gercek kanitlarla guven veren TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
+            "🎯 ANA KARAR: (En degerli ve en ustun tek bahis secenegi)\n"
+            "🕵️ İSTİHBARAT & KANIT: (Web aramasindan buldugun kadro/sakatlik/yorgunluk/hakem-hava veya form gercegiyle neden bu secenegin ustun oldugu - 1-2 net cumle)\n"
+            "⚠️ KRİTİK RİSK: (Bu tahmini bozabilecek en somut tehlike)"
         )
         return self._ai_sor(prompt, max_tokens=450)
