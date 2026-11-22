@@ -350,9 +350,9 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
             if "/karne" in metin:
                 istenen_komutlar.add("karne")
             if "/yardim" in metin or "/start" in metin:
+             istenen_komutlar.add("yardim")
             if "/kombin" in metin:
-             istenen_komutlar.add("kombin")    
-                istenen_komutlar.add("yardim")
+             istenen_komutlar.add("kombin")
             if metin.startswith("/analiz") or metin.startswith("/sor"):
               sorgu_takim = metin.replace("/analiz", "").replace("/sor", "").strip()
             if sorgu_takim:
