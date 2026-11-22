@@ -131,7 +131,7 @@ def _espn_canli_aksiyon_cek(spor_turu, lig_yolu, mac_id, ev_skor_int=0, dep_skor
     except Exception:
         pass
     return sonuc
-    def canli_saha_goster(spor_turu, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor="0", dep_skor="0", sure=""):
+def canli_saha_goster(spor_turu, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor="0", dep_skor="0", sure=""):
     try:
         try:
             ev_s_int = int(ev_skor)
