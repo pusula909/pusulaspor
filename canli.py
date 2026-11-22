@@ -1257,6 +1257,7 @@ else:
                     st.session_state.eski_skorlar[mac_id] = skor_gosterim
                 iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
                 _, ozet_tahmin, en_guclu = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor, aktif_lig_ad, 0, 0, state, ev_s_int, dep_s_int)
+                if state in ("in", "pre"):
                 banko_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "tahmin": en_guclu.get("AI Tahmin Secenegi", ""), "guven": en_guclu.get("Guven Seviyesi", ""), "guven_int": en_guclu.get("GuvenInt", 0)})
                 maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": is_fav, "Dakika / Ceyrek": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Deplasman": dep_ad, "IY / Ceyrek Skorlari": iy_ceyrek_str, "Ev Form": ev_rec, "Dep Form": dep_rec, "Hizli AI Ozet": ozet_tahmin, "Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)})
             except Exception:
