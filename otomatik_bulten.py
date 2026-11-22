@@ -5,7 +5,7 @@ import sys
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 import requests
-
+from analiz_motoru import PusulaAnalizBeyni
 try:
     from google import genai
     GEMINI_AKTIF = True
@@ -15,7 +15,8 @@ except Exception:
 TG_TOKEN = os.environ.get("TG_TOKEN", "").strip()
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "").strip()
 GEMINI_KEY = os.environ.get("GEMINI_KEY", "").strip()
-
+GROQ_KEY = os.environ.get("GROQ_KEY", "").strip()
+beyin = PusulaAnalizBeyni(gemini_key=GEMINI_KEY, groq_key=GROQ_KEY)
 suan_tr = datetime.now(timezone(timedelta(hours=3)))
 tarih = suan_tr.strftime("%Y%m%d")
 tarih_guzel = suan_tr.strftime("%d.%m.%Y")
@@ -109,73 +110,20 @@ def _el_get(t):
 
 def en_guclu_tahmini_bul(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi):
     try:
-        ev_p = list(int(x) for x in ev_rec.split("-"))
-        dep_p = list(int(x) for x in dep_rec.split("-"))
-        ev_top = sum(ev_p) if sum(ev_p) > 0 else 1
-        dep_top = sum(dep_p) if sum(dep_p) > 0 else 1
-        ev_g = max(0.08, min(0.92, (ev_p.pop(0) / ev_top) + 0.06))
-        dep_g = max(0.08, min(0.92, (dep_p.pop(0) / dep_top)))
-        fark = abs(ev_g - dep_g)
-        secenekler = list()
-        deger_etiket = ""
-
-        if spor_turu == "Futbol":
-            if ev_g > dep_g + 0.14:
-                secenekler.append({"tahmin": f"{ev_ad} Kazanir (MS 1)", "guven": min(89, int(56 + fark * 45))})
-            elif dep_g > ev_g + 0.14:
-                secenekler.append({"tahmin": f"{dep_ad} Kazanir (MS 2)", "guven": min(88, int(55 + fark * 45))})
-                if dep_g >= 0.65:
-                    deger_etiket = "💎 DEPLASMAN DEGER FIRSATI"
-            else:
-                secenekler.append({"tahmin": "Cifte Sans 1X (MS 0)", "guven": min(75, int(64 - fark * 20))})
-
-            if ev_g >= 0.54 and dep_g >= 0.48:
-                secenekler.append({"tahmin": "Toplam 2.5 UST", "guven": min(84, int(62 + (ev_g + dep_g) * 15))})
-                if ev_g >= 0.62 and dep_g >= 0.58:
-                    deger_etiket = "💎 YUKSEK HUCUM VALUE (2.5 UST)"
-            elif ev_g <= 0.36 and dep_g <= 0.36:
-                secenekler.append({"tahmin": "Toplam 2.5 ALT", "guven": min(81, int(63 + (1 - (ev_g + dep_g)) * 16))})
-            else:
-                secenekler.append({"tahmin": "Toplam 1.5 UST", "guven": min(85, int(68 + (ev_g + dep_g) * 10))})
-
-            if ev_g >= 0.48 and dep_g >= 0.48:
-                secenekler.append({"tahmin": "KG VAR (Karsilikli Gol)", "guven": min(82, int(60 + min(ev_g, dep_g) * 32))})
-
-            if ev_g >= 0.62:
-                secenekler.append({"tahmin": f"{ev_ad} 1.5 UST Gol", "guven": min(83, int(55 + ev_g * 34))})
-            elif dep_g <= 0.32:
-                secenekler.append({"tahmin": f"{dep_ad} 1.5 ALT Gol", "guven": min(81, int(80 - dep_g * 28))})
-        else:
-            if ev_g >= dep_g:
-                secenekler.append({"tahmin": f"{ev_ad} Kazanir (MS 1)", "guven": min(89, int(54 + fark * 48))})
-            else:
-                secenekler.append({"tahmin": f"{dep_ad} Kazanir (MS 2)", "guven": min(88, int(54 + fark * 48))})
-                if dep_g >= 0.68:
-                    deger_etiket = "💎 DEPLASMAN FAVORISI VALUE"
-
-            beklenen_toplam = round(154 + (ev_g + dep_g) * 14) + 0.5 if lig_adi == "EuroLeague" else round(212 + (ev_g + dep_g) * 14) + 0.5
-            if (ev_g + dep_g) >= 1.12:
-                secenekler.append({"tahmin": f"Mac Toplami {beklenen_toplam} UST", "guven": min(85, int(60 + (ev_g + dep_g) * 18))})
-                if (ev_g + dep_g) >= 1.28:
-                    deger_etiket = "💎 EKSTREM TEMPO FIRSATI"
-            elif (ev_g + dep_g) <= 0.88:
-                secenekler.append({"tahmin": f"Mac Toplami {beklenen_toplam} ALT", "guven": min(83, int(75 - (ev_g + dep_g) * 12))})
-
-            taban_ev = 77 if lig_adi == "EuroLeague" else 105
-            ev_barem = round(taban_ev + ev_g * 14) + 0.5
-            if ev_g >= 0.58:
-                secenekler.append({"tahmin": f"{ev_ad} {ev_barem} UST Sayi", "guven": min(84, int(55 + ev_g * 34))})
-
-            taban_dep = 75 if lig_adi == "EuroLeague" else 103
-            dep_barem = round(taban_dep + dep_g * 14) + 0.5
-            if dep_g <= 0.38:
-                secenekler.append({"tahmin": f"{dep_ad} {dep_barem} ALT Sayi", "guven": min(82, int(80 - dep_g * 28))})
-
-        en_iyi = sorted(secenekler, key=lambda x: x["guven"], reverse=True).pop(0)
-        return en_iyi["tahmin"], en_iyi["guven"], deger_etiket
+        rapor = beyin.mac_deger_analizi(
+            spor_turu=spor_turu,
+            lig_adi=lig_adi,
+            ev_ad=ev_ad,
+            dep_ad=dep_ad,
+            ev_rec=ev_rec,
+            dep_rec=dep_rec,
+            state="pre"
+        )
+        guven = rapor["guven"] if not rapor["tuzak_notu"] else 55
+        etiket = f"💎 Deger: {rapor['deger_puani']}/10"
+        return rapor["ana_tercih"], guven, etiket
     except Exception:
         return "Form Analizi", 55, ""
-
 
 YILDIZLAR = (
     "Giannis", "Jokic", "Doncic", "Tatum", "Curry", "LeBron", "Durant", "Embiid", "Shai", "Edwards",
