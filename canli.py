@@ -1247,7 +1247,9 @@ else:
                 is_fav = bool(favori and (favori in ev_ad.lower() or favori in dep_ad.lower()))
                 if favori and not is_fav:
                     continue
-                durum_gosterim = f"CANLI ({durum_detay})" if state == "in" else (f"BITTI ({durum_detay})" if state == "post" else durum_detay)
+                mac_saat_tr = (datetime.fromisoformat(ev.get("date", "").replace("Z", "+00:00")) + timedelta(hours=3)).strftime("%H:%M") if ev.get("date") else durum_detay
+                temiz_sure = durum_detay.replace("Half", "IY").replace("End of", "Sonu").replace("1st", "1P").replace("2nd", "2P").replace("3rd", "3P").replace("4th", "4P")
+                durum_gosterim = f"🔴 {temiz_sure} CANLI" if state == "in" else (f"🏁 MS ({temiz_sure})" if state == "post" else f"⏰ {mac_saat_tr}")
                 skor_gosterim = f"{ev_s_int} - {dep_s_int}" if state in ("in", "post") else "vs"
                 if state == "in":
                     if mac_id in st.session_state.eski_skorlar and st.session_state.eski_skorlar.get(mac_id) != skor_gosterim:
