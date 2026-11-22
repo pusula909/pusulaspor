@@ -1212,20 +1212,20 @@ elif gorunum == "AI Gunun Radari (Tum Ligler)":
     )
 
 
-    else:
-    secili_ligler = list(TUM_LIGLER[spor].items()) if lig == "Tumu (Butun Ligler)" else [(lig, yol)]
-    maclar = list()
-    banko_havuzu = list()
-    for aktif_lig_ad, aktif_yol in secili_ligler:
-    try:
-    r = (
-    _el_get(tarih)
-    if aktif_yol == "euroleague_resmi"
-    else requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
-    )
-    except Exception:
-    r = {}
-    for ev in r.get("events", list()):
+   else:
+        secili_ligler = list(TUM_LIGLER[spor].items()) if lig == "Tumu (Butun Ligler)" else [(lig, yol)]
+        maclar = list()
+        banko_havuzu = list()
+        for aktif_lig_ad, aktif_yol in secili_ligler:
+            try:
+                r = (
+                    _el_get(tarih)
+                    if aktif_yol == "euroleague_resmi"
+                    else requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
+                )
+            except Exception:
+                r = {}
+            for ev in r.get("events", list()):
     mac_id = ev.get("id", "")
     comp = ev.get("competitions", list()).pop(0)
     takim_listesi = comp.get("competitors", list())
