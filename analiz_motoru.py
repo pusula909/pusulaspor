@@ -211,7 +211,7 @@ class PusulaAnalizBeyni:
                 ham_guven = 64
                 tuzak_notu = "Kafa kafaya mac; taraf yerine barem degerlendirilmeli."
 
-   guven = max(48, min(90, ham_guven + kalibrasyon_puani))
+        guven = max(48, min(90, ham_guven + kalibrasyon_puani))
         if kalibrasyon_puani <= -8 and not tuzak_notu:
             tuzak_notu = f"Oto-Evrim (v{versiyon}.0): Bu ligde son donemde dusuk isabet nedeniyle risk kirildi."
         if piyasa_tuzak_notu:
