@@ -349,34 +349,36 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                 istenen_komutlar.add("bulten")
             if "/karne" in metin:
                 istenen_komutlar.add("karne")
-            if "/yardim" in metin or "/start" in metin:
-             istenen_komutlar.add("yardim")
             if "/kombin" in metin:
-             istenen_komutlar.add("kombin")
+                istenen_komutlar.add("kombin")
+            if "/yardim" in metin or "/start" in metin:
+                istenen_komutlar.add("yardim")
             if metin.startswith("/analiz") or metin.startswith("/sor"):
-              sorgu_takim = metin.replace("/analiz", "").replace("/sor", "").strip()
-            if sorgu_takim:
-                telegram_gonder(tek_takim_derin_analiz(sorgu_takim))
-            else:
-                    telegram_gonder("Kullanim ornegi: /analiz Real Madrid veya /analiz Lakers")    
+                sorgu_takim = metin.replace("/analiz", "").replace("/sor", "").strip()
+                if sorgu_takim:
+                    telegram_gonder(tek_takim_derin_analiz(sorgu_takim))
+                else:
+                    telegram_gonder("Kullanim ornegi: /sor Real Madrid veya /sor Lakers")
+    except Exception:
+        pass
 
-        if "canli" in istenen_komutlar:
-            if canli_ozet_listesi:
-                mesaj_parcalari = list((f"📺 ANLIK CANLI MACLAR & AI BAS ANALIST ({saat_str})\n",))
-                mesaj_parcalari.extend(canli_ozet_listesi[:12])
-                if canli_detay_objeleri:
-                    ilk_m = canli_detay_objeleri.pop(0)
-                    ai_yorum = ai_bas_analist_karari(
-                        ilk_m["spor"], ilk_m["lig"], ilk_m["ev"], ilk_m["dep"],
-                        ilk_m["ev_s"], ilk_m["dep_s"], ilk_m["sure"], ilk_m["ev_r"], ilk_m["dep_r"], ilk_m["saha"]
-                    )
-                    if ai_yorum:
-                        mesaj_parcalari.append(f"\n📌 One Cikan Mac Analizi ({ilk_m['ev']} - {ilk_m['dep']}):\n{ai_yorum}")
-                telegram_gonder("\n".join(mesaj_parcalari))
+    if "canli" in istenen_komutlar:
+        if canli_ozet_listesi:
+            mesaj_parcalari = list(("🔴 ANLIK CANLI MAC DURUMU\n",))
+            mesaj_parcalari.extend(canli_ozet_listesi[:15])
+            if canli_detay_objeleri:
+                ilk_m = canli_detay_objeleri.pop(0)
+                ai_yorum = ai_bas_analist_karari(
+                    ilk_m["spor"], ilk_m["lig"], ilk_m["ev"], ilk_m["dep"],
+                    ilk_m["ev_s"], ilk_m["dep_s"], ilk_m["sure"], ilk_m["ev_r"], ilk_m["dep_r"], ilk_m["saha"]
+                )
+                if ai_yorum:
+                    mesaj_parcalari.append(f"\n🔥 One Cikan Mac Analizi ({ilk_m['ev']} - {ilk_m['dep']}):\n{ai_yorum}")
+            telegram_gonder("\n".join(mesaj_parcalari))
         else:
-                telegram_gonder("Su an canli oynanan mac bulunmuyor.")
+            telegram_gonder("Su an canli oynanan mac bulunmuyor.")
 
-       if "bulten" in istenen_komutlar:
+    if "bulten" in istenen_komutlar:
         if os.path.exists("son_bulten.json"):
             with open("son_bulten.json", "r", encoding="utf-8") as f:
                 b_list = json.load(f)
