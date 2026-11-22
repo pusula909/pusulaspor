@@ -140,7 +140,7 @@ class PusulaAnalizBeyni:
         except Exception:
             pass
         return 0.50
-        def mac_deger_analizi(
+    def mac_deger_analizi(
         self,
         spor_turu,
         lig_adi,
