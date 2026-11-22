@@ -289,7 +289,7 @@ durum_filtre = st.sidebar.radio("Mac Durumu", ["Tumu", "Sadece Canli Maclar", "O
 favori = st.sidebar.text_input("Favori Takim", "").strip().lower()
 otomatik_yenile = st.sidebar.checkbox("Canli Otomatik Yenileme & Alarm (30 sn)", value=False)
 
-yol = TUM_LIGLER[spor][lig]
+yol = "" if lig == "Tumu (Butun Ligler)" else TUM_LIGLER[spor][lig]
 YILDIZ_LISTESI = (
     "Giannis", "Jokic", "Doncic", "Tatum", "Curry", "LeBron", "Durant", "Embiid", "Shai", "Edwards",
     "Brunson", "Mitchell", "Booker", "Davis", "Wembanyama", "Haliburton", "Maxey", "Banchero", "Morant",
