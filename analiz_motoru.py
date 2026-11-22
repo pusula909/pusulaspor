@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import datetime, timedelta, timezone
 import requests
 
 try:
@@ -10,28 +11,136 @@ except Exception:
 
 
 class PusulaAnalizBeyni:
-    """
-    Web arayuzu, Telegram canli radari ve Gunluk Bulten icin
-    tek merkezli, cok katmanli profesyonel spor analiz motoru.
-    """
-
     def __init__(self, gemini_key="", groq_key=""):
         self.gemini_key = (gemini_key or os.environ.get("GEMINI_KEY", "")).strip()
         self.groq_key = (groq_key or os.environ.get("GROQ_KEY", "")).strip()
+        self.arsiv_dosya = "haftalik_arsiv.json"
+        self.evrim_dosya = "ai_evrim_hafizasi.json"
+
+    def _ai_sor(self, prompt, max_tokens=400):
+        if GEMINI_AKTIF and self.gemini_key:
+            try:
+                client = genai.Client(api_key=self.gemini_key, http_options={"api_version": "v1beta"})
+                for m in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+                    try:
+                        yanit = client.models.generate_content(model=m, contents=prompt)
+                        if yanit and yanit.text:
+                            return yanit.text.strip()
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+
+        if self.groq_key:
+            g_base = "https://groq.com"
+            g_headers = {"Authorization": f"Bearer {self.groq_key}", "Content-Type": "application/json"}
+            for m in ("openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"):
+                try:
+                    r = requests.post(
+                        f"{g_base}/chat/completions",
+                        headers=g_headers,
+                        json={
+                            "model": m,
+                            "messages": [{"role": "user", "content": prompt}],
+                            "temperature": 0.3,
+                            "max_tokens": max_tokens,
+                        },
+                        timeout=12,
+                    ).json()
+                    if "choices" in r and r["choices"]:
+                        txt = r["choices"].get("message", {}).get("content", "").strip()
+                        if txt:
+                            return txt
+                except Exception:
+                    continue
+        return ""
+
+    def _evrim_hafizasi_oku(self):
+        if os.path.exists(self.evrim_dosya):
+            try:
+                with open(self.evrim_dosya, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return {"versiyon": 1, "son_guncelleme": "", "ogrenilen_kurallar": [], "lig_ayarlari": {}}
+        def gece_kendini_gelistir(self):
+        if not os.path.exists(self.arsiv_dosya):
+            return ""
+        try:
+            with open(self.arsiv_dosya, "r", encoding="utf-8") as f:
+                arsiv = json.load(f)
+        except Exception:
+            return ""
+        if len(arsiv) < 3:
+            return ""
+
+        hafiza = self._evrim_hafizasi_oku()
+        bugun_str = datetime.now(timezone(timedelta(hours=3))).strftime("%d.%m.%Y")
+
+        lig_istatistik = {}
+        for k in arsiv[-50:]:
+            l_ad = k.get("lig", "")
+            if not l_ad:
+                continue
+            if l_ad not in lig_istatistik:
+                lig_istatistik[l_ad] = {"top": 0, "hit": 0}
+            lig_istatistik[l_ad]["top"] += 1
+            if k.get("tuttu"):
+                lig_istatistik[l_ad]["hit"] += 1
+
+        yeni_lig_ayarlari = {}
+        for l_ad, v in lig_istatistik.items():
+            if v["top"] >= 3:
+                oran = v["hit"] / v["top"]
+                if oran < 0.45:
+                    yeni_lig_ayarlari[l_ad] = -10
+                elif oran < 0.55:
+                    yeni_lig_ayarlari[l_ad] = -5
+                elif oran >= 0.75:
+                    yeni_lig_ayarlari[l_ad] = +6
+                else:
+                    yeni_lig_ayarlari[l_ad] = 0
+
+        son_kayitlar = arsiv[-15:]
+        ozet_metin = "\n".join(
+            f"- [{x.get('lig')}] Sonuc: {'TUTTU' if x.get('tuttu') else 'YATTI'}"
+            for x in son_kayitlar
+        )
+        mevcut_kurallar = "\n".join(hafiza.get("ogrenilen_kurallar", [])[-8:])
+
+        prompt = (
+            f"Sen kendi kendini gelistiren bir Spor Analiz Yapay Zekasisin.\n"
+            f"Son 15 tahmin sonucun:\n{ozet_metin}\n\n"
+            f"Mevcut Kurallarin:\n{mevcut_kurallar}\n\n"
+            f"Gorevin: Yatan tahminlere bakarak kendine TEK CUMLELIK, somut ve yeni bir 'Kendi Kendini Duzeltme Kurali' yaz. Sadece yeni kurali yaz."
+        )
+
+        yeni_kural = self._ai_sor(prompt, max_tokens=120)
+        kurallar = hafiza.get("ogrenilen_kurallar", [])
+        if yeni_kural and len(yeni_kural) > 10:
+            kurallar.append(f"[{bugun_str}] {yeni_kural}")
+
+        yeni_versiyon = hafiza.get("versiyon", 1) + 1
+        hafiza["versiyon"] = yeni_versiyon
+        hafiza["son_guncelleme"] = bugun_str
+        hafiza["ogrenilen_kurallar"] = kurallar[-25:]
+        hafiza["lig_ayarlari"] = yeni_lig_ayarlari
+
+        with open(self.evrim_dosya, "w", encoding="utf-8") as f:
+            json.dump(hafiza, f, ensure_ascii=False, indent=2)
+
+        return f"🧬 AI SISTEM KENDINI GUNCELLEDI (v{yeni_versiyon}.0)\n📌 Yeni Ogrenilen Kural: {yeni_kural}"
 
     def _oran_coz(self, rec_str):
-        """'15-5' veya '10-4-6' gibi derece metnini güvenli galibiyet oranina cevirir."""
         try:
             parcalar = [int(x) for x in str(rec_str).split("-") if x.strip().isdigit()]
             toplam = sum(parcalar)
             if len(parcalar) >= 2 and toplam > 0:
-                # Sezon basi sapmalarini dengeleyen Laplace yumusatmasi
-                return (parcalar + 2) / (toplam + 4)
+                return (parcalar[0] + 2) / (toplam + 4)
         except Exception:
             pass
         return 0.50
-
-    def mac_deger_analizi(
+        def mac_deger_analizi(
         self,
         spor_turu,
         lig_adi,
@@ -48,19 +157,17 @@ class PusulaAnalizBeyni:
         dep_skor=0,
         detay_sure=""
     ):
-        """
-        Ezber oranlara dusmeden; saha gucu, sakatlik maliyeti, piyasa baremi
-        ve canli skoru birlestirip tek bir tutarli karar ve deger puani uretir.
-        """
         ev_guc = self._oran_coz(ev_rec)
         dep_guc = self._oran_coz(dep_rec)
 
-        # Ic saha avantaji ve sakatlik etkisi
+        hafiza = self._evrim_hafizasi_oku()
+        kalibrasyon_puani = hafiza.get("lig_ayarlari", {}).get(lig_adi, 0)
+        versiyon = hafiza.get("versiyon", 1)
+
         ev_avantaj = 0.05 if spor_turu == "Futbol" else 0.04
         ev_net = max(0.08, min(0.92, ev_guc + ev_avantaj - (ev_eksik_puan * 0.025)))
         dep_net = max(0.08, min(0.92, dep_guc - (dep_eksik_puan * 0.025)))
 
-        # Canli mac ise skor ve sure etkisini dahil et
         if state == "in":
             fark = ev_skor - dep_skor
             if spor_turu == "Futbol":
@@ -73,32 +180,34 @@ class PusulaAnalizBeyni:
         guc_farki = ev_net - dep_net
         abs_fark = abs(guc_farki)
 
-        # 1. Ana Taraf Karari ve Tuzak Kontrolu
         tuzak_notu = ""
         if spor_turu == "Futbol":
             if guc_farki >= 0.16:
                 ana_tercih = f"{ev_ad} Kazanir (MS 1)"
-                guven = min(88, int(56 + abs_fark * 48))
+                ham_guven = int(56 + abs_fark * 48)
             elif guc_farki <= -0.16:
                 ana_tercih = f"{dep_ad} Kazanir (MS 2)"
-                guven = min(87, int(55 + abs_fark * 48))
+                ham_guven = int(55 + abs_fark * 48)
             else:
                 ana_tercih = "Cifte Sans 1X / Dengeli Mac"
-                guven = min(76, int(62 + (0.16 - abs_fark) * 35))
+                ham_guven = int(62 + (0.16 - abs_fark) * 35)
                 tuzak_notu = "Taraf bahsi riskli, iki takim birbirine cok yakin."
         else:
             if guc_farki >= 0.14:
                 ana_tercih = f"{ev_ad} Kazanir (MS 1)"
-                guven = min(89, int(57 + abs_fark * 50))
+                ham_guven = int(57 + abs_fark * 50)
             elif guc_farki <= -0.14:
                 ana_tercih = f"{dep_ad} Kazanir (MS 2)"
-                guven = min(88, int(56 + abs_fark * 50))
+                ham_guven = int(56 + abs_fark * 50)
             else:
                 ana_tercih = "Taraf Riskli -> Toplam Sayi / Handikap Odakli"
-                guven = 64
+                ham_guven = 64
                 tuzak_notu = "Kafa kafaya mac; taraf yerine barem degerlendirilmeli."
 
-        # 2. Piyasa Baremi (Alt/Ust) Degerlendirmesi
+        guven = max(48, min(90, ham_guven + kalibrasyon_puani))
+        if kalibrasyon_puani <= -8 and not tuzak_notu:
+            tuzak_notu = f"Oto-Evrim (v{versiyon}.0): Bu ligde son donemde dusuk isabet nedeniyle risk kirildi."
+
         toplam_skor = ev_skor + dep_skor
         if spor_turu == "Futbol":
             if state == "in":
@@ -127,8 +236,7 @@ class PusulaAnalizBeyni:
                 barem_tercih = f"Piyasa Baremi: {ref_barem}"
                 barem_guven = 70
 
-        # 3. 10 Uzerinden Genel Deger Puani (Value Rating)
-        deger_puani = round(min(9.8, max(4.5, (guven / 10.0) - (0.6 if tuzak_notu else 0.0))), 1)
+        deger_puani = round(min(9.8, max(4.2, (guven / 10.0) - (0.6 if tuzak_notu else 0.0))), 1)
 
         return {
             "ana_tercih": ana_tercih,
@@ -142,56 +250,19 @@ class PusulaAnalizBeyni:
         }
 
     def ai_karar_ve_onay(self, spor_turu, lig_adi, ev_ad, dep_ad, analiz_ozeti, saha_verisi=""):
-        """
-        Yapay zekaya sadece yorum yazdirmaz; hesaplanan matematiksel analizi
-        saha ve kadro verisiyle denetletip 'ONAY' veya 'DIKKAT / TUZAK' karari aldirir.
-        """
+        hafiza = self._evrim_hafizasi_oku()
+        ogrenilenler = hafiza.get("ogrenilen_kurallar", [])[-5:]
+        kural_metni = "\n".join(ogrenilenler) if ogrenilenler else "Henuz ek ozel kural yok."
+
         prompt = (
-            f"Sen dunya capinda bir {spor_turu} Bas Analisti ve Risk Yoneticisisin.\n"
+            f"Sen kendi kendini gelistiren (v{hafiza.get('versiyon', 1)}.0) {spor_turu} Bas Analisti ve Risk Yoneticisisin.\n"
             f"Mac: {lig_adi} | {ev_ad} vs {dep_ad}\n"
             f"Matematik Motoru Ciktisi: {analiz_ozeti}\n"
             f"Canli Saha / Kadro / Eksik Verisi: {saha_verisi}\n\n"
-            f"Gorevin: Bu tahmini saha gercekleri, rotasyon, sakatlik ve piyasa tuzaklari acisindan denetlemek.\n"
+            f"Gecmis Hatalarindan Ogrenip Kendi Yazdigin Kurallar (BUNLARA KESIN UY):\n{kural_metni}\n\n"
             f"Ciktiyi Turkce olarak TAM OLARAK su 3 kisa maddede ver:\n"
             f"🎯 ANA KARAR: (En mantikli tek secenek ve neden degerli oldugu)\n"
             f"🧠 SAHA & TAKTIK OKUMASI: (Kadro, tempo veya koc hamlesi acisindan 1-2 net cumle)\n"
             f"⚠️ TUZAK / RISK UYARISI: (Bu tahmini bozabilecek tek kritik nokta)"
         )
-
-        if GEMINI_AKTIF and self.gemini_key:
-            try:
-                client = genai.Client(api_key=self.gemini_key, http_options={"api_version": "v1beta"})
-                for m in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
-                    try:
-                        yanit = client.models.generate_content(model=m, contents=prompt)
-                        if yanit and yanit.text:
-                            return yanit.text.strip()
-                    except Exception:
-                        continue
-            except Exception:
-                pass
-
-        if self.groq_key:
-            g_base = "https://groq.com"
-            g_headers = {"Authorization": f"Bearer {self.groq_key}", "Content-Type": "application/json"}
-            for m in ("openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"):
-                try:
-                    r = requests.post(
-                        f"{g_base}/chat/completions",
-                        headers=g_headers,
-                        json={
-                            "model": m,
-                            "messages": [{"role": "user", "content": prompt}],
-                            "temperature": 0.3,
-                            "max_tokens": 400,
-                        },
-                        timeout=12,
-                    ).json()
-                    if "choices" in r and r["choices"]:
-                        txt = r["choices"].get("message", {}).get("content", "").strip()
-                        if txt:
-                            return txt
-                except Exception:
-                    continue
-
-        return ""
+        return self._ai_sor(prompt, max_tokens=400)
