@@ -223,12 +223,9 @@ TUM_LIGLER = {
     },
 }
 
-gizli_tg_token = st.secrets.get("TG_TOKEN", "")
-gizli_tg_chat_id = st.secrets.get("TG_CHAT_ID", "")
-gizli_gemini_key = st.secrets.get("GEMINI_KEY", "")
-
+gizli_gemini_key = st.secrets.get("GEMINI_KEY", "") or st.secrets.get("GEMINI_API_KEY", "")
 gemini_api_key = gizli_gemini_key
-groq_api_key = st.secrets.get("GROQ_KEY", "")
+groq_api_key = st.secrets.get("GROQ_KEY", "") or st.secrets.get("GROQ_API_KEY", "")
 beyin = PusulaAnalizBeyni(gemini_key=gemini_api_key, groq_key=groq_api_key)
 st.sidebar.header("Kontrol Merkezi")
 gorunum = st.sidebar.radio(
