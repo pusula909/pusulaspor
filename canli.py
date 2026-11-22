@@ -219,7 +219,7 @@ TUM_LIGLER = {
     "Basketbol": {
         "NBA": "basketball/nba",
         "EuroLeague": "euroleague_resmi",
-        "NCAA Basketbol": "basketball/mens-college-basketball",
+        
     },
 }
 
