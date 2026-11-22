@@ -1212,7 +1212,7 @@ elif gorunum == "AI Gunun Radari (Tum Ligler)":
         )
 
 
-   else:
+else:
     secili_ligler = list(TUM_LIGLER[spor].items()) if lig == "Tumu (Butun Ligler)" else [(lig, yol)]
     maclar = list()
     banko_havuzu = list()
