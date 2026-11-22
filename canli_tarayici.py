@@ -315,13 +315,27 @@ def tek_takim_derin_analiz(aranan_takim):
                             f"Bu mac icin en mantikli, kazanma ihtimali en yuksek 1 ana tahmin ve 1 alternatif tahmin oner; "
                             f"gerekcesini 3 kisa madde halinde Turkce yaz."
                         )
-                        ai_yanit = cift_motor_ai_sor(soru) or "Su an AI servisi yogun, form verilerine gore analiz yapildi."
-                        return (
-                            f"🔍 OZEL MAC ANALIZ RAPORU\n"
-                            f"🏆 [{l_adi}] {ev_ad} - {dep_ad} ({detay_sure})\n"
-                            f"📊 Formlar: {ev_r} vs {dep_r} | {piyasa_not}\n"
-                            f"🏥 Eksikler: {', '.join(sakat_not[:4]) or 'Yok'}\n\n"
-                            f"{ai_yanit}"
+                        rapor = beyin.mac_deger_analizi(
+                    spor_turu=s_tur, lig_adi=l_adi, ev_ad=ev_ad, dep_ad=dep_ad,
+                    ev_rec=ev_r, dep_rec=dep_r, state=state,
+                    ev_skor=int(ev_s or 0), dep_skor=int(dep_s or 0), detay_sure=detay_sure
+                )
+                ai_yanit = beyin.ai_karar_ve_onay(
+                    s_tur, l_adi, ev_ad, dep_ad,
+                    f"{rapor['ana_tercih']} | Deger: {rapor['deger_puani']}/10 | Tuzak: {rapor['tuzak_notu'] or 'Temiz'}",
+                    f"Formlar: {ev_r} vs {dep_r} | Eksikler: {sakat_not} | Piyasa: {piyasa_not}"
+                )
+                tuzak_satir = f"⚠️ {rapor['tuzak_notu']}\n" if rapor["tuzak_notu"] else ""
+                return (
+                    f"🔎 OZEL MAC ANALIZ RAPORU\n"
+                    f"🏆 [{l_adi}] {ev_ad} - {dep_ad} ({detay_sure})\n"
+                    f"📊 Formlar: {ev_r} vs {dep_r} | {piyasa_not}\n"
+                    f"💎 Deger Puani: {rapor['deger_puani']}/10 | Guven: %{rapor['guven']}\n"
+                    f"✅ Merkez Karar: {rapor['ana_tercih']}\n"
+                    f"{tuzak_satir}"
+                    f"🏥 Eksikler: {', '.join(sakat_not) or 'Yok'}\n\n"
+                    f"{ai_yanit}"
+                )
                         )
             except Exception:
                 pass
@@ -351,8 +365,8 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                 istenen_komutlar.add("karne")
             if "/yardim" in metin or "/start" in metin:
                 istenen_komutlar.add("yardim")
-            if metin.startswith("/analiz"):
-                sorgu_takim = metin.replace("/analiz", "").strip()
+            if metin.startswith("/analiz") or metin.startswith("/sor"):
+              sorgu_takim = metin.replace("/analiz", "").replace("/sor", "").strip()
             if sorgu_takim:
                 telegram_gonder(tek_takim_derin_analiz(sorgu_takim))
             else:
