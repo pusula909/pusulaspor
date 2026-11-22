@@ -444,7 +444,7 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
         telegram_gonder(yardim_metni)
 
     hafiza["son_update_id"] = son_update_id
-    hafiza_kaydet(hafiza)
+    json.dump(hafiza, open("canli_hafiza.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
 
 if __name__ == "__main__":
