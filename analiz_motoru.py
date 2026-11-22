@@ -16,7 +16,7 @@ class PusulaAnalizBeyni:
         self.groq_key = (groq_key or os.environ.get("GROQ_KEY", "")).strip()
         self.arsiv_dosya = "haftalik_arsiv.json"
         self.evrim_dosya = "ai_evrim_hafizasi.json"
-
+    def _ai_sor(self, prompt, max_tokens=400):
     if GEMINI_AKTIF and self.gemini_key:
          try:
              client = genai.Client(api_key=self.gemini_key)
