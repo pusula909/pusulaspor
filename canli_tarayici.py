@@ -373,10 +373,10 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                     if ai_yorum:
                         mesaj_parcalari.append(f"\n📌 One Cikan Mac Analizi ({ilk_m['ev']} - {ilk_m['dep']}):\n{ai_yorum}")
                 telegram_gonder("\n".join(mesaj_parcalari))
-            else:
+        else:
                 telegram_gonder("Su an canli oynanan mac bulunmuyor.")
 
-       if "bulten" in istenen_komutlar:
+        if "bulten" in istenen_komutlar:
         if os.path.exists("son_bulten.json"):
             with open("son_bulten.json", "r", encoding="utf-8") as f:
                 b_list = json.load(f)
