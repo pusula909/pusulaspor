@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import requests
 import streamlit as st
-
+from analiz_motoru import PusulaAnalizBeyni
 try:
     import winsound
     SES_AKTIF = True
@@ -228,7 +228,8 @@ gizli_tg_chat_id = st.secrets.get("TG_CHAT_ID", "")
 gizli_gemini_key = st.secrets.get("GEMINI_KEY", "")
 
 gemini_api_key = gizli_gemini_key
-
+groq_api_key = st.secrets.get("GROQ_KEY", "")
+beyin = PusulaAnalizBeyni(gemini_key=gemini_api_key, groq_key=groq_api_key)
 st.sidebar.header("Kontrol Merkezi")
 gorunum = st.sidebar.radio(
     "Mod Secimi",
@@ -451,29 +452,31 @@ def koc_ve_rotasyon_etkisi_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu, ev_
 
 def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_eksik=0, dep_eksik=0, state="pre", ev_skor=0, dep_skor=0):
     try:
-        ev_p = [int(x) for x in ev_rec.split("-") if x.isdigit()]
-        dep_p = [int(x) for x in dep_rec.split("-") if x.isdigit()]
-        ev_top = sum(ev_p) if sum(ev_p) > 0 else 0
-        dep_top = sum(dep_p) if sum(dep_p) > 0 else 0
-
-        # Az maç oynanmışsa (sezon başı vb.) %50 tabanına yaklaştırarak yapay %90'ları önler
-        ev_ham_oran = ((ev_p[0] + 2) / (ev_top + 4)) if len(ev_p) >= 2 else 0.50
-        dep_ham_oran = ((dep_p[0] + 2) / (dep_top + 4)) if len(dep_p) >= 2 else 0.50
-
-        ev_g = max(0.08, min(0.92, ev_ham_oran + 0.05 - (ev_eksik * 0.03)))
-        dep_g = max(0.08, min(0.92, dep_ham_oran - (dep_eksik * 0.03)))
-
-        if state == "in":
-            skor_farki = ev_skor - dep_skor
-            if spor_turu == "Futbol":
-                ev_g = max(0.05, min(0.95, ev_g + (skor_farki * 0.18)))
-                dep_g = max(0.05, min(0.95, dep_g - (skor_farki * 0.18)))
-            else:
-                ev_g = max(0.05, min(0.95, ev_g + (skor_farki * 0.025)))
-                dep_g = max(0.05, min(0.95, dep_g - (skor_farki * 0.025)))
-
+        rapor = beyin.mac_deger_analizi(
+            spor_turu=spor_turu,
+            lig_adi=lig_adi,
+            ev_ad=ev_ad,
+            dep_ad=dep_ad,
+            ev_rec=ev_rec,
+            dep_rec=dep_rec,
+            ev_eksik_puan=ev_eksik,
+            dep_eksik_puan=dep_eksik,
+            state=state,
+            ev_skor=ev_skor,
+            dep_skor=dep_skor
+        )
+        ev_g = rapor["ev_guc_yuzde"] / 100.0
+        dep_g = rapor["dep_guc_yuzde"] / 100.0
         fark = abs(ev_g - dep_g)
         satirlar = list()
+        tuzak_etiket = f"⚠️ {rapor['tuzak_notu']}" if rapor["tuzak_notu"] else f"💎 Deger Puani: {rapor['deger_puani']}/10 (Temiz)"
+        satirlar.append({
+        "Analiz Tipi": "MERKEZ BEYIN",
+        "Bahis Kategorisi": "Deger & Tuzak Denetimi",
+        "AI Tahmin Secenegi": f"{rapor['ana_tercih']} | {tuzak_etiket}",
+        "Guven Seviyesi": f"%{rapor['guven']}",
+        "GuvenInt": rapor["guven"]
+     })
         etiket = "CANLI AI" if state == "in" else "Mac Onu AI"
 
         if spor_turu == "Futbol":
