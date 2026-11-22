@@ -17,7 +17,7 @@ class PusulaAnalizBeyni:
         self.arsiv_dosya = "haftalik_arsiv.json"
         self.evrim_dosya = "ai_evrim_hafizasi.json"
     def _ai_sor(self, prompt, max_tokens=400):
-    if GEMINI_AKTIF and self.gemini_key:
+         if GEMINI_AKTIF and self.gemini_key:
          try:
              client = genai.Client(api_key=self.gemini_key)
              for m in ("gemini-2.5-flash", "gemini-2.0-flash"):
@@ -31,7 +31,7 @@ class PusulaAnalizBeyni:
                 pass
 
         if self.groq_key:
-            g_base = "https://groq.com"
+            "https://groq.com"
             g_headers = {"Authorization": f"Bearer {self.groq_key}", "Content-Type": "application/json"}
             for m in ("llama-3.3-70b-versatile", "llama-3.1-8b-instant"):
                 try:
