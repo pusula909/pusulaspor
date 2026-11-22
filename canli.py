@@ -312,10 +312,10 @@ def son_dakika_baski_kontrol(spor_turu, state, detay_sure, ev_ad, dep_ad, ev_s, 
     if state != "in":
         return ""
     try:
-        ev_p = list(int(x) for x in ev_rec.split("-"))
-        dep_p = list(int(x) for x in dep_rec.split("-"))
-        ev_g = ev_p.pop(0) / (sum(ev_p) if sum(ev_p) > 0 else 1)
-        dep_g = dep_p.pop(0) / (sum(dep_p) if sum(dep_p) > 0 else 1)
+        ev_p = [int(x) for x in ev_rec.split("-") if x.isdigit()]
+        dep_p = [int(x) for x in dep_rec.split("-") if x.isdigit()]
+        ev_g = (ev_p / sum(ev_p)) if (len(ev_p) >= 2 and sum(ev_p) > 0) else 0.5
+        dep_g = (dep_p / sum(dep_p)) if (len(dep_p) >= 2 and sum(dep_p) > 0) else 0.5
         fark = abs(ev_s - dep_s)
 
         if spor_turu == "Futbol":
@@ -451,12 +451,17 @@ def koc_ve_rotasyon_etkisi_getir(lig_yolu, mac_id, ev_id, dep_id, spor_turu, ev_
 
 def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_eksik=0, dep_eksik=0, state="pre", ev_skor=0, dep_skor=0):
     try:
-        ev_p = list(int(x) for x in ev_rec.split("-"))
-        dep_p = list(int(x) for x in dep_rec.split("-"))
-        ev_top = sum(ev_p) if sum(ev_p) > 0 else 1
-        dep_top = sum(dep_p) if sum(dep_p) > 0 else 1
-        ev_g = max(0.08, min(0.92, (ev_p.pop(0) / ev_top) + 0.06 - (ev_eksik * 0.03)))
-        dep_g = max(0.08, min(0.92, (dep_p.pop(0) / dep_top) - (dep_eksik * 0.03)))
+        ev_p = [int(x) for x in ev_rec.split("-") if x.isdigit()]
+        dep_p = [int(x) for x in dep_rec.split("-") if x.isdigit()]
+        ev_top = sum(ev_p) if sum(ev_p) > 0 else 0
+        dep_top = sum(dep_p) if sum(dep_p) > 0 else 0
+
+        # Az maç oynanmışsa (sezon başı vb.) %50 tabanına yaklaştırarak yapay %90'ları önler
+        ev_ham_oran = ((ev_p + 2) / (ev_top + 4)) if len(ev_p) >= 2 else 0.50
+        dep_ham_oran = ((dep_p + 2) / (dep_top + 4)) if len(dep_p) >= 2 else 0.50
+
+        ev_g = max(0.08, min(0.92, ev_ham_oran + 0.05 - (ev_eksik * 0.03)))
+        dep_g = max(0.08, min(0.92, dep_ham_oran - (dep_eksik * 0.03)))
 
         if state == "in":
             skor_farki = ev_skor - dep_skor
