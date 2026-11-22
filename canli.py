@@ -1209,92 +1209,92 @@ elif gorunum == "AI Gunun Radari (Tum Ligler)":
             "Gunun Radar Raporunu Excel Indir",
             data=excel_dosyasi_olustur(radar_df),
             file_name=f"AI_Radar_{tarih}.xlsx",
-        )
+    )
 
 
-else:
+    else:
     secili_ligler = list(TUM_LIGLER[spor].items()) if lig == "Tumu (Butun Ligler)" else [(lig, yol)]
     maclar = list()
     banko_havuzu = list()
     for aktif_lig_ad, aktif_yol in secili_ligler:
-        try:
-            r = (
-                _el_get(tarih)
-                if aktif_yol == "euroleague_resmi"
-                else requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
-            )
-        except Exception:
-            r = {}
-        for ev in r.get("events", list()):
-        mac_id = ev.get("id", "")
-        comp = ev.get("competitions", list()).pop(0)
-        takim_listesi = comp.get("competitors", list())
-        t1 = takim_listesi.pop(0)
-        t2 = takim_listesi.pop(0)
-        ev_t = t1 if t1["homeAway"] == "home" else t2
-        dep_t = t2 if t1["homeAway"] == "home" else t1
-        ev_ad, dep_ad = ev_t["team"]["displayName"], dep_t["team"]["displayName"]
-        ev_id, dep_id = ev_t["team"].get("id", ""), dep_t["team"].get("id", "")
-        ev_rec_list = ev_t.get("records", list())
-        dep_rec_list = dep_t.get("records", list())
-        ev_rec = ev_rec_list.pop(0).get("summary", "0-0") if ev_rec_list else "0-0"
-        dep_rec = dep_rec_list.pop(0).get("summary", "0-0") if dep_rec_list else "0-0"
-        state = ev["status"]["type"]["state"]
-        durum_detay = ev["status"]["type"]["shortDetail"]
-        ev_s_int = int(ev_t.get("score", 0))
-        dep_s_int = int(dep_t.get("score", 0))
+    try:
+    r = (
+    _el_get(tarih)
+    if aktif_yol == "euroleague_resmi"
+    else requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
+    )
+    except Exception:
+    r = {}
+    for ev in r.get("events", list()):
+    mac_id = ev.get("id", "")
+    comp = ev.get("competitions", list()).pop(0)
+    takim_listesi = comp.get("competitors", list())
+    t1 = takim_listesi.pop(0)
+    t2 = takim_listesi.pop(0)
+    ev_t = t1 if t1["homeAway"] == "home" else t2
+    dep_t = t2 if t1["homeAway"] == "home" else t1
+    ev_ad, dep_ad = ev_t["team"]["displayName"], dep_t["team"]["displayName"]
+    ev_id, dep_id = ev_t["team"].get("id", ""), dep_t["team"].get("id", "")
+    ev_rec_list = ev_t.get("records", list())
+    dep_rec_list = dep_t.get("records", list())
+    ev_rec = ev_rec_list.pop(0).get("summary", "0-0") if ev_rec_list else "0-0"
+    dep_rec = dep_rec_list.pop(0).get("summary", "0-0") if dep_rec_list else "0-0"
+    state = ev["status"]["type"]["state"]
+    durum_detay = ev["status"]["type"]["shortDetail"]
+    ev_s_int = int(ev_t.get("score", 0))
+    dep_s_int = int(dep_t.get("score", 0))
 
-        if durum_filtre == "Sadece Canli Maclar" and state != "in":
-            continue
-        if durum_filtre == "Oynanacak Maclar" and state != "pre":
-            continue
-        if durum_filtre == "Biten Maclar" and state != "post":
-            continue
+    if durum_filtre == "Sadece Canli Maclar" and state != "in":
+    continue
+    if durum_filtre == "Oynanacak Maclar" and state != "pre":
+    continue
+    if durum_filtre == "Biten Maclar" and state != "post":
+    continue
 
-        is_fav = bool(favori and (favori in ev_ad.lower() or favori in dep_ad.lower()))
-        if favori and not is_fav:
-            continue
+    is_fav = bool(favori and (favori in ev_ad.lower() or favori in dep_ad.lower()))
+    if favori and not is_fav:
+    continue
 
-        if state == "in":
-            durum_gosterim = f"CANLI ({durum_detay})"
-            skor_gosterim = f"{ev_s_int} - {dep_s_int}"
-            if mac_id in st.session_state.eski_skorlar and st.session_state.eski_skorlar[mac_id] != skor_gosterim:
-                st.toast(f"SKOR DEGISTI! {ev_ad} {skor_gosterim} {dep_ad}")
-                if SES_AKTIF and otomatik_yenile:
-                    winsound.Beep(1000, 350)
-            st.session_state.eski_skorlar[mac_id] = skor_gosterim
-        elif state == "post":
-            durum_gosterim = f"BITTI ({durum_detay})"
-            skor_gosterim = f"{ev_s_int} - {dep_s_int}"
-        else:
-            durum_gosterim = durum_detay
-            skor_gosterim = "vs"
+    if state == "in":
+    durum_gosterim = f"CANLI ({durum_detay})"
+    skor_gosterim = f"{ev_s_int} - {dep_s_int}"
+    if mac_id in st.session_state.eski_skorlar and st.session_state.eski_skorlar[mac_id] != skor_gosterim:
+    st.toast(f"SKOR DEGISTI! {ev_ad} {skor_gosterim} {dep_ad}")
+    if SES_AKTIF and otomatik_yenile:
+    winsound.Beep(1000, 350)
+    st.session_state.eski_skorlar[mac_id] = skor_gosterim
+    elif state == "post":
+    durum_gosterim = f"BITTI ({durum_detay})"
+    skor_gosterim = f"{ev_s_int} - {dep_s_int}"
+    else:
+    durum_gosterim = durum_detay
+    skor_gosterim = "vs"
 
-        iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
-        baski_uyari = son_dakika_baski_kontrol(spor, state, durum_detay, ev_ad, dep_ad, ev_s_int, dep_s_int, ev_rec, dep_rec)
-        baski_anahtar = f"BASKI_{mac_id}"
-        if baski_uyari and baski_anahtar not in st.session_state.gonderilen_kritik_uyarilar:
-            if telegram_mesaj_gonder(tg_token, tg_chat_id, baski_uyari):
-                st.session_state.gonderilen_kritik_uyarilar.append(baski_anahtar)
-        firsat_etiket = canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)
-        firsat_anahtar = f"FIRSAT_{mac_id}_{firsat_etiket}"
-        if "🔥" in firsat_etiket and firsat_anahtar not in st.session_state.gonderilen_kritik_uyarilar:
-            if telegram_mesaj_gonder(tg_token, tg_chat_id, f"{firsat_etiket} | {ev_ad} {ev_s_int}-{dep_s_int} {dep_ad} ({durum_detay})"):
-                st.session_state.gonderilen_kritik_uyarilar.append(firsat_anahtar)
-        _, ozet_tahmin, en_guclu = coklu_tahmin_motoru(
-            ev_ad, dep_ad, ev_rec, dep_rec, spor, lig, 0, 0, state, ev_s_int, dep_s_int
-        )
+    iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
+    baski_uyari = son_dakika_baski_kontrol(spor, state, durum_detay, ev_ad, dep_ad, ev_s_int, dep_s_int, ev_rec, dep_rec)
+    baski_anahtar = f"BASKI_{mac_id}"
+    if baski_uyari and baski_anahtar not in st.session_state.gonderilen_kritik_uyarilar:
+    if telegram_mesaj_gonder(tg_token, tg_chat_id, baski_uyari):
+    st.session_state.gonderilen_kritik_uyarilar.append(baski_anahtar)
+    firsat_etiket = canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)
+    firsat_anahtar = f"FIRSAT_{mac_id}_{firsat_etiket}"
+    if "🔥" in firsat_etiket and firsat_anahtar not in st.session_state.gonderilen_kritik_uyarilar:
+    if telegram_mesaj_gonder(tg_token, tg_chat_id, f"{firsat_etiket} | {ev_ad} {ev_s_int}-{dep_s_int} {dep_ad} ({durum_detay})"):
+    st.session_state.gonderilen_kritik_uyarilar.append(firsat_anahtar)
+    _, ozet_tahmin, en_guclu = coklu_tahmin_motoru(
+    ev_ad, dep_ad, ev_rec, dep_rec, spor, lig, 0, 0, state, ev_s_int, dep_s_int
+    )
 
-        banko_havuzu.append(
+    banko_havuzu.append(
             {
-                "mac": f"{ev_ad} - {dep_ad}",
-                "tahmin": en_guclu["AI Tahmin Secenegi"],
-                "guven": en_guclu["Guven Seviyesi"],
-                "guven_int": en_guclu["GuvenInt"],
-            }
-        )
+    "mac": f"{ev_ad} - {dep_ad}",
+    "tahmin": en_guclu["AI Tahmin Secenegi"],
+    "guven": en_guclu["Guven Seviyesi"],
+    "guven_int": en_guclu["GuvenInt"],
+     }
+    )
 
-        maclar.append(
+    maclar.append(
             {
                 "ID": mac_id,
                 "LigYolu": yol,
