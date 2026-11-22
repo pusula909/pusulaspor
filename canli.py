@@ -1261,7 +1261,7 @@ else:
                  deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
                  if not deger_rapor["tuzak_notu"]:
                      banko_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "tahmin": deger_rapor["ana_tercih"], "guven": f"%{deger_rapor['guven']} | Deger: {deger_rapor['deger_puani']}/10", "guven_int": deger_rapor["deger_puani"]})
-                    banko_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "tahmin": en_guclu.get("AI Tahmin Secenegi", ""), "guven": en_guclu.get("Guven Seviyesi", ""), "guven_int": en_guclu.get("GuvenInt", 0)})
+                    
                 maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": is_fav, "Dakika / Ceyrek": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Deplasman": dep_ad, "IY / Ceyrek Skorlari": iy_ceyrek_str, "Ev Form": ev_rec, "Dep Form": dep_rec, "Hizli AI Ozet": ozet_tahmin, "Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)})
             except Exception:
                 continue
