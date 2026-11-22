@@ -272,7 +272,7 @@ def tek_takim_derin_analiz(aranan_takim):
                 resp = (
                     _el_get(tarih)
                     if l_yolu == "euroleague_resmi"
-                    else requests.get(f"{url_basi}{l_yolu}/scoreboard?dates={tarih}", headers=basliklar, timeout=7).json()
+                    else requests.get(f"{url_basi}{l_yolu}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=7).json()
                 )
                 for ev in resp.get("events", list()):
                     comp = ev.get("competitions", list()).pop(0)
@@ -317,7 +317,7 @@ def tek_takim_derin_analiz(aranan_takim):
                         )
                         rapor = beyin.mac_deger_analizi(
                     spor_turu=s_tur, lig_adi=l_adi, ev_ad=ev_ad, dep_ad=dep_ad,
-                    ev_rec=ev_r, dep_rec=dep_r, state=state,
+                    ev_rec=ev_r, dep_rec=dep_r, state="pre
                     ev_skor=int(ev_s or 0), dep_skor=int(dep_s or 0), detay_sure=detay_sure
                 )
                 ai_yanit = beyin.ai_karar_ve_onay(
