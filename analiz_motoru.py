@@ -16,34 +16,30 @@ class PusulaAnalizBeyni:
         self.groq_key = (groq_key or os.environ.get("GROQ_KEY", "")).strip()
         self.arsiv_dosya = "haftalik_arsiv.json"
         self.evrim_dosya = "ai_evrim_hafizasi.json"
-    def _ai_sor(self, prompt, max_tokens=400):
-        if GEMINI_AKTIF and self.gemini_key:
-            try:
-                client = genai.Client(api_key=self.gemini_key)
-                for m in ("gemini-2.5-flash", "gemini-2.0-flash"):
-                    try:
-                        yanit = client.models.generate_content(model=m, contents=prompt)
-                        if yanit and yanit.text:
-                            return yanit.text.strip()
-                    except Exception:
-                        continue
-            except Exception:
-                pass
-
-        if self.groq_key:
-            g_base = "https://groq.com"
-            g_headers = {"Authorization": f"Bearer {self.groq_key}", "Content-Type": "application/json"}
+    def _ai_sor(self, prompt, max_tokens=450):
+        g_key = str(self.gemini_key or "").strip()
+        q_key = str(self.groq_key or "").strip()
+        if g_key:
+            for m in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"):
+                try:
+                    u = f"https://googleapis.com{m}:generateContent?key={g_key}"
+                    r = requests.post(u, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=15).json()
+                    adaylar = r.get("candidates", list())
+                    if adaylar:
+                        parcalar = adaylar.pop(0).get("content", {}).get("parts", list())
+                        if parcalar:
+                            txt = parcalar.pop(0).get("text", "").strip()
+                            if txt:
+                                return txt
+                except Exception:
+                    continue
+        if q_key:
             for m in ("llama-3.3-70b-versatile", "llama-3.1-8b-instant"):
                 try:
                     r = requests.post(
-                        f"{g_base}/chat/completions",
-                        headers=g_headers,
-                        json={
-                            "model": m,
-                            "messages": [{"role": "user", "content": prompt}],
-                            "temperature": 0.3,
-                            "max_tokens": max_tokens,
-                        },
+                        "https://groq.com",
+                        headers={"Authorization": f"Bearer {q_key}", "Content-Type": "application/json"},
+                        json={"model": m, "messages": [{"role": "user", "content": prompt}], "temperature": 0.3, "max_tokens": max_tokens},
                         timeout=15,
                     ).json()
                     secenekler = r.get("choices", list())
