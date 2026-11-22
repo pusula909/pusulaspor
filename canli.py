@@ -314,8 +314,8 @@ def son_dakika_baski_kontrol(spor_turu, state, detay_sure, ev_ad, dep_ad, ev_s, 
     try:
         ev_p = [int(x) for x in ev_rec.split("-") if x.isdigit()]
         dep_p = [int(x) for x in dep_rec.split("-") if x.isdigit()]
-        ev_g = (ev_p / sum(ev_p)) if (len(ev_p) >= 2 and sum(ev_p) > 0) else 0.5
-        dep_g = (dep_p / sum(dep_p)) if (len(dep_p) >= 2 and sum(dep_p) > 0) else 0.5
+        ev_ham_oran = ((ev_p[0] + 2) / (ev_top + 4)) if len(ev_p) >= 2 else 0.50
+        dep_ham_oran = ((dep_p[0] + 2) / (dep_top + 4)) if len(dep_p) >= 2 else 0.50
         fark = abs(ev_s - dep_s)
 
         if spor_turu == "Futbol":
@@ -457,8 +457,8 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
         dep_top = sum(dep_p) if sum(dep_p) > 0 else 0
 
         # Az maç oynanmışsa (sezon başı vb.) %50 tabanına yaklaştırarak yapay %90'ları önler
-        ev_ham_oran = ((ev_p + 2) / (ev_top + 4)) if len(ev_p) >= 2 else 0.50
-        dep_ham_oran = ((dep_p + 2) / (dep_top + 4)) if len(dep_p) >= 2 else 0.50
+        ev_ham_oran = ((ev_p[0] + 2) / (ev_top + 4)) if len(ev_p) >= 2 else 0.50
+        dep_ham_oran = ((dep_p[0] + 2) / (dep_top + 4)) if len(dep_p) >= 2 else 0.50
 
         ev_g = max(0.08, min(0.92, ev_ham_oran + 0.05 - (ev_eksik * 0.03)))
         dep_g = max(0.08, min(0.92, dep_ham_oran - (dep_eksik * 0.03)))
