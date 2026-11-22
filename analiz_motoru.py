@@ -285,10 +285,11 @@ class PusulaAnalizBeyni:
             if lig_maclar:
                 l_hit = sum(1 for k in lig_maclar if k.get("tuttu"))
                 ozet += f"{lig_adi} ligi ozelinde {len(lig_maclar)} macta {l_hit} isabet (%{int((l_hit/len(lig_maclar))*100)}). "
-        if yatan_ornekler:
-            ozet += f"Son yatan tuzak ornekleri: {', '.join(yatan_ornekler)}."
-        return ozet
-    except Exception:
+            if yatan_ornekler:
+                ozet += f"Son yatan tuzak ornekleri: {', '.join(yatan_ornekler)}."
+            return ozet
+        except Exception:
+            return "Karne verisi okunamadi."
         return "Karne verisi okunamadi."
 
     def canli_web_istihbarati(self, ev_ad, dep_ad, spor_turu):
