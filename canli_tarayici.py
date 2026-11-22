@@ -659,6 +659,23 @@ def canli_maclari_tara():
         except Exception:
             pass
 
+    bulten_haritasi = {}
+    if os.path.exists("son_bulten.json"):
+        try:
+            with open("son_bulten.json", "r", encoding="utf-8") as f:
+                for b in json.load(f):
+                    bulten_haritasi[str(b.get("id", ""))] = b
+        except Exception:
+            pass
+
+    piyasa_haritasi = {}
+    if os.path.exists("piyasa_takip.json"):
+        try:
+            with open("piyasa_takip.json", "r", encoding="utf-8") as f:
+                piyasa_haritasi = json.load(f).get("maclar", {})
+        except Exception:
+            pass
+
     gonderilenler = set(hafiza.get("uyarilar", list()))
     yeni_mesajlar = list()
     canli_ozet_listesi = list()
@@ -680,24 +697,30 @@ def canli_maclari_tara():
 
                     mac_id = str(ev.get("id", ""))
                     detay_sure = ev.get("status", {}).get("type", {}).get("shortDetail", "")
-                    comp = ev.get("competitions", list()).pop(0)
+                    comp = ev.get("competitions", list(({},)))
                     t_list = comp.get("competitors", list())
-                    t1, t2 = t_list.pop(0), t_list.pop(0)
-                    ev_t = t1 if t1["homeAway"] == "home" else t2
-                    dep_t = t2 if t1["homeAway"] == "home" else t1
+                    if len(t_list) < 2:
+                        continue
 
-                    ev_ad, dep_ad = ev_t["team"]["displayName"], dep_t["team"]["displayName"]
+                    ev_t = next((t for t in t_list if t.get("homeAway") == "home"), t_list)
+                    dep_t = next((t for t in t_list if t.get("homeAway") == "away"), t_list)
+
+                    ev_ad = ev_t.get("team", {}).get("displayName", "Ev")
+                    dep_ad = dep_t.get("team", {}).get("displayName", "Dep")
                     ev_s = int(float(ev_t.get("score", 0) or 0))
                     dep_s = int(float(dep_t.get("score", 0) or 0))
                     canli_ozet_listesi.append(f"• [{l_adi}] {ev_ad} {ev_s}-{dep_s} {dep_ad} ({detay_sure})")
 
-                    ev_rec = ev_t.get("records", list()).pop(0).get("summary", "1-1") if ev_t.get("records") else "1-1"
-                    dep_rec = dep_t.get("records", list()).pop(0).get("summary", "1-1") if dep_t.get("records") else "1-1"
+                    ev_recs = ev_t.get("records", list())
+                    dep_recs = dep_t.get("records", list())
+                    ev_rec = ev_recs.get("summary", "1-1") if ev_recs else "1-1"
+                    dep_rec = dep_recs.get("summary", "1-1") if dep_recs else "1-1"
 
-                    ev_p = list(int(x) for x in ev_rec.split("-"))
-                    dep_p = list(int(x) for x in dep_rec.split("-"))
-                    ev_g = ev_p.pop(0) / (sum(ev_p) if sum(ev_p) > 0 else 1)
-                    dep_g = dep_p.pop(0) / (sum(dep_p) if sum(dep_p) > 0 else 1)
+                    ev_p = [int(x) for x in ev_rec.split("-") if x.isdigit()]
+                    dep_p = [int(x) for x in dep_rec.split("-") if x.isdigit()]
+                    ev_g = (ev_p / sum(ev_p)) if (len(ev_p) >= 2 and sum(ev_p) > 0) else 0.5
+                    dep_g = (dep_p / sum(dep_p)) if (len(dep_p) >= 2 and sum(dep_p) > 0) else 0.5
+
                     top_s = ev_s + dep_s
                     fark = abs(ev_s - dep_s)
 
@@ -709,28 +732,56 @@ def canli_maclari_tara():
                     })
 
                     uyari_tipi = ""
+                    uyari_kodu = ""
+
                     if s_adi == "Basketbol":
-                        if ("Q2" in detay_sure or "Half" in detay_sure or "2C" in detay_sure) and top_s >= 84:
-                            uyari_tipi = "🔥 YUKSEK TEMPO / ROTASYON ANALIZI"
-                        elif ("Q4" in detay_sure or "4C" in detay_sure or "OT" in detay_sure) and fark <= 6:
-                            uyari_tipi = "⏳ CRUNCH TIME (SON CEYREK KARARI)"
-                        elif "Q4" not in detay_sure and "4C" not in detay_sure and ev_g >= 0.65 and 6 <= (dep_s - ev_s) <= 14:
-                            uyari_tipi = f"🔥 FAVORI GERIDE ({ev_ad} Takipte)"
-                        elif "Q4" not in detay_sure and "4C" not in detay_sure and dep_g >= 0.65 and 6 <= (ev_s - dep_s) <= 14:
-                            uyari_tipi = f"🔥 FAVORI GERIDE ({dep_ad} Takipte)"
+                        ikinci_ceyrek = any(k in detay_sure for k in ("2nd", "Q2", "2C"))
+                        devre_arasi = any(k in detay_sure for k in ("Half", "HT", "IY"))
+                        ucuncu_ceyrek = any(k in detay_sure for k in ("3rd", "Q3", "3C"))
+                        dorduncu_ceyrek = any(k in detay_sure for k in ("4th", "Q4", "4C", "OT"))
+
+                        acilis_baremi = float(piyasa_haritasi.get(mac_id, {}).get("ou", 0) or 0)
+                        if acilis_baremi <= 0:
+                            acilis_baremi = 224.0 if "NBA" in l_adi else 162.0
+
+                        if devre_arasi and (top_s * 2) >= (acilis_baremi + 12):
+                            uyari_tipi = f"🚀 YUKSEK TEMPO (Devre: {top_s} | Projeksiyon: {top_s*2} / Barem: {acilis_baremi})"
+                            uyari_kodu = "TEMPO"
+
+                        elif (ikinci_ceyrek or devre_arasi or ucuncu_ceyrek):
+                            mac_bulten = bulten_haritasi.get(mac_id, {})
+                            bulten_tahmin = mac_bulten.get("tahmin", "")
+
+                            ev_gercek_fav = ("(MS 1)" in bulten_tahmin) or (ev_g >= 0.62 and (ev_g - dep_g) >= 0.20)
+                            dep_gercek_fav = ("(MS 2)" in bulten_tahmin) or (dep_g >= 0.62 and (dep_g - ev_g) >= 0.20)
+
+                            if ev_gercek_fav and not dep_gercek_fav and 8 <= (dep_s - ev_s) <= 15:
+                                uyari_tipi = f"🔥 FAVORI GERIDE (MS 1 FIRSATI) | {ev_ad} -{dep_s - ev_s} Sayi Takipte"
+                                uyari_kodu = "FAVORI"
+                            elif dep_gercek_fav and not ev_gercek_fav and 8 <= (ev_s - dep_s) <= 15:
+                                uyari_tipi = f"🔥 FAVORI GERIDE (MS 2 FIRSATI) | {dep_ad} -{ev_s - dep_s} Sayi Takipte"
+                                uyari_kodu = "FAVORI"
+
+                        elif dorduncu_ceyrek and fark <= 5 and top_s > 0:
+                            uyari_tipi = "⏳ CRUNCH TIME (SON CEYREK HEYECANI)"
+                            uyari_kodu = "CRUNCH"
+
                     else:
                         rakamlar = "".join(c for c in detay_sure if c.isdigit())
                         dk = int(rakamlar) if rakamlar else 0
-                        if dk >= 75 and fark <= 1 and (ev_g >= 0.58 or dep_g >= 0.58):
+                        if dk >= 75 and fark <= 1 and ((ev_g >= 0.60 and (ev_g - dep_g) >= 0.18) or (dep_g >= 0.60 and (dep_g - ev_g) >= 0.18)):
                             baskili = ev_ad if ev_g >= dep_g else dep_ad
                             uyari_tipi = f"⏳ SON DAKIKA BASKI ({baskili})"
-                        elif ("45" in detay_sure or "Half" in detay_sure or "HT" in detay_sure) and top_s >= 2:
-                            uyari_tipi = "🔥 GOLLU TEMPO ANALIZI"
-                        elif ("45" in detay_sure or "HT" in detay_sure) and top_s == 0 and (ev_g >= 0.60 or dep_g >= 0.60):
-                            uyari_tipi = "🔥 IY 0-0 (2. YARI PLANI)"
+                            uyari_kodu = "BASKI"
+                        elif any(k in detay_sure for k in ("45", "Half", "HT")) and top_s >= 3:
+                            uyari_tipi = "🚀 GOLLU TEMPO ANALIZI (IY 3+ Gol)"
+                            uyari_kodu = "GOL_TEMPO"
+                        elif any(k in detay_sure for k in ("45", "Half", "HT")) and top_s == 0 and abs(ev_g - dep_g) >= 0.25:
+                            uyari_tipi = "🔥 IY 0-0 (FAVORI 2. YARI PLANI)"
+                            uyari_kodu = "IY_00"
 
-                    if uyari_tipi:
-                        anahtar = f"{mac_id}_{uyari_tipi}"
+                    if uyari_tipi and uyari_kodu:
+                        anahtar = f"{mac_id}_{uyari_kodu}"
                         if anahtar not in gonderilenler:
                             gonderilenler.add(anahtar)
                             ai_analiz = ai_bas_analist_karari(s_adi, l_adi, ev_ad, dep_ad, ev_s, dep_s, detay_sure, ev_rec, dep_rec, saha_bilgisi)
