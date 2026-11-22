@@ -1233,7 +1233,7 @@ else:
                 dep_t = t2 if t1.get("homeAway") == "home" else t1
                 ev_ad_ham = ev_t.get("team", {}).get("displayName", "")
                 dep_ad = dep_t.get("team", {}).get("displayName", "")
-                ev_ad = f"[{aktif_lig_ad}] {ev_ad_ham}" if lig == "Tumu (Butun Ligler)" else ev_ad_ham
+                ev_ad = f"{ev_ad_ham} [{aktif_lig_ad}]" if lig == "Tumu (Butun Ligler)" else ev_ad_ham
                 ev_id, dep_id = ev_t.get("team", {}).get("id", ""), dep_t.get("team", {}).get("id", "")
                 ev_r_l, dep_r_l = ev_t.get("records", list()), dep_t.get("records", list())
                 ev_rec = ev_r_l.pop(0).get("summary", "0-0") if ev_r_l else "0-0"
