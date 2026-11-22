@@ -3,7 +3,7 @@ import os
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 import requests
-
+from analiz_motoru import PusulaAnalizBeyni
 try:
     from google import genai
     GEMINI_AKTIF = True
@@ -14,7 +14,7 @@ TG_TOKEN = os.environ.get("TG_TOKEN", "").strip()
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "").strip()
 GEMINI_KEY = os.environ.get("GEMINI_KEY", "").strip()
 GROQ_KEY = os.environ.get("GROQ_KEY", "").strip()
-
+beyin = PusulaAnalizBeyni(gemini_key=GEMINI_KEY, groq_key=GROQ_KEY)
 suan_tr = datetime.now(timezone(timedelta(hours=3)))
 tarih = suan_tr.strftime("%Y%m%d")
 saat_str = suan_tr.strftime("%H:%M")
@@ -139,19 +139,26 @@ def canli_oyuncu_ve_olay_cek(mac_id, lig_yolu, sezon_kodu):
 
 
 def ai_bas_analist_karari(spor_turu, lig_adi, ev_ad, dep_ad, ev_s, dep_s, detay_sure, ev_rec, dep_rec, saha_detay):
-    soru = (
-        f"Sen dunya capinda bir {spor_turu} Bas Analisti ve Basantrenor Danismanisin. "
-        f"SIKI KURAL: Hafizandaki eski yillarin kadrolarini (ornegin eski takimlarina gitmis yildizlari) ASLA yazma! Sadece asagidaki canli saha verisindeki isimleri veya genel takim oyununu kullan. "
-        f"Duz istatistik ezberine (ilk yari cok sayi/gol oldu kesin ust biter gibi kliselere) ASLA dusme! "
-        f"Canli Mac: {lig_adi} | {ev_ad} ({ev_rec}) {ev_s} - {dep_s} {dep_ad} ({dep_rec}) | Sure: {detay_sure}. "
-        f"Canli Saha, Oyuncu, Faul, Kart ve Rotasyon Verileri: {saha_detay}. "
-        f"Analiz Kriterlerin: Fark acildiysa kocun yildizlari kenara alip yedeklere donme (garbage time / tempo dususu) ihtimalini, "
-        f"ilk yari anormal tempo ciktiysa 2. yarida savunma sertligiyle baremin tersine donup donmeyecegini ve faul/kart etkisini hesapla. "
-        f"Ciktiyi Turkce, kisa ve ikna edici sekilde TAM OLARAK su 2 satirla yaz:\n"
-        f"🎯 AI Karari: (Tek net tahmin ve barem)\n"
-        f"🧠 Koc & Saha Gerekcesi: (En fazla 2 cumleyle neden bu ters kose veya nokta atisi karari verdigin)"
+    deger_raporu = beyin.mac_deger_analizi(
+        spor_turu=spor_turu,
+        lig_adi=lig_adi,
+        ev_ad=ev_ad,
+        dep_ad=dep_ad,
+        ev_rec=ev_rec,
+        dep_rec=dep_rec,
+        state="in",
+        ev_skor=ev_s,
+        dep_skor=dep_s,
+        detay_sure=detay_sure
     )
-    return cift_motor_ai_sor(soru)
+    analiz_metni = (
+        f"Ana Tercih: {deger_raporu['ana_tercih']} (Guven: %{deger_raporu['guven']}) | "
+        f"Barem: {deger_raporu['barem_tercih']} | Deger Puani: {deger_raporu['deger_puani']}/10 | "
+        f"Tuzak Notu: {deger_raporu['tuzak_notu'] or 'Temiz'}"
+    )
+    ai_onay = beyin.ai_karar_ve_onay(spor_turu, lig_adi, ev_ad, dep_ad, analiz_metni, saha_detay)
+    ust_baslik = f"💎 Deger Puani: {deger_raporu['deger_puani']}/10 | {deger_raporu['ana_tercih']}"
+    return f"{ust_baslik}\n{ai_onay}" if ai_onay else ust_baslik
 
 
 def _el_get(t):
