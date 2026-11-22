@@ -31,7 +31,7 @@ class PusulaAnalizBeyni:
                 pass
 
         if self.groq_key:
-            "https://groq.com"
+            g_base = "https://groq.com"
             g_headers = {"Authorization": f"Bearer {self.groq_key}", "Content-Type": "application/json"}
             for m in ("llama-3.3-70b-versatile", "llama-3.1-8b-instant"):
                 try:
