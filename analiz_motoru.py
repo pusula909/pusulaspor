@@ -52,7 +52,7 @@ class PusulaAnalizBeyni:
                             return txt
                 except Exception:
                     continue
-        return ""
+        return f"AI Durum: Gemini={bool(self.gemini_key)}, Groq={bool(self.groq_key)}"
 
     def _evrim_hafizasi_oku(self):
         if os.path.exists(self.evrim_dosya):
