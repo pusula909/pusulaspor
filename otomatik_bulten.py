@@ -258,13 +258,13 @@ def bulten_olustur_ve_gonder():
             aday["tahmin"] = "Toplam 2.5 ALT"
             piyasa = f"{piyasa} | 🌧️ {hava}" if piyasa else f"🌧️ {hava}"
         lig_bonus = lig_basari_bonusu_getir(aday["lig"])
-     sharp_bonus, sharp_not = sharp_piyasa_durumu_getir(aday["id"])
-     aday["guven"] = max(50, min(96, aday["guven"] - ceza + lig_bonus + sharp_bonus))
+        sharp_bonus, sharp_not = sharp_piyasa_durumu_getir(aday["id"])
+        aday["guven"] = max(50, min(96, aday["guven"] - ceza + lig_bonus + sharp_bonus))
      if sharp_not:
          piyasa = f"{piyasa} | 🦈 {sharp_not}" if piyasa else f"🦈 {sharp_not}"
         aday["eksikler"] = eksikler
         aday["piyasa"] = piyasa
-        if aday["guven"] >= 68:
+        if aday["guven"] >= 62:
             filtrelenmis_adaylar.append(aday)
 
     en_iyiler = hakem_ai_tuzak_ele(sorted(filtrelenmis_adaylar, key=lambda x: x["guven"], reverse=True)[:8])
