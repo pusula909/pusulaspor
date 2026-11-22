@@ -350,6 +350,8 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
             if "/karne" in metin:
                 istenen_komutlar.add("karne")
             if "/yardim" in metin or "/start" in metin:
+            if "/kombin" in metin:
+             istenen_komutlar.add("kombin")    
                 istenen_komutlar.add("yardim")
             if metin.startswith("/analiz") or metin.startswith("/sor"):
               sorgu_takim = metin.replace("/analiz", "").replace("/sor", "").strip()
@@ -385,7 +387,24 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                  telegram_gonder("\n".join(satir))
             else:
                    telegram_gonder("Henuz kayitli gunluk bulten yok.")
-        
+        if "kombin" in istenen_komutlar:
+        if os.path.exists("son_bulten.json"):
+            with open("son_bulten.json", "r", encoding="utf-8") as f:
+                b_list = json.load(f)
+            uygunlar = [m for m in b_list if not m.get("tuzak_notu")][:3]
+            if uygunlar:
+                mesaj = ["🏆 GUNUN CANLI ISTIHBARATLI 3'LU AI KOMBINESI\n"]
+                for i, m in enumerate(uygunlar, 1):
+                    takimlar = m.get("mac", "").split(" - ")
+                    ev_a = takimlar.pop(0) if takimlar else m.get("mac", "")
+                    dep_a = takimlar.pop(0) if takimlar else ""
+                    rapor = beyin.ai_karar_ve_onay(m.get("spor", "Futbol"), m.get("lig", ""), ev_a, dep_a, f"{m.get('tahmin', '')} (Guven: %{m.get('guven', '')})")
+                    mesaj.append(f"{i}️⃣ [{m.get('lig', '')}] {m.get('mac', '')}\n{rapor}\n")
+                telegram_gonder("\n".join(mesaj))
+            else:
+                telegram_gonder("Su an tuzak filtresini gecen uygun kombine maci bulunamadi.")
+        else:
+            telegram_gonder("Henuz kayitli gunluk bulten yok.")
                 
                
 
