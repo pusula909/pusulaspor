@@ -448,4 +448,5 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
 
 
 if __name__ == "__main__":
-    telegram_komutlari_isle(hafiza_oku(), [], [])
+    h_veri = json.load(open("canli_hafiza.json", "r", encoding="utf-8")) if os.path.exists("canli_hafiza.json") else {}
+    telegram_komutlari_isle(h_veri, [], [])
