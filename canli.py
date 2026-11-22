@@ -201,16 +201,20 @@ basliklar = {"User-Agent": "Mozilla/5.0"}
 
 TUM_LIGLER = {
     "Futbol": {
-        "Turkiye Super Lig": "soccer/tur.1",
-        "Sampiyonlar Ligi": "soccer/uefa.champions",
-        "Avrupa Ligi": "soccer/uefa.europa",
-        "Ingiltere Premier League": "soccer/eng.1",
+        "Trendyol Super Lig": "soccer/tur.1",
+        "Ingiltere Premier Lig": "soccer/eng.1",
         "Ispanya La Liga": "soccer/esp.1",
         "Italya Serie A": "soccer/ita.1",
-        "Almanya Bundesliga": "soccer/ger.1",
         "Fransa Ligue 1": "soccer/fra.1",
+        "Almanya Bundesliga": "soccer/ger.1",
         "Hollanda Eredivisie": "soccer/ned.1",
+        "Belcika Pro League": "soccer/bel.1",
         "Portekiz Liga": "soccer/por.1",
+        "Avusturya Bundesliga": "soccer/aut.1",
+        "Isvicre Super League": "soccer/sui.1",
+        "Isvec Allsvenskan": "soccer/swe.1",
+        "Sampiyonlar Ligi": "soccer/uefa.champions",
+        "Avrupa Ligi": "soccer/uefa.europa",
     },
     "Basketbol": {
         "NBA": "basketball/nba",
