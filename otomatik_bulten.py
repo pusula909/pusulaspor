@@ -390,7 +390,9 @@ def sonuc_raporu_kontrol_et():
             h_satir.append(f"• {l_ad}: {v['top']} Macta {v['hit']} Isabet (%{yuzde})")
         telegram_gonder("\n".join(h_satir))
 
-
+    evrim_raporu = beyin.gece_kendini_gelistir()
+    if evrim_raporu:
+        telegram_gonder(evrim_raporu)
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv.pop(1) == "rapor":
         sonuc_raporu_kontrol_et()
