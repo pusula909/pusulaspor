@@ -212,16 +212,16 @@ class PusulaAnalizBeyni:
                 tuzak_notu = "Kafa kafaya mac; taraf yerine barem degerlendirilmeli."
 
     guven = max(48, min(90, ham_guven + kalibrasyon_puani))
-    if kalibrasyon_puani <= -8 and not tuzak_notu:
+        if kalibrasyon_puani <= -8 and not tuzak_notu:
             tuzak_notu = f"Oto-Evrim (v{versiyon}.0): Bu ligde son donemde dusuk isabet nedeniyle risk kirildi."
-     if piyasa_tuzak_notu:
-         tuzak_notu = f"🚨 PIYASA TUZAGI: {piyasa_tuzak_notu}"
-     elif ev_yorgun and guc_farki > 0:
-         tuzak_notu = f"⚠️ YORGUNLUK ALARMI: {ev_ad} dun mac yapti (Back-to-Back), surpriz riski yuksek!"
-     elif dep_yorgun and guc_farki < 0:
-         tuzak_notu = f"⚠️ YORGUNLUK ALARMI: {dep_ad} dun mac yapti (Deplasman Back-to-Back), riskli!"
-     elif kotu_hava and spor_turu == "Futbol":
-     tuzak_notu = "🌧️ HAVA & ZEMIN UYARISI: Kotu hava kosullari nedeniyle UST yerine ALT odaklanilmali."
+        if piyasa_tuzak_notu:
+            tuzak_notu = f"🚨 PIYASA TUZAGI: {piyasa_tuzak_notu}"
+        elif ev_yorgun and guc_farki > 0:
+            tuzak_notu = f"⚠️ YORGUNLUK ALARMI: {ev_ad} dun mac yapti (Back-to-Back), surpriz riski yuksek!"
+        elif dep_yorgun and guc_farki < 0:
+            tuzak_notu = f"⚠️ YORGUNLUK ALARMI: {dep_ad} dun mac yapti (Deplasman Back-to-Back), riskli!"
+        elif kotu_hava and spor_turu == "Futbol":
+            tuzak_notu = "🌧️ HAVA & ZEMIN UYARISI: Kotu hava kosullari nedeniyle UST yerine ALT odaklanilmali."
 
         toplam_skor = ev_skor + dep_skor
         if spor_turu == "Futbol":
