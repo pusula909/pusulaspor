@@ -447,6 +447,141 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
     json.dump(hafiza, open("canli_hafiza.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
 
+def otomatik_radar_ve_karne():
+    hafiza = json.load(open("canli_hafiza.json", "r", encoding="utf-8")) if os.path.exists("canli_hafiza.json") else {}
+    if "alarmlar" not in hafiza:
+        hafiza["alarmlar"] = {}
+    if "gol_skorlari" not in hafiza:
+        hafiza["gol_skorlari"] = {}
+
+    simdi = datetime.now(timezone(timedelta(hours=3)))
+    bugun_str = simdi.strftime("%Y%m%d")
+    dun_str = (simdi - timedelta(days=1)).strftime("%Y%m%d")
+
+    canli_ozet_listesi = list()
+    canli_detay_objeleri = list()
+    biten_skorlar = {}
+
+    for s_tur, lig_sozluk in TUM_LIGLER.items():
+        for l_adi, l_yolu in lig_sozluk.items():
+            for t_str in (bugun_str, dun_str):
+                try:
+                    resp = (
+                        _el_get(t_str)
+                        if l_yolu == "euroleague_resmi"
+                        else requests.get(f"{url_basi}{l_yolu}/scoreboard?dates={t_str}&limit=100", headers=basliklar, timeout=7).json()
+                    )
+                    for ev in resp.get("events", list()):
+                        comp_list = ev.get("competitions", list())
+                        if not comp_list:
+                            continue
+                        comp = comp_list.pop(0)
+                        t_list = comp.get("competitors", list())
+                        if len(t_list) < 2:
+                            continue
+                        t1, t2 = t_list.pop(0), t_list.pop(0)
+                        ev_t = t1 if t1.get("homeAway") == "home" else t2
+                        dep_t = t2 if t1.get("homeAway") == "home" else t1
+                        ev_ad = ev_t.get("team", {}).get("displayName", "")
+                        dep_ad = dep_t.get("team", {}).get("displayName", "")
+                        ev_s = int(ev_t.get("score", 0) or 0)
+                        dep_s = int(dep_t.get("score", 0) or 0)
+                        state = ev.get("status", {}).get("type", {}).get("state", "")
+                        detay_sure = ev.get("status", {}).get("type", {}).get("shortDetail", "")
+                        mac_id = str(ev.get("id", f"{ev_ad}_{dep_ad}"))
+                        mac_etiket = f"{ev_ad} - {dep_ad}"
+
+                        if state == "post":
+                            biten_skorlar[mac_etiket.lower()] = (ev_s, dep_s)
+
+                        elif state == "in" and t_str == bugun_str:
+                            canli_ozet_listesi.append(f"• [{l_adi}] {ev_ad} {ev_s}-{dep_s} {dep_ad} ({detay_sure})")
+                            ev_recs = ev_t.get("records", list())
+                            dep_recs = dep_t.get("records", list())
+                            ev_r = ev_recs.pop(0).get("summary", "1-1") if ev_recs else "1-1"
+                            dep_r = dep_recs.pop(0).get("summary", "1-1") if dep_recs else "1-1"
+
+                            canli_detay_objeleri.append({
+                                "spor": s_tur, "lig": l_adi, "ev": ev_ad, "dep": dep_ad,
+                                "ev_s": ev_s, "dep_s": dep_s, "sure": detay_sure,
+                                "ev_r": ev_r, "dep_r": dep_r, "saha": ""
+                            })
+
+                            rapor = beyin.mac_deger_analizi(
+                                spor_turu=s_tur, lig_adi=l_adi, ev_ad=ev_ad, dep_ad=dep_ad,
+                                ev_rec=ev_r, dep_rec=dep_r, state="in",
+                                ev_skor=ev_s, dep_skor=dep_s, detay_sure=detay_sure
+                            )
+                            guven = int(rapor.get("guven", 0))
+                            deger_p = float(rapor.get("deger_puani", 0))
+                            tuzak_var = bool(rapor.get("tuzak_notu", ""))
+
+                            onceki_skor = hafiza["gol_skorlari"].get(mac_id, "")
+                            yeni_skor = f"{ev_s}-{dep_s}"
+                            gol_oldu = bool(onceki_skor and onceki_skor != yeni_skor and (ev_s + dep_s) > 0)
+                            hafiza["gol_skorlari"][mac_id] = yeni_skor
+
+                            alarm_anahtar = f"{mac_id}_{rapor.get('ana_tercih', '')}"
+                            if guven >= 80 and deger_p >= 7.5 and not tuzak_var and alarm_anahtar not in hafiza["alarmlar"]:
+                                ai_yorum = beyin.ai_karar_ve_onay(
+                                    s_tur, l_adi, ev_ad, dep_ad,
+                                    f"CANLI FIRSAT: {rapor.get('ana_tercih', '')} | Guven: %{guven} | Skor: {yeni_skor} ({detay_sure})"
+                                )
+                                gol_baslik = "⚽ GOL SONRASI %80+ CANLI FIRSAT ALARMI" if gol_oldu else "🔥 %80+ YUKSEK IHTIMALLI CANLI GOL / MAC FIRSATI"
+                                bildirim = (
+                                    f"{gol_baslik}\n\n"
+                                    f"🏆 [{l_adi}] {ev_ad} {ev_s}-{dep_s} {dep_ad} ({detay_sure})\n"
+                                    f"📊 Guven: %{guven} | Deger Puani: {deger_p}/10\n\n"
+                                    f"{ai_yorum}"
+                                )
+                                telegram_gonder(bildirim)
+                                hafiza["alarmlar"][alarm_anahtar] = simdi.strftime("%Y-%m-%d %H:%M")
+                except Exception:
+                    continue
+
+    if os.path.exists("son_bulten.json") and biten_skorlar:
+        try:
+            with open("son_bulten.json", "r", encoding="utf-8") as f:
+                b_list = json.load(f)
+            arsiv = json.load(open("haftalik_arsiv.json", "r", encoding="utf-8")) if os.path.exists("haftalik_arsiv.json") else list()
+            kayitli_maclar = {k.get("mac", "") for k in arsiv}
+            degisti = False
+            for m in b_list:
+                m_ad = m.get("mac", "")
+                if m_ad in kayitli_maclar:
+                    continue
+                skor_tup = biten_skorlar.get(m_ad.lower())
+                if not skor_tup:
+                    continue
+                es, ds = skor_tup
+                tahmin_txt = str(m.get("tahmin", "")).upper()
+                tuttu = False
+                if "MS 1" in tahmin_txt or "KAZANIR (MS 1)" in tahmin_txt:
+                    tuttu = es > ds
+                elif "MS 2" in tahmin_txt or "KAZANIR (MS 2)" in tahmin_txt:
+                    tuttu = ds > es
+                elif "2.5 UST" in tahmin_txt or "UST" in tahmin_txt:
+                    tuttu = (es + ds) >= 3
+                elif "2.5 ALT" in tahmin_txt or "ALT" in tahmin_txt:
+                    tuttu = (es + ds) <= 2
+                elif "KG VAR" in tahmin_txt:
+                    tuttu = (es > 0 and ds > 0)
+                arsiv.append({
+                    "tarih": simdi.strftime("%Y-%m-%d"),
+                    "lig": m.get("lig", ""),
+                    "mac": m_ad,
+                    "tahmin": m.get("tahmin", ""),
+                    "skor": f"{es}-{ds}",
+                    "tuttu": tuttu
+                })
+                degisti = True
+            if degisti:
+                json.dump(arsiv[-150:], open("haftalik_arsiv.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri)
+
+
 if __name__ == "__main__":
-    h_veri = json.load(open("canli_hafiza.json", "r", encoding="utf-8")) if os.path.exists("canli_hafiza.json") else {}
-    telegram_komutlari_isle(h_veri, [], [])
+    otomatik_radar_ve_karne()
