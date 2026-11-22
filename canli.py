@@ -6,7 +6,7 @@ import pandas as pd
 import requests
 import streamlit as st
 from analiz_motoru import PusulaAnalizBeyni
-from canli_saha import canli_saha_goster
+
 try:
     import winsound
     SES_AKTIF = True
@@ -1333,7 +1333,7 @@ else:
         )
         st.markdown(f"*Durum:* {satir['Dakika / Ceyrek']}  |  *Periyot / IY Detayi:* {satir['IY / Ceyrek Skorlari']}")
         if satir["State"] == "in":
-            canli_saha_goster(spor, satir.get("LigYolu", ""), satir.get("ID", ""), satir["Ev Sahibi"], satir["Deplasman"], satir["EvSkorInt"], satir["DepSkorInt"], satir["Dakika / Ceyrek"])
+            
             st.warning(f"⚡ Canli Koc Hamlesi & Rotasyon Etkisi: {koc_etkisi_metni}")
         df_goster = pd.DataFrame(detayli_tahmin_satirlari).drop(columns=("GuvenInt",), errors="ignore")
         st.dataframe(df_goster, use_container_width=True, hide_index=True)
