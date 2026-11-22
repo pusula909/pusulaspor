@@ -39,7 +39,7 @@ class PusulaAnalizBeyni:
         if q_key:
             q_host = ".".join(["api", "groq", "com"])
             q_url = f"https://{q_host}/openai/v1/chat/completions"
-            for m in ("llama-3.3-70b-versatile", "groq/compound"):
+            for m in ("llama-3.3-70b-versatile", "qwen/qwen3-32b"):
                 try:
                     r = requests.post(
                         q_url,
