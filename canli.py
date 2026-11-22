@@ -234,8 +234,26 @@ gorunum = st.sidebar.radio(
     "Mod Secimi",
     ["Maclar ve Canli AI Analiz", "Canli Kupon Takip", "AI Gunun Radari (Tum Ligler)", "Puan Durumu","AI Dogruluk Karnesi"],
 )
-tarih_obj = st.sidebar.date_input("Tarih", datetime.now())
+gun_secimi = st.sidebar.radio(
+    "Hizli Gun Secimi",
+    ["Bugun", "Yarin", "2 Gun Sonra", "3 Gun Sonra", "Ozel Tarih Sec"],
+    horizontal=True
+)
+
+bugun_tr = datetime.now(timezone(timedelta(hours=3)))
+if gun_secimi == "Bugun":
+    tarih_obj = bugun_tr
+elif gun_secimi == "Yarin":
+    tarih_obj = bugun_tr + timedelta(days=1)
+elif gun_secimi == "2 Gun Sonra":
+    tarih_obj = bugun_tr + timedelta(days=2)
+elif gun_secimi == "3 Gun Sonra":
+    tarih_obj = bugun_tr + timedelta(days=3)
+else:
+    tarih_obj = st.sidebar.date_input("Takvimden Sec", bugun_tr)
+
 tarih = tarih_obj.strftime("%Y%m%d")
+st.sidebar.caption(f"📅 Secili Bulten Tarihi: **{tarih_obj.strftime('%d.%m.%Y')}**")
 
 st.sidebar.divider()
 st.sidebar.subheader("Telegram Bildirim Ayari")
