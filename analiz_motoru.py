@@ -19,7 +19,7 @@ class PusulaAnalizBeyni:
     def _ai_sor(self, prompt, max_tokens=450):
         g_key = str(self.gemini_key or "").strip()
         q_key = str(self.groq_key or "").strip()
-       son_hata = "Bilinmiyor"
+        son_hata = "Bilinmiyor"
         if g_key:
             g_host = "://googleapis.com"
             for m in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"):
