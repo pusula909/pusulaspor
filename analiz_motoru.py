@@ -20,9 +20,10 @@ class PusulaAnalizBeyni:
         g_key = str(self.gemini_key or "").strip()
         q_key = str(self.groq_key or "").strip()
         if g_key:
+            g_host = "://googleapis.com"
             for m in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"):
                 try:
-                    u = f"https://googleapis.com{m}:generateContent?key={g_key}"
+                    u = f"https://{g_host}/v1beta/models/{m}:generateContent?key={g_key}"
                     r = requests.post(u, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=15).json()
                     adaylar = r.get("candidates", list())
                     if adaylar:
@@ -34,10 +35,12 @@ class PusulaAnalizBeyni:
                 except Exception:
                     continue
         if q_key:
+            q_host = "://groq.com"
+            q_url = f"https://{q_host}/openai/v1/chat/completions"
             for m in ("llama-3.3-70b-versatile", "llama-3.1-8b-instant"):
                 try:
                     r = requests.post(
-                        "https://groq.com",
+                        q_url,
                         headers={"Authorization": f"Bearer {q_key}", "Content-Type": "application/json"},
                         json={"model": m, "messages": [{"role": "user", "content": prompt}], "temperature": 0.3, "max_tokens": max_tokens},
                         timeout=15,
