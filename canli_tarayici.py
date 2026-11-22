@@ -336,7 +336,7 @@ def tek_takim_derin_analiz(aranan_takim):
                     f"🏥 Eksikler: {', '.join(sakat_not) or 'Yok'}\n\n"
                     f"{ai_yanit}"
                 )
-                        )
+                
             except Exception:
                 pass
     return f"Bugunun bulteninde '{aranan_takim}' adinda bir takimin maci bulunamadi."
