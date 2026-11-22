@@ -20,7 +20,7 @@ class PusulaAnalizBeyni:
         g_key = str(self.gemini_key or "").strip()
         q_key = str(self.groq_key or "").strip()
         son_hata = "Bilinmiyor"
-       if g_key:
+        if g_key:
             g_host = ".".join(["generativelanguage", "googleapis", "com"])
             for m in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"):
                 try:
