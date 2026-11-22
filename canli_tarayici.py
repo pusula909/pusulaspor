@@ -376,7 +376,7 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
         else:
                 telegram_gonder("Su an canli oynanan mac bulunmuyor.")
 
-        if "bulten" in istenen_komutlar:
+       if "bulten" in istenen_komutlar:
         if os.path.exists("son_bulten.json"):
             with open("son_bulten.json", "r", encoding="utf-8") as f:
                 b_list = json.load(f)
@@ -406,428 +406,43 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                 telegram_gonder("Su an tuzak filtresini gecen uygun kombine maci bulunamadi.")
         else:
             telegram_gonder("Henuz kayitli gunluk bulten yok.")
-                
-               
 
     if "karne" in istenen_komutlar:
-            if os.path.exists("haftalik_arsiv.json"):
-                with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
-                    arsiv = json.load(f)
-                if arsiv:
-                    lig_ozet = {}
-                    for k in arsiv:
-                        l_ad = k["lig"]
-                        if l_ad not in lig_ozet:
-                            lig_ozet[l_ad] = {"top": 0, "hit": 0}
-                        lig_ozet[l_ad]["top"] += 1
-                        if k["tuttu"]:
-                            lig_ozet[l_ad]["hit"] += 1
-                    k_satir = list(("🏅 HAFTALIK BASARI KARNESI\n",))
-                    for l_ad, v in lig_ozet.items():
-                        yuzde = int((v["hit"] / v["top"]) * 100)
-                        k_satir.append(f"• {l_ad}: {v['top']} Macta {v['hit']} Isabet (%{yuzde})")
-                    telegram_gonder("\n".join(k_satir))
-                else:
-                    telegram_gonder("Haftalik karne icin gece sonuclarinin kaydi bekleniyor.")
-            else:
-                telegram_gonder("Haftalik karne icin gece sonuclarinin kaydi bekleniyor.")
-
-        if "yardim" in istenen_komutlar:
-            telegram_gonder("🤖 PusulaSpor Komutlari:\n/canli - Anlik skorlar + AI Bas Analist yorumu\n/bulten - Gunun AI bankolari\n/karne - Haftalik basari orani")
-    except Exception:
-        pass
-    hafiza["son_update_id"] = son_update_id
-MAC_ONU_YILDIZLAR = (
-    "Giannis", "Jokic", "Doncic", "Tatum", "Curry", "LeBron", "Durant", "Embiid", "Shai", "Edwards",
-    "Brunson", "Mitchell", "Booker", "Davis", "Wembanyama", "Sengun", "Larkin", "Vezenkov", "Tavares",
-    "Campazzo", "Hezonja", "Lessort", "Nunn", "Sloukas", "Icardi", "Osimhen", "Dzeko", "Tadic", "Immobile",
-    "Rafa", "Haaland", "Salah", "Mbappe", "Vinicius", "Bellingham", "Kane", "Yamal", "Lewandowski", "Palmer", "Saka"
-)
-
-
-def maca_1_saat_kala_kadro_kontrol(gonderilenler):
-    if not os.path.exists("son_bulten.json"):
-        return
-    try:
-        with open("son_bulten.json", "r", encoding="utf-8") as f:
-            bulten_maclar = json.load(f)
-    except Exception:
-        return
-
-    for m in bulten_maclar:
-        mac_id = str(m.get("id", ""))
-        lig_yolu = m.get("yol", "")
-        alarm_anahtar = f"KADRO1SAAT_{m.get('tarih', tarih)}_{mac_id}"
-        if not mac_id or lig_yolu == "euroleague_resmi" or "/" not in lig_yolu or alarm_anahtar in gonderilenler:
-            continue
-
-        try:
-            j = requests.get(f"{url_basi}{lig_yolu}/summary?event={mac_id}", headers=basliklar, timeout=6).json()
-            header_comp = j.get("header", {}).get("competitions", list(({},))).pop(0)
-            st_code = header_comp.get("status", {}).get("type", {}).get("state", "pre")
-            if st_code != "pre":
-                continue
-
-            mac_tarih_str = header_comp.get("date", "")
-            if not mac_tarih_str:
-                continue
-
-            mac_zamani_utc = datetime.strptime(mac_tarih_str[:16], "%Y-%m-%dT%H:%M").replace(tzinfo=timezone.utc)
-            kalan_dakika = (mac_zamani_utc - suan_tr.astimezone(timezone.utc)).total_seconds() / 60
-
-            if 10 <= kalan_dakika <= 75:
-                eksik_yildizlar = list()
-                for grp in j.get("injuries", list()):
-                    t_ad = grp.get("team", {}).get("displayName", "")
-                    for inj in grp.get("injuries", list()):
-                        durum = inj.get("status", "")
-                        oyuncu = inj.get("athlete", {}).get("displayName", "")
-                        if durum in ("Out", "Doubtful") and oyuncu:
-                            if any(y.lower() in oyuncu.lower() for y in MAC_ONU_YILDIZLAR):
-                                eksik_yildizlar.append(f"{t_ad}: {oyuncu} ({durum})")
-
-                gonderilenler.add(alarm_anahtar)
-                if eksik_yildizlar:
-                    telegram_gonder(
-                        f"⚠️ SON DAKIKA KADRO ALARMI (Maca ~{int(kalan_dakika)} Dk Kala)\n"
-                        f"🏆 [{m.get('lig', '')}] {m.get('mac', '')}\n"
-                        f"🎯 Bulten Tahmini: {m.get('tahmin', '')}\n"
-                        f"❌ Kadroda Yok / Supheli: {', '.join(eksik_yildizlar)}\n"
-                        f"💡 Dikkat: Yildiz oyuncu eksigi nedeniyle bu maci tekrar gozden gecir!"
-                    )
-        except Exception:
-            pass
-                            
-def bulten_anlik_sonuc_kontrol(gonderilenler):
-    if not os.path.exists("son_bulten.json"):
-        return
-    try:
-        with open("son_bulten.json", "r", encoding="utf-8") as f:
-            kayitli_maclar = json.load(f)
-    except Exception:
-        return
-
-    if not kayitli_maclar:
-        return
-
-    arsiv = list()
-    if os.path.exists("haftalik_arsiv.json"):
-        try:
+        if os.path.exists("haftalik_arsiv.json"):
             with open("haftalik_arsiv.json", "r", encoding="utf-8") as f:
                 arsiv = json.load(f)
-        except Exception:
-            arsiv = list()
+            if arsiv:
+                lig_ozet = {}
+                for k in arsiv:
+                    l_ad = k["lig"]
+                    if l_ad not in lig_ozet:
+                        lig_ozet[l_ad] = {"top": 0, "hit": 0}
+                    lig_ozet[l_ad]["top"] += 1
+                    if k["tuttu"]:
+                        lig_ozet[l_ad]["hit"] += 1
+                k_satir = list(("🏆 HAFTALIK BASARI KARNESI\n",))
+                for l_ad, v in lig_ozet.items():
+                    yuzde = int((v["hit"] / v["top"]) * 100)
+                    k_satir.append(f"• {l_ad}: {v['top']} Macta {v['hit']} Isabet (%{yuzde})")
+                telegram_gonder("\n".join(k_satir))
+            else:
+                telegram_gonder("Haftalik karne icin gece sonuclarinin kaydi bekleniyor.")
+        else:
+            telegram_gonder("Haftalik karne icin gece sonuclarinin kaydi bekleniyor.")
 
-    arsiv_degisti = False
-    for m in kayitli_maclar:
-        mac_id = str(m.get("id", ""))
-        sonuc_anahtari = f"SONUC_{m.get('tarih', tarih)}_{mac_id}"
-        if not mac_id or sonuc_anahtari in gonderilenler:
-            continue
-
-        ev_s, dep_s, st_code = 0, 0, "pre"
-        try:
-            resp = (
-                _el_get(m["tarih"])
-                if m["yol"] == "euroleague_resmi"
-                else requests.get(f"{url_basi}{m['yol']}/scoreboard?dates={m['tarih']}", headers=basliklar, timeout=8).json()
-            )
-            for ev in resp.get("events", list()):
-                if str(ev.get("id", "")) == mac_id:
-                    st_code = ev.get("status", {}).get("type", {}).get("state", "pre")
-                    comp = ev.get("competitions", list()).pop(0)
-                    for t_obj in comp.get("competitors", list()):
-                        if t_obj.get("homeAway") == "home":
-                            ev_s = int(float(t_obj.get("score", 0) or 0))
-                        else:
-                            dep_s = int(float(t_obj.get("score", 0) or 0))
-                    break
-        except Exception:
-            pass
-
-        if st_code != "post":
-            continue
-
-        t = m.get("tahmin", "")
-        top_s = ev_s + dep_s
-        tuttu = False
-
-        if "(MS 1)" in t and ev_s > dep_s:
-            tuttu = True
-        elif "(MS 2)" in t and dep_s > ev_s:
-            tuttu = True
-        elif "(MS 0)" in t and ev_s >= dep_s:
-            tuttu = True
-        elif "KG VAR" in t and ev_s > 0 and dep_s > 0:
-            tuttu = True
-        elif "UST" in t:
-            barem_list = list(x for x in t.split() if "." in x)
-            if barem_list:
-                barem = float(barem_list.pop(0))
-                hedef = ev_s if t.startswith(m.get("ev", "")) else (dep_s if t.startswith(m.get("dep", "")) else top_s)
-                if hedef > barem:
-                    tuttu = True
-        elif "ALT" in t:
-            barem_list = list(x for x in t.split() if "." in x)
-            if barem_list:
-                barem = float(barem_list.pop(0))
-                hedef = ev_s if t.startswith(m.get("ev", "")) else (dep_s if t.startswith(m.get("dep", "")) else top_s)
-                if hedef < barem:
-                    tuttu = True
-
-        gonderilenler.add(sonuc_anahtari)
-        durum_baslik = "✅ TAHMIN TUTTU!" if tuttu else "❌ TAHMIN YATTI"
-        arsiv.append({
-            "tarih": m.get("tarih_guzel", suan_tr.strftime("%d.%m.%Y")),
-            "lig": m.get("lig", "Genel"),
-            "mac": m.get("mac", ""),
-            "tahmin": t,
-            "skor": f"{ev_s}-{dep_s}",
-            "tuttu": tuttu
-        })
-        arsiv_degisti = True
-
-        telegram_gonder(
-            f"{durum_baslik}\n"
-            f"🏆 [{m.get('lig', '')}] {m.get('mac', '')}\n"
-            f"🎯 Tahmin: {t} (Guven: %{m.get('guven', '')})\n"
-            f"🏁 Mac Sonucu: {ev_s} - {dep_s}"
+    if "yardim" in istenen_komutlar:
+        yardim_metni = (
+            "🤖 PUSULA AI KOMUT LISTESI\n\n"
+            "/kombin - Canli web istihbaratli 3'lu gunun kombinesi\n"
+            "/sor TakimAdi - Tek mac icin derin istihbarat & analiz\n"
+            "/canli - O an oynanan canli maclar ve AI firsatlari\n"
+            "/bulten - Gunun kayitli bulten listesi\n"
+            "/karne - Haftalik AI basari karnesi"
         )
+        telegram_gonder(yardim_metni)
 
-    if arsiv_degisti:
-        with open("haftalik_arsiv.json", "w", encoding="utf-8") as f:
-            json.dump(arsiv[-150:], f, ensure_ascii=False, indent=2)
-def sharp_para_ve_oran_radari(gonderilenler):
-    piyasa_dosya = "piyasa_hafiza.json"
-    kayitli_piyasa = {"tarih": tarih, "maclar": {}}
-    if os.path.exists(piyasa_dosya):
-        try:
-            with open(piyasa_dosya, "r", encoding="utf-8") as f:
-                eski_p = json.load(f)
-                if eski_p.get("tarih") == tarih:
-                    kayitli_piyasa = eski_p
-        except Exception:
-            pass
-
-    mac_sozluk = kayitli_piyasa.get("maclar", {})
-    sharp_alarmlar = list()
-
-    for s_adi, lig_sozluk in TUM_LIGLER.items():
-        for l_adi, l_yolu in lig_sozluk.items():
-            if l_yolu == "euroleague_resmi" or "/" not in l_yolu:
-                continue
-            try:
-                resp = requests.get(f"{url_basi}{l_yolu}/scoreboard?dates={tarih}", headers=basliklar, timeout=6).json()
-                for ev in resp.get("events", list()):
-                    if ev.get("status", {}).get("type", {}).get("state", "pre") != "pre":
-                        continue
-                    mac_id = str(ev.get("id", ""))
-                    comp = ev.get("competitions", list(({},))).pop(0)
-                    t_list = comp.get("competitors", list())
-                    if len(t_list) < 2:
-                        continue
-                    ev_ad = t_list.pop(0).get("team", {}).get("displayName", "Ev")
-                    dep_ad = t_list.pop(0).get("team", {}).get("displayName", "Dep")
-
-                    sj = requests.get(f"{url_basi}{l_yolu}/summary?event={mac_id}", headers=basliklar, timeout=5).json()
-                    pk_l = sj.get("pickcenter", list())
-                    if not pk_l:
-                        continue
-                    pk0 = pk_l.pop(0)
-                    ou_yeni = float(pk0.get("overUnder", 0) or 0)
-                    det_yeni = str(pk0.get("details", "")).strip()
-
-                    if ou_yeni <= 0 and not det_yeni:
-                        continue
-
-                    if mac_id not in mac_sozluk:
-                        mac_sozluk[mac_id] = {"ou": ou_yeni, "det": det_yeni, "ad": f"{ev_ad} - {dep_ad}", "lig": l_adi}
-                    else:
-                        eski_ou = float(mac_sozluk[mac_id].get("ou", 0) or 0)
-                        eski_det = str(mac_sozluk[mac_id].get("det", "")).strip()
-                        fark_ou = round(ou_yeni - eski_ou, 1) if (ou_yeni > 0 and eski_ou > 0) else 0.0
-                        esik = 3.5 if s_adi == "Basketbol" else 0.5
-
-                        sharp_anahtar = f"SHARP_{tarih}_{mac_id}"
-                        if sharp_anahtar not in gonderilenler:
-                            hareket_notu = ""
-                            if abs(fark_ou) >= esik:
-                                yon = "YUKARI FIRLADI (UST Parasi)" if fark_ou > 0 else "ASAGI DUSTU (ALT Parasi)"
-                                hareket_notu = f"Barem Kaymasi: {eski_ou} -> {ou_yeni} ({fark_ou:+} | {yon})"
-                            elif eski_det and det_yeni and eski_det != det_yeni:
-                                hareket_notu = f"Handikap / Favori Kaymasi: {eski_det} -> {det_yeni}"
-
-                            if hareket_notu:
-                                gonderilenler.add(sharp_anahtar)
-                                mac_sozluk[mac_id]["sharp_uyari"] = hareket_notu
-                                sharp_alarmlar.append(
-                                    f"🚨 [{l_adi}] {ev_ad} - {dep_ad}\n"
-                                    f"   📊 {hareket_notu}\n"
-                                    f"   💡 Piyasada sert para hareketi / gizli bilgi akisi tespit edildi!"
-                                )
-            except Exception:
-                pass
-
-    kayitli_piyasa["maclar"] = mac_sozluk
-    with open(piyasa_dosya, "w", encoding="utf-8") as f:
-        json.dump(kayitli_piyasa, f, ensure_ascii=False, indent=2)
-
-    if sharp_alarmlar:
-        telegram_gonder("🦈 SHARP PARA & ORAN DUSUSU RADARI\n\n" + "\n\n".join(sharp_alarmlar[:5]))            
-def canli_maclari_tara():
-    hafiza = {"tarih": tarih, "uyarilar": list(), "son_update_id": 0}
-    if os.path.exists("canli_uyarilar.json"):
-        try:
-            with open("canli_uyarilar.json", "r", encoding="utf-8") as f:
-                eski = json.load(f)
-                hafiza["son_update_id"] = eski.get("son_update_id", 0)
-                if eski.get("tarih") == tarih:
-                    hafiza["uyarilar"] = eski.get("uyarilar", list())
-        except Exception:
-            pass
-
-    bulten_haritasi = {}
-    if os.path.exists("son_bulten.json"):
-        try:
-            with open("son_bulten.json", "r", encoding="utf-8") as f:
-                for b in json.load(f):
-                    bulten_haritasi[str(b.get("id", ""))] = b
-        except Exception:
-            pass
-
-    piyasa_haritasi = {}
-    if os.path.exists("piyasa_takip.json"):
-        try:
-            with open("piyasa_takip.json", "r", encoding="utf-8") as f:
-                piyasa_haritasi = json.load(f).get("maclar", {})
-        except Exception:
-            pass
-
-    gonderilenler = set(hafiza.get("uyarilar", list()))
-    yeni_mesajlar = list()
-    canli_ozet_listesi = list()
-    canli_detay_objeleri = list()
-    sezon_kodu = f"E{suan_tr.year if suan_tr.month >= 8 else suan_tr.year - 1}"
-
-    for s_adi, lig_sozluk in TUM_LIGLER.items():
-        for l_adi, l_yolu in lig_sozluk.items():
-            try:
-                resp = (
-                    _el_get(tarih)
-                    if l_yolu == "euroleague_resmi"
-                    else requests.get(f"{url_basi}{l_yolu}/scoreboard?dates={tarih}", headers=basliklar, timeout=8).json()
-                )
-                for ev in resp.get("events", list()):
-                    st_code = ev.get("status", {}).get("type", {}).get("state", "pre")
-                    if st_code != "in":
-                        continue
-
-                    mac_id = str(ev.get("id", ""))
-                    detay_sure = ev.get("status", {}).get("type", {}).get("shortDetail", "")
-                    comp = ev.get("competitions", list(({},)))
-                    t_list = comp.get("competitors", list())
-                    if len(t_list) < 2:
-                        continue
-
-                    ev_t = next((t for t in t_list if t.get("homeAway") == "home"), t_list)
-                    dep_t = next((t for t in t_list if t.get("homeAway") == "away"), t_list)
-
-                    ev_ad = ev_t.get("team", {}).get("displayName", "Ev")
-                    dep_ad = dep_t.get("team", {}).get("displayName", "Dep")
-                    ev_s = int(float(ev_t.get("score", 0) or 0))
-                    dep_s = int(float(dep_t.get("score", 0) or 0))
-                    canli_ozet_listesi.append(f"• [{l_adi}] {ev_ad} {ev_s}-{dep_s} {dep_ad} ({detay_sure})")
-
-                    ev_recs = ev_t.get("records", list())
-                    dep_recs = dep_t.get("records", list())
-                    ev_rec = ev_recs.get("summary", "1-1") if ev_recs else "1-1"
-                    dep_rec = dep_recs.get("summary", "1-1") if dep_recs else "1-1"
-
-                    ev_p = [int(x) for x in ev_rec.split("-") if x.isdigit()]
-                    dep_p = [int(x) for x in dep_rec.split("-") if x.isdigit()]
-                    ev_g = (ev_p / sum(ev_p)) if (len(ev_p) >= 2 and sum(ev_p) > 0) else 0.5
-                    dep_g = (dep_p / sum(dep_p)) if (len(dep_p) >= 2 and sum(dep_p) > 0) else 0.5
-
-                    top_s = ev_s + dep_s
-                    fark = abs(ev_s - dep_s)
-
-                    saha_bilgisi = canli_oyuncu_ve_olay_cek(mac_id, l_yolu, sezon_kodu)
-                    canli_detay_objeleri.append({
-                        "spor": s_adi, "lig": l_adi, "ev": ev_ad, "dep": dep_ad,
-                        "ev_s": ev_s, "dep_s": dep_s, "sure": detay_sure,
-                        "ev_r": ev_rec, "dep_r": dep_rec, "saha": saha_bilgisi
-                    })
-
-                    uyari_tipi = ""
-                    uyari_kodu = ""
-
-                    if s_adi == "Basketbol":
-                        ikinci_ceyrek = any(k in detay_sure for k in ("2nd", "Q2", "2C"))
-                        devre_arasi = any(k in detay_sure for k in ("Half", "HT", "IY"))
-                        ucuncu_ceyrek = any(k in detay_sure for k in ("3rd", "Q3", "3C"))
-                        dorduncu_ceyrek = any(k in detay_sure for k in ("4th", "Q4", "4C", "OT"))
-
-                        acilis_baremi = float(piyasa_haritasi.get(mac_id, {}).get("ou", 0) or 0)
-                        if acilis_baremi <= 0:
-                            acilis_baremi = 224.0 if "NBA" in l_adi else 162.0
-
-                        if devre_arasi and (top_s * 2) >= (acilis_baremi + 12):
-                            uyari_tipi = f"🚀 YUKSEK TEMPO (Devre: {top_s} | Projeksiyon: {top_s*2} / Barem: {acilis_baremi})"
-                            uyari_kodu = "TEMPO"
-
-                        elif (ikinci_ceyrek or devre_arasi or ucuncu_ceyrek):
-                            mac_bulten = bulten_haritasi.get(mac_id, {})
-                            bulten_tahmin = mac_bulten.get("tahmin", "")
-
-                            ev_gercek_fav = ("(MS 1)" in bulten_tahmin) or (ev_g >= 0.62 and (ev_g - dep_g) >= 0.20)
-                            dep_gercek_fav = ("(MS 2)" in bulten_tahmin) or (dep_g >= 0.62 and (dep_g - ev_g) >= 0.20)
-
-                            if ev_gercek_fav and not dep_gercek_fav and 8 <= (dep_s - ev_s) <= 15:
-                                uyari_tipi = f"🔥 FAVORI GERIDE (MS 1 FIRSATI) | {ev_ad} -{dep_s - ev_s} Sayi Takipte"
-                                uyari_kodu = "FAVORI"
-                            elif dep_gercek_fav and not ev_gercek_fav and 8 <= (ev_s - dep_s) <= 15:
-                                uyari_tipi = f"🔥 FAVORI GERIDE (MS 2 FIRSATI) | {dep_ad} -{ev_s - dep_s} Sayi Takipte"
-                                uyari_kodu = "FAVORI"
-
-                        elif dorduncu_ceyrek and fark <= 5 and top_s > 0:
-                            uyari_tipi = "⏳ CRUNCH TIME (SON CEYREK HEYECANI)"
-                            uyari_kodu = "CRUNCH"
-
-                    else:
-                        rakamlar = "".join(c for c in detay_sure if c.isdigit())
-                        dk = int(rakamlar) if rakamlar else 0
-                        if dk >= 75 and fark <= 1 and ((ev_g >= 0.60 and (ev_g - dep_g) >= 0.18) or (dep_g >= 0.60 and (dep_g - ev_g) >= 0.18)):
-                            baskili = ev_ad if ev_g >= dep_g else dep_ad
-                            uyari_tipi = f"⏳ SON DAKIKA BASKI ({baskili})"
-                            uyari_kodu = "BASKI"
-                        elif any(k in detay_sure for k in ("45", "Half", "HT")) and top_s >= 3:
-                            uyari_tipi = "🚀 GOLLU TEMPO ANALIZI (IY 3+ Gol)"
-                            uyari_kodu = "GOL_TEMPO"
-                        elif any(k in detay_sure for k in ("45", "Half", "HT")) and top_s == 0 and abs(ev_g - dep_g) >= 0.25:
-                            uyari_tipi = "🔥 IY 0-0 (FAVORI 2. YARI PLANI)"
-                            uyari_kodu = "IY_00"
-
-                    if uyari_tipi and uyari_kodu:
-                        anahtar = f"{mac_id}_{uyari_kodu}"
-                        if anahtar not in gonderilenler:
-                            gonderilenler.add(anahtar)
-                            ai_analiz = ai_bas_analist_karari(s_adi, l_adi, ev_ad, dep_ad, ev_s, dep_s, detay_sure, ev_rec, dep_rec, saha_bilgisi)
-                            ek_yorum = f"\n{ai_analiz}" if ai_analiz else ""
-                            yeni_mesajlar.append(f"• [{l_adi}] {ev_ad} {ev_s}-{dep_s} {dep_ad} ({detay_sure})\n  👉 {uyari_tipi}{ek_yorum}")
-            except Exception:
-                pass
-
-    if yeni_mesajlar:
-        baslik = f"🚨 PUSULASPOR AI CANLI BAS ANALIST RAPORU ({saat_str})\n\n"
-        telegram_gonder(baslik + "\n\n".join(yeni_mesajlar[:4]))
-    sharp_para_ve_oran_radari(gonderilenler)
-    maca_1_saat_kala_kadro_kontrol(gonderilenler)
-    bulten_anlik_sonuc_kontrol(gonderilenler)
-    telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri)
-
-    hafiza["uyarilar"] = list(gonderilenler)
-    with open("canli_uyarilar.json", "w", encoding="utf-8") as f:
-        json.dump(hafiza, f, ensure_ascii=False, indent=2)
+    hafiza["son_update_id"] = son_update_id
+    hafiza_kaydet(hafiza)
 
 
 if __name__ == "__main__":
