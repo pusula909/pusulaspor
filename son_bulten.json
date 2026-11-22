@@ -1,1 +1,66 @@
-[]
+[
+  {
+    "id": "401888249",
+    "yol": "soccer/tur.1",
+    "tarih": "20261122",
+    "tarih_guzel": "22.11.2026",
+    "lig": "Turkiye Super Lig",
+    "ev": "Trabzonspor",
+    "dep": "Eyupspor",
+    "mac": "Trabzonspor - Eyupspor",
+    "saat": "Scheduled",
+    "tahmin": "Trabzonspor Kazanir (MS 1)",
+    "guven": 80,
+    "deger": "💎 Deger: 8.0/10",
+    "eksikler": [],
+    "piyasa": "Piyasa: TRAB -800 | Barem: 3.5"
+  },
+  {
+    "id": "401882804",
+    "yol": "soccer/esp.1",
+    "tarih": "20261122",
+    "tarih_guzel": "22.11.2026",
+    "lig": "Ispanya La Liga",
+    "ev": "Barcelona",
+    "dep": "Villarreal",
+    "mac": "Barcelona - Villarreal",
+    "saat": "Scheduled",
+    "tahmin": "Barcelona Kazanir (MS 1)",
+    "guven": 79,
+    "deger": "💎 Deger: 7.9/10",
+    "eksikler": [],
+    "piyasa": "Piyasa: BAR -550 | Barem: 4.5"
+  },
+  {
+    "id": "401876400",
+    "yol": "soccer/fra.1",
+    "tarih": "20261122",
+    "tarih_guzel": "22.11.2026",
+    "lig": "Fransa Ligue 1",
+    "ev": "Marseille",
+    "dep": "Le Mans",
+    "mac": "Marseille - Le Mans",
+    "saat": "Scheduled",
+    "tahmin": "Marseille Kazanir (MS 1)",
+    "guven": 75,
+    "deger": "💎 Deger: 7.5/10",
+    "eksikler": [],
+    "piyasa": "Piyasa: OLM -215 | Barem: 3.5"
+  },
+  {
+    "id": "401878755",
+    "yol": "soccer/eng.1",
+    "tarih": "20261122",
+    "tarih_guzel": "22.11.2026",
+    "lig": "Ingiltere Premier League",
+    "ev": "Liverpool",
+    "dep": "Manchester United",
+    "mac": "Liverpool - Manchester United",
+    "saat": "Scheduled",
+    "tahmin": "Liverpool Kazanir (MS 1)",
+    "guven": 72,
+    "deger": "💎 Deger: 7.2/10",
+    "eksikler": [],
+    "piyasa": "Piyasa: LIV -145 | Barem: 3.5"
+  }
+]
