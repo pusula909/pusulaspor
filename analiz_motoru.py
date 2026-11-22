@@ -22,7 +22,7 @@ class PusulaAnalizBeyni:
         son_hata = "Bilinmiyor"
         if g_key:
             g_host = ".".join(["generativelanguage", "googleapis", "com"])
-            for m in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"):
+            for m in ("gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash"):
                 try:
                     u = f"https://{g_host}/v1beta/models/{m}:generateContent?key={g_key}"
                     r = requests.post(u, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=15).json()
