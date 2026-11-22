@@ -20,8 +20,8 @@ class PusulaAnalizBeyni:
         g_key = str(self.gemini_key or "").strip()
         q_key = str(self.groq_key or "").strip()
         son_hata = "Bilinmiyor"
-        if g_key:
-            g_host = "://googleapis.com"
+       if g_key:
+            g_host = ".".join(["generativelanguage", "googleapis", "com"])
             for m in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"):
                 try:
                     u = f"https://{g_host}/v1beta/models/{m}:generateContent?key={g_key}"
@@ -37,7 +37,7 @@ class PusulaAnalizBeyni:
                 except Exception as e:
                     son_hata = str(e)[:140]
         if q_key:
-            q_host = "://groq.com"
+            q_host = ".".join(["api", "groq", "com"])
             q_url = f"https://{q_host}/openai/v1/chat/completions"
             for m in ("llama-3.3-70b-versatile", "llama-3.1-8b-instant"):
                 try:
