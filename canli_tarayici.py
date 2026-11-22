@@ -279,23 +279,28 @@ def tek_takim_derin_analiz(aranan_takim):
                         else requests.get(f"{url_basi}{l_yolu}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=7).json()
                     )
                     for ev in resp.get("events", list()):
-                        comp = ev.get("competitions", list())
+                        comp_list = ev.get("competitions", list())
+                        if not comp_list:
+                            continue
+                        comp = comp_list.pop(0)
                         t_list = comp.get("competitors", list())
                         if len(t_list) < 2:
                             continue
-                        t1, t2 = t_list, t_list
+                        t1, t2 = t_list.pop(0), t_list.pop(0)
                         ev_t = t1 if t1.get("homeAway") == "home" else t2
                         dep_t = t2 if t1.get("homeAway") == "home" else t1
-                        ev_ad = ev_t["team"]["displayName"]
-                        dep_ad = dep_t["team"]["displayName"]
+                        ev_ad = ev_t.get("team", {}).get("displayName", "")
+                        dep_ad = dep_t.get("team", {}).get("displayName", "")
 
                         if aranan in ev_ad.lower() or aranan in dep_ad.lower():
                             detay_sure = ev.get("status", {}).get("type", {}).get("shortDetail", "")
                             state = ev.get("status", {}).get("type", {}).get("state", "pre")
                             ev_s = int(float(ev_t.get("score", 0) or 0))
                             dep_s = int(float(dep_t.get("score", 0) or 0))
-                            ev_r = ev_t.get("records", list()).get("summary", "1-1") if ev_t.get("records") else "1-1"
-                            dep_r = dep_t.get("records", list()).get("summary", "1-1") if dep_t.get("records") else "1-1"
+                            ev_recs = ev_t.get("records", list())
+                            dep_recs = dep_t.get("records", list())
+                            ev_r = ev_recs.pop(0).get("summary", "1-1") if ev_recs else "1-1"
+                            dep_r = dep_recs.pop(0).get("summary", "1-1") if dep_recs else "1-1"
 
                             rapor = beyin.mac_deger_analizi(
                                 spor_turu=s_tur, lig_adi=l_adi, ev_ad=ev_ad, dep_ad=dep_ad,
