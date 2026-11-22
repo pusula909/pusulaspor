@@ -327,7 +327,7 @@ class PusulaAnalizBeyni:
         karne_dersi = self._karne_oz_ogrenme_ozeti(lig_adi)
         web_istihbarat = self.canli_web_istihbarati(ev_ad, dep_ad, spor_turu)
 
-       prompt = (
+        prompt = (
             f"Sen v{hafiza.get('versiyon', 1)}.0 {spor_turu} Bas Analistisin.\n"
             f"Mac: [{lig_adi}] {ev_ad} vs {dep_ad}\n"
             f"Ozet: {analiz_ozeti}\n"
