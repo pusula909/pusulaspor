@@ -355,7 +355,7 @@ def telegram_komutlari_isle(hafiza, canli_ozet_listesi, canli_detay_objeleri):
                 sorgu_takim = metin.replace("/analiz", "").strip()
             if sorgu_takim:
                 telegram_gonder(tek_takim_derin_analiz(sorgu_takim))
-                else:
+            else:
                     telegram_gonder("Kullanim ornegi: /analiz Real Madrid veya /analiz Lakers")    
 
         if "canli" in istenen_komutlar:
