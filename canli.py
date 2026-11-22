@@ -1233,7 +1233,7 @@ else:
                 dep_t = t2 if t1.get("homeAway") == "home" else t1
                 ev_ad_ham = ev_t.get("team", {}).get("displayName", "")
                 dep_ad = dep_t.get("team", {}).get("displayName", "")
-                ev_ad = f"{ev_ad_ham} [{aktif_lig_ad}]" if lig == "Tumu (Butun Ligler)" else ev_ad_ham
+                ev_ad = ev_ad_ham
                 ev_id, dep_id = ev_t.get("team", {}).get("id", ""), dep_t.get("team", {}).get("id", "")
                 ev_r_l, dep_r_l = ev_t.get("records", list()), dep_t.get("records", list())
                 ev_rec = ev_r_l.pop(0).get("summary", "0-0") if ev_r_l else "0-0"
@@ -1256,9 +1256,10 @@ else:
                 iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
                 _, ozet_tahmin, en_guclu = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor, aktif_lig_ad, 0, 0, state, ev_s_int, dep_s_int)
                 banko_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "tahmin": en_guclu.get("AI Tahmin Secenegi", ""), "guven": en_guclu.get("Guven Seviyesi", ""), "guven_int": en_guclu.get("GuvenInt", 0)})
-                maclar.append({"ID": mac_id, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": is_fav, "Dakika / Ceyrek": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Deplasman": dep_ad, "IY / Ceyrek Skorlari": iy_ceyrek_str, "Ev Form": ev_rec, "Dep Form": dep_rec, "Hizli AI Ozet": ozet_tahmin, "Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)})
+                maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": is_fav, "Dakika / Ceyrek": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Deplasman": dep_ad, "IY / Ceyrek Skorlari": iy_ceyrek_str, "Ev Form": ev_rec, "Dep Form": dep_rec, "Hizli AI Ozet": ozet_tahmin, "Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)})
             except Exception:
                 continue
+
     if maclar:
         en_iyi_kartlar = sorted(banko_havuzu, key=lambda x: x["guven_int"], reverse=True)[:3]
         if en_iyi_kartlar:
@@ -1269,7 +1270,7 @@ else:
 
         st.subheader(f"{lig} | Canli Skor, IY / Ceyrek Detaylari ve AI Analiz")
         df_ham = pd.DataFrame(maclar)
-        gizlenecek = ("ID", "EvID", "DepID", "State", "EvSkorInt", "DepSkorInt", "MacSecim", "Fav")
+        gizlenecek = ["ID", "LigYolu", "EvID", "DepID", "State", "EvSkorInt", "DepSkorInt", "MacSecim", "Fav"]
         gosterilecek_tablo = df_ham.drop(columns=list(gizlenecek))
         st.dataframe(gosterilecek_tablo, use_container_width=True, hide_index=True)
         st.download_button(
