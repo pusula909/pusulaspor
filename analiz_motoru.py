@@ -63,7 +63,7 @@ class PusulaAnalizBeyni:
             except Exception:
                 pass
         return {"versiyon": 1, "son_guncelleme": "", "ogrenilen_kurallar": [], "lig_ayarlari": {}}
-        def gece_kendini_gelistir(self):
+    def gece_kendini_gelistir(self):
         if not os.path.exists(self.arsiv_dosya):
             return ""
         try:
