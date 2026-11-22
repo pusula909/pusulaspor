@@ -1,80 +1,160 @@
-import streamlit as st
 import requests
-import xml.etree.ElementTree as ET
+import streamlit.components.v1 as components
 
-def canli_saha_ve_anlatim_ciz(spor, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor, dep_skor, state, durum_detay, url_basi, basliklar):
-    st.subheader("Canli Mac Merkezi | 2D Saha Radari & Anlik Anlatim")
-    if state == "pre":
-        son_olay = "Mac Baslamasi Bekleniyor"
-    elif state == "post":
-        son_olay = "Mac Sona Erdi"
-    else:
-        son_olay = f"Canli Oyun Devam Ediyor ({durum_detay})"
 
-    olaylar = list()
-    istatistikler = list()
-    x_pos, y_pos = 50, 50
-    gc_clean = str(mac_id).replace("E2026_", "")
+def _espn_canli_aksiyon_cek(spor_turu, lig_yolu, mac_id):
+    sonuc = {
+        "aksiyon": "Canli saha akisi izleniyor...",
+        "dakika": "",
+        "taraf": "orta",
+        "tip": "normal",
+        "ev_baski": 50,
+    }
+    if not mac_id or not lig_yolu or lig_yolu == "euroleague_resmi":
+        return sonuc
+    try:
+        kat = "basketball" if spor_turu == "Basketbol" else "soccer"
+        host = ".".join(["site", "api", "espn", "com"])
+        u = f"https://{host}/apis/site/v2/sports/{kat}/{lig_yolu}/summary?event={mac_id}"
+        r = requests.get(u, headers={"User-Agent": "Mozilla/5.0"}, timeout=5).json()
 
-    if lig_yolu == "euroleague_resmi" and gc_clean:
-        try:
-            h = {"User-Agent": "Mozilla/5.0"}
-            r = requests.get("https://euroleague.net", params={"seasonCode": "E2026", "gameCode": gc_clean}, headers=h, timeout=5)
-            root = ET.fromstring(r.content)
-            for q in ["FirstQuarter", "SecondQuarter", "ThirdQuarter", "FourthQuarter", "ExtraTime"]:
-                qv = root.findtext(f".//{q}", "").strip()
-                if qv:
-                    olaylar.append(f"{q}: {qv}")
-            for pl in root.findall(".//Player")[:6]:
-                nm = pl.findtext("PlayerName", "").strip()
-                pt = pl.findtext("Points", "0").strip()
-                if nm and int(pt or 0) > 0:
-                    olaylar.append(f"{nm}: {pt} Sayi")
-            if olaylar:
-                son_olay = olaylar[-1]
-                x_pos = 78 if int(ev_skor) >= int(dep_skor) else 22
-        except Exception:
-            pass
-    elif lig_yolu != "euroleague_resmi" and mac_id:
-        try:
-            s_veri = requests.get(f"{url_basi}{lig_yolu}/summary?event={mac_id}", headers=basliklar, timeout=6).json()
-            for p in s_veri.get("plays", list())[-8:]:
-                txt = p.get("text", "")
-                clk = p.get("clock", {}).get("displayValue", "")
-                per = p.get("period", {}).get("number", "")
-                if txt:
-                    olaylar.append(f"P{per} ({clk}) - {txt}")
-            if olaylar:
-                son_olay = olaylar[-1]
-                if ev_ad.lower() in son_olay.lower():
-                    x_pos = 78
-                elif dep_ad.lower() in son_olay.lower():
-                    x_pos = 22
-            box = s_veri.get("boxscore", {}).get("teams", list())
-            if len(box) >= 2:
-                s1 = {x.get("label", x.get("name", "")): x.get("displayValue", "0") for x in box[0].get("statistics", list())}
-                s2 = {x.get("label", x.get("name", "")): x.get("displayValue", "0") for x in box[1].get("statistics", list())}
-                for k in list(s1.keys())[:6]:
-                    istatistikler.append({"Istatistik": k, ev_ad: s1.get(k, "-"), dep_ad: s2.get(k, "-")})
-        except Exception:
-            pass
+        olaylar = r.get("keyEvents", list())
+        if not olaylar:
+            drives = r.get("plays", list())
+            if isinstance(drives, list):
+                olaylar = drives
 
-    c1, c2 = st.columns([1.3, 1])
-    with c1:
-        if spor == "Futbol":
-            svg = f'<svg viewBox="0 0 400 240" style="width:100%;border-radius:12px;background:#15803d;border:3px solid #fff"><rect x="10" y="10" width="380" height="220" fill="none" stroke="#fff" stroke-width="2"/><line x1="200" y1="10" x2="200" y2="230" stroke="#fff" stroke-width="2"/><circle cx="200" cy="120" r="32" fill="none" stroke="#fff" stroke-width="2"/><rect x="10" y="65" width="55" height="110" fill="none" stroke="#fff" stroke-width="2"/><rect x="335" y="65" width="55" height="110" fill="none" stroke="#fff" stroke-width="2"/><circle cx="{x_pos*3.6+20}" cy="{y_pos*2+20}" r="9" fill="#facc15" stroke="#000" stroke-width="2"/><text x="200" y="28" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">{ev_ad} {ev_skor} - {dep_skor} {dep_ad}</text></svg>'
-        else:
-            svg = f'<svg viewBox="0 0 400 240" style="width:100%;border-radius:12px;background:#d97706;border:3px solid #78350f"><rect x="10" y="10" width="380" height="220" fill="#f59e0b" stroke="#fff" stroke-width="2"/><line x1="200" y1="10" x2="200" y2="230" stroke="#fff" stroke-width="2"/><circle cx="200" cy="120" r="28" fill="none" stroke="#fff" stroke-width="2"/><path d="M 10 40 Q 110 120 10 200" fill="none" stroke="#fff" stroke-width="2"/><path d="M 390 40 Q 290 120 390 200" fill="none" stroke="#fff" stroke-width="2"/><circle cx="{x_pos*3.6+20}" cy="120" r="10" fill="#dc2626" stroke="#fff" stroke-width="2"/><text x="200" y="28" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">{ev_ad} {ev_skor} - {dep_skor} {dep_ad}</text></svg>'
-        st.markdown(svg, unsafe_allow_html=True)
-        st.info(f"Son Aksiyon: {son_olay}")
-
-    with c2:
-        st.markdown("*Canli Mac Anlatimi (Son Olaylar)*")
         if olaylar:
-            for o in reversed(olaylar[-5:]):
-                st.caption(o)
+            son = olaylar[-1]
+            metin = son.get("text", "") or son.get("shortText", "")
+            sure = son.get("clock", {}).get("displayValue", "")
+            if metin:
+                sonuc["aksiyon"] = metin[:95]
+                sonuc["dakika"] = sure
+
+            alt = metin.lower()
+            if any(k in alt for k in ("goal", "gol", "3pt", "three point", "dunk", "layup")):
+                sonuc["tip"] = "gol"
+            elif any(k in alt for k in ("shot", "sut", "corner", "korner", "save", "kurtaris", "foul", "faul", "rebound")):
+                sonuc["tip"] = "tehlike"
+
+            takim_id = str(son.get("team", {}).get("id", ""))
+            comp = r.get("header", {}).get("competitions", list())
+            if comp:
+                takimlar = comp.pop(0).get("competitors", list())
+                ev_id = ""
+                dep_id = ""
+                for t in takimlar:
+                    if t.get("homeAway") == "home":
+                        ev_id = str(t.get("team", {}).get("id", ""))
+                    elif t.get("homeAway") == "away":
+                        dep_id = str(t.get("team", {}).get("id", ""))
+                if takim_id and takim_id == ev_id:
+                    sonuc["taraf"] = "ev"
+                    sonuc["ev_baski"] = 68 if sonuc["tip"] != "normal" else 58
+                elif takim_id and takim_id == dep_id:
+                    sonuc["taraf"] = "dep"
+                    sonuc["ev_baski"] = 32 if sonuc["tip"] != "normal" else 42
+    except Exception:
+        pass
+    return sonuc
+
+
+def canli_saha_goster(spor_turu, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor="0", dep_skor="0", sure=""):
+    try:
+        veri = _espn_canli_aksiyon_cek(spor_turu, lig_yolu, mac_id)
+        taraf = veri["taraf"]
+        tip = veri["tip"]
+        ev_baski = veri["ev_baski"]
+        dep_baski = 100 - ev_baski
+        aksiyon_txt = veri["aksiyon"].replace('"', "'").replace("<", "").replace(">", "")
+        dk_txt = veri["dakika"] or sure or "CANLI"
+
+        if taraf == "ev":
+            top_x = 82 if tip in ("gol", "tehlike") else 66
+            ok_txt = f"➡️ {ev_ad} Hucumda"
+        elif taraf == "dep":
+            top_x = 18 if tip in ("gol", "tehlike") else 34
+            ok_txt = f"⬅️ {dep_ad} Hucumda"
         else:
-            st.caption("Canli akis verisi bekleniyor veya mac henuz baslamadi.")
-        if istatistikler:
-            st.markdown("*Canli Mac Istatistikleri*")
-            st.dataframe(istatistikler, use_container_width=True, hide_index=True)
+            top_x = 50
+            ok_txt = "⚡ Orta Saha Mucadelesi"
+
+        top_renk = "#ff2e4c" if tip == "gol" else ("#ffd60a" if tip == "tehlike" else "#ffffff")
+
+        if spor_turu == "Basketbol":
+            saha_svg = f"""
+            <svg viewBox="0 0 600 260" width="100%" height="210" style="border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,0.25);">
+              <defs>
+                <linearGradient id="parke" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#c98a4b"/>
+                  <stop offset="50%" stop-color="#d99b5b"/>
+                  <stop offset="100%" stop-color="#c98a4b"/>
+                </linearGradient>
+              </defs>
+              <rect x="0" y="0" width="600" height="260" fill="url(#parke)"/>
+              <rect x="14" y="14" width="572" height="232" fill="none" stroke="#ffffff" stroke-width="3"/>
+              <line x1="300" y1="14" x2="300" y2="246" stroke="#ffffff" stroke-width="3"/>
+              <circle cx="300" cy="130" r="36" fill="rgba(255,255,255,0.12)" stroke="#ffffff" stroke-width="3"/>
+              <rect x="14" y="82" width="95" height="96" fill="rgba(180,50,30,0.25)" stroke="#ffffff" stroke-width="2.5"/>
+              <rect x="491" y="82" width="95" height="96" fill="rgba(30,80,180,0.25)" stroke="#ffffff" stroke-width="2.5"/>
+              <path d="M 14 35 Q 165 130 14 225" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+              <path d="M 586 35 Q 435 130 586 225" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+              <circle cx="32" cy="130" r="8" fill="none" stroke="#ff4500" stroke-width="3"/>
+              <circle cx="568" cy="130" r="8" fill="none" stroke="#ff4500" stroke-width="3"/>
+              <circle cx="{top_x * 6}" cy="130" r="14" fill="{top_renk}" opacity="0.35">
+                <animate attributeName="r" values="10;20;10" dur="1.4s" repeatCount="indefinite"/>
+              </circle>
+              <circle cx="{top_x * 6}" cy="130" r="8" fill="#ff6b00" stroke="#111" stroke-width="2"/>
+            </svg>
+            """
+        else:
+            saha_svg = f"""
+            <svg viewBox="0 0 600 260" width="100%" height="210" style="border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,0.25);">
+              <rect x="0" y="0" width="600" height="260" fill="#1b7a37"/>
+              <rect x="60" y="0" width="60" height="260" fill="#218c40"/>
+              <rect x="180" y="0" width="60" height="260" fill="#218c40"/>
+              <rect x="300" y="0" width="60" height="260" fill="#218c40"/>
+              <rect x="420" y="0" width="60" height="260" fill="#218c40"/>
+              <rect x="540" y="0" width="60" height="260" fill="#218c40"/>
+              <rect x="16" y="14" width="568" height="232" fill="none" stroke="rgba(255,255,255,0.88)" stroke-width="2.5"/>
+              <line x1="300" y1="14" x2="300" y2="246" stroke="rgba(255,255,255,0.88)" stroke-width="2.5"/>
+              <circle cx="300" cy="130" r="38" fill="none" stroke="rgba(255,255,255,0.88)" stroke-width="2.5"/>
+              <circle cx="300" cy="130" r="3.5" fill="#ffffff"/>
+              <rect x="16" y="62" width="84" height="136" fill="none" stroke="rgba(255,255,255,0.88)" stroke-width="2.5"/>
+              <rect x="16" y="96" width="32" height="68" fill="none" stroke="rgba(255,255,255,0.88)" stroke-width="2"/>
+              <rect x="500" y="62" width="84" height="136" fill="none" stroke="rgba(255,255,255,0.88)" stroke-width="2.5"/>
+              <rect x="552" y="96" width="32" height="68" fill="none" stroke="rgba(255,255,255,0.88)" stroke-width="2"/>
+              <circle cx="{top_x * 6}" cy="130" r="16" fill="{top_renk}" opacity="0.4">
+                <animate attributeName="r" values="10;22;10" dur="1.3s" repeatCount="indefinite"/>
+              </circle>
+              <circle cx="{top_x * 6}" cy="130" r="7.5" fill="{top_renk}" stroke="#111111" stroke-width="2"/>
+            </svg>
+            """
+
+        html_kodu = f"""
+        <div style="font-family:sans-serif;background:#111827;color:#f9fafb;padding:12px;border-radius:14px;border:1px solid #374151;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;">
+            <span style="font-weight:700;color:#60a5fa;">🏠 {ev_ad} ({ev_skor})</span>
+            <span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:99px;font-weight:700;font-size:11px;">● {dk_txt}</span>
+            <span style="font-weight:700;color:#f87171;">({dep_skor}) {dep_ad} ✈️</span>
+          </div>
+          {saha_svg}
+          <div style="margin-top:8px;background:#1f2937;padding:8px 10px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+            <span style="color:#34d399;font-weight:700;">{ok_txt}</span>
+            <span style="color:#e5e7eb;">{aksiyon_txt}</span>
+          </div>
+          <div style="margin-top:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;margin-bottom:3px;">
+              <span>Atak Baskisi %{ev_baski}</span>
+              <span>%{dep_baski} Atak Baskisi</span>
+            </div>
+            <div style="width:100%;height:7px;background:#ef4444;border-radius:99px;overflow:hidden;">
+              <div style="width:{ev_baski}%;height:100%;background:#3b82f6;"></div>
+            </div>
+          </div>
+        </div>
+        """
+        components.html(html_kodu, height=325)
+    except Exception:
+        pass
