@@ -264,20 +264,43 @@ class PusulaAnalizBeyni:
             "dep_guc_yuzde": int(dep_net * 100),
         }
 
+    def canli_web_istihbarati(self, ev_ad, dep_ad, spor_turu):
+        bulgular = list()
+        try:
+            from duckduckgo_search import DDGS
+            sorgular = [
+                f"{ev_ad} {dep_ad} sakat cezali son dakika kadro",
+                f"{ev_ad} vs {dep_ad} injury news lineup"
+            ]
+            with DDGS() as ddgs:
+                for q in sorgular:
+                    sonuclar = list(ddgs.text(q, max_results=3))
+                    for s in sonuclar:
+                        baslik = s.get("title", "")
+                        ozet = s.get("body", "")
+                        if baslik or ozet:
+                            bulgular.append(f"- {baslik}: {ozet[:180]}")
+        except Exception:
+            pass
+        return "\n".join(bulgular[:5]) if bulgular else "Canli web aramasinda ek son dakika haberi bulunamadi."
+
     def ai_karar_ve_onay(self, spor_turu, lig_adi, ev_ad, dep_ad, analiz_ozeti, saha_verisi=""):
         hafiza = self._evrim_hafizasi_oku()
-        ogrenilenler = hafiza.get("ogrenilen_kurallar", [])[-5:]
+        ogrenilenler = hafiza.get("ogrenilen_kurallar", list())[-5:]
         kural_metni = "\n".join(ogrenilenler) if ogrenilenler else "Henuz ek ozel kural yok."
+        web_istihbarat = self.canli_web_istihbarati(ev_ad, dep_ad, spor_turu)
 
         prompt = (
-            f"Sen kendi kendini gelistiren (v{hafiza.get('versiyon', 1)}.0) {spor_turu} Bas Analisti ve Risk Yoneticisisin.\n"
-            f"Mac: {lig_adi} | {ev_ad} vs {dep_ad}\n"
-            f"Matematik Motoru Ciktisi: {analiz_ozeti}\n"
-            f"Canli Saha / Kadro / Eksik Verisi: {saha_verisi}\n\n"
+            f"Sen kendi kendini gelistiren (v{hafiza.get('versiyon', 1)}.0) {spor_turu} Bas Analisti ve Istihbarat Sefisin.\n"
+            f"Mac: [{lig_adi}] {ev_ad} vs {dep_ad}\n"
+            f"Istatistik & Piyasa Ozeti: {analiz_ozeti}\n"
+            f"Canli Saha Verisi: {saha_verisi}\n"
+            f"Internetten Toplanan Son Dakika Haber & Sakatlik Istihbarati:\n{web_istihbarat}\n\n"
             f"Gecmis Hatalarindan Ogrenip Kendi Yazdigin Kurallar (BUNLARA KESIN UY):\n{kural_metni}\n\n"
-            f"Ciktiyi Turkce olarak TAM OLARAK su 3 kisa maddede ver:\n"
-            f"🎯 ANA KARAR: (En mantikli tek secenek ve neden degerli oldugu)\n"
-            f"🧠 SAHA & TAKTIK OKUMASI: (Kadro, tempo veya koc hamlesi acisindan 1-2 net cumle)\n"
-            f"⚠️ TUZAK / RISK UYARISI: (Bu tahmini bozabilecek tek kritik nokta)"
+            f"Gorevin: Ezbere konusma; yukaridaki istihbarati, kadro eksiklerini ve istatistikleri carpistirarak "
+            f"kullaniciya gercek kanitlarla guven veren TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
+            f"🎯 ANA KARAR: (En degerli ve en ustun tek bahis secenegi)\n"
+            f"🕵️ ISTIHBARAT & KANIT: (Web aramasindan buldugun kadro/sakatlik/form gercegiyle neden bu secenegin ustun oldugu - 1-2 net cumle)\n"
+            f"⚠️ KRITIK RISK: (Bu tahmini bozabilecek tek somut tehlike)"
         )
-        return self._ai_sor(prompt, max_tokens=400)
+        return self._ai_sor(prompt, max_tokens=450)
