@@ -494,6 +494,41 @@ def otomatik_radar_ve_karne():
                         if state == "post":
                             biten_skorlar[mac_etiket.lower()] = (ev_s, dep_s)
 
+                        elif state == "pre" and t_str == bugun_str:
+                            mac_tarih_str = ev.get("date", "")
+                            if mac_tarih_str:
+                                try:
+                                    mac_dt = datetime.fromisoformat(mac_tarih_str.replace("Z", "+00:00"))
+                                    kalan_dk = (mac_dt - datetime.now(timezone.utc)).total_seconds() / 60.0
+                                    kadro_anahtar = f"ilk11_{mac_id}"
+                                    if 10 <= kalan_dk <= 55 and kadro_anahtar not in hafiza["alarmlar"]:
+                                        ev_recs = ev_t.get("records", list())
+                                        dep_recs = dep_t.get("records", list())
+                                        ev_r = ev_recs.pop(0).get("summary", "1-1") if ev_recs else "1-1"
+                                        dep_r = dep_recs.pop(0).get("summary", "1-1") if dep_recs else "1-1"
+                                        rapor = beyin.mac_deger_analizi(
+                                            spor_turu=s_tur, lig_adi=l_adi, ev_ad=ev_ad, dep_ad=dep_ad,
+                                            ev_rec=ev_r, dep_rec=dep_r, state="pre"
+                                        )
+                                        guven = int(rapor.get("guven", 0))
+                                        deger_p = float(rapor.get("deger_puani", 0))
+                                        tuzak_var = bool(rapor.get("tuzak_notu", ""))
+                                        if guven >= 78 and deger_p >= 7.2 and not tuzak_var:
+                                            ai_yorum = beyin.ai_karar_ve_onay(
+                                                s_tur, l_adi, ev_ad, dep_ad,
+                                                f"MACA {int(kalan_dk)} DK KALA RESMI ILK 11 & KADRO KONTROLU: {rapor.get('ana_tercih', '')} | Guven: %{guven}"
+                                            )
+                                            bildirim = (
+                                                f"⏰ MACA {int(kalan_dk)} DK KALA RESMI ILK 11 & KADRO ALARMI\n\n"
+                                                f"🏆 [{l_adi}] {ev_ad} - {dep_ad}\n"
+                                                f"📊 Guven: %{guven} | Deger Puani: {deger_p}/10\n\n"
+                                                f"{ai_yorum}"
+                                            )
+                                            telegram_gonder(bildirim)
+                                            hafiza["alarmlar"][kadro_anahtar] = simdi.strftime("%Y-%m-%d %H:%M")
+                                except Exception:
+                                    pass
+
                         elif state == "in" and t_str == bugun_str:
                             canli_ozet_listesi.append(f"• [{l_adi}] {ev_ad} {ev_s}-{dep_s} {dep_ad} ({detay_sure})")
                             ev_recs = ev_t.get("records", list())
@@ -521,6 +556,26 @@ def otomatik_radar_ve_karne():
                             gol_oldu = bool(onceki_skor and onceki_skor != yeni_skor and (ev_s + dep_s) > 0)
                             hafiza["gol_skorlari"][mac_id] = yeni_skor
 
+                            sure_alt = detay_sure.lower()
+                            bask_4q_anahtar = f"4q_{mac_id}"
+                            if s_tur == "Basketbol" and any(k in sure_alt for k in ("4th", "q4", "end of 3rd", "4p")) and bask_4q_anahtar not in hafiza["alarmlar"]:
+                                toplam_sayi = ev_s + dep_s
+                                fark_sayi = abs(ev_s - dep_s)
+                                if toplam_sayi >= 135 and fark_sayi <= 16:
+                                    yon = "CANLI TOPLAM SAYI UST (Yuksek Tempo & Yakin Skor)" if toplam_sayi >= 165 else "CANLI TOPLAM SAYI ALT (Dusuk Tempo & Savunma)"
+                                    ai_bask = beyin.ai_karar_ve_onay(
+                                        s_tur, l_adi, ev_ad, dep_ad,
+                                        f"4. CEYREK BAREM AVCISI: Skor {ev_s}-{dep_s} (Toplam: {toplam_sayi}, Fark: {fark_sayi}) | Oneri: {yon}"
+                                    )
+                                    bildirim_bask = (
+                                        f"🏀 4. CEYREK CANLI UST/ALT BAREM FIRSATI\n\n"
+                                        f"🏆 [{l_adi}] {ev_ad} {ev_s}-{dep_s} {dep_ad} ({detay_sure})\n"
+                                        f"⚡ Anlik Toplam: {toplam_sayi} Sayi | Skor Farki: {fark_sayi}\n\n"
+                                        f"{ai_bask}"
+                                    )
+                                    telegram_gonder(bildirim_bask)
+                                    hafiza["alarmlar"][bask_4q_anahtar] = simdi.strftime("%Y-%m-%d %H:%M")
+
                             alarm_anahtar = f"{mac_id}_{rapor.get('ana_tercih', '')}"
                             if guven >= 80 and deger_p >= 7.5 and not tuzak_var and alarm_anahtar not in hafiza["alarmlar"]:
                                 ai_yorum = beyin.ai_karar_ve_onay(
@@ -538,7 +593,6 @@ def otomatik_radar_ve_karne():
                                 hafiza["alarmlar"][alarm_anahtar] = simdi.strftime("%Y-%m-%d %H:%M")
                 except Exception:
                     continue
-
     if os.path.exists("son_bulten.json") and biten_skorlar:
         try:
             with open("son_bulten.json", "r", encoding="utf-8") as f:
