@@ -95,7 +95,7 @@ def _gercek_mac_verisi_cek(spor_turu, lig_yolu, mac_id):
     except Exception:
         pass
     return veri
-    def canli_saha_goster(spor_turu, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor="0", dep_skor="0", sure=""):
+def canli_saha_goster(spor_turu, lig_yolu, mac_id, ev_ad, dep_ad, ev_skor="0", dep_skor="0", sure=""):
     try:
         veri = _gercek_mac_verisi_cek(spor_turu, lig_yolu, mac_id)
         olaylar = veri["olaylar"]
