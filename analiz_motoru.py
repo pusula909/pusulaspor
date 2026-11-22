@@ -19,6 +19,7 @@ class PusulaAnalizBeyni:
     def _ai_sor(self, prompt, max_tokens=450):
         g_key = str(self.gemini_key or "").strip()
         q_key = str(self.groq_key or "").strip()
+       son_hata = "Bilinmiyor"
         if g_key:
             g_host = "://googleapis.com"
             for m in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"):
@@ -32,8 +33,9 @@ class PusulaAnalizBeyni:
                             txt = parcalar.pop(0).get("text", "").strip()
                             if txt:
                                 return txt
-                except Exception:
-                    continue
+                    son_hata = str(r.get("error", {}).get("message", r))[:140]
+                except Exception as e:
+                    son_hata = str(e)[:140]
         if q_key:
             q_host = "://groq.com"
             q_url = f"https://{q_host}/openai/v1/chat/completions"
@@ -50,9 +52,10 @@ class PusulaAnalizBeyni:
                         txt = secenekler.pop(0).get("message", {}).get("content", "").strip()
                         if txt:
                             return txt
-                except Exception:
-                    continue
-        return ""
+                    son_hata = str(r.get("error", {}).get("message", r))[:140]
+                except Exception as e:
+                    son_hata = str(e)[:140]
+        return f"⚠️ AI Yanit Detayi: {son_hata}"
 
     def _evrim_hafizasi_oku(self):
         if os.path.exists(self.evrim_dosya):
