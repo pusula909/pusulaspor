@@ -1479,6 +1479,8 @@ if "maclar" in locals() and maclar:
             st.dataframe(pd.DataFrame(suzulen_liste), use_container_width=True, hide_index=True)
         else:
             st.info("Bu lig/tarih bulteni icin bahis sirketlerinin aktif acik baremleri bekleniyor (mac baslangicina yakin otomatik dolar).")
+            from oran_motoru import oran_durum_test
+            st.caption(oran_durum_test())
     except Exception as _oran_err:
         st.warning(f"Oran suzgeci gecici olarak beklemede: {_oran_err}")
 
