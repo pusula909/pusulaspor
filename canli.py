@@ -1406,7 +1406,7 @@ if "maclar" in locals() and maclar:
             _dep_s = int(_m.get("DepSkorInt", 0) or 0)
             _top_skor = _ev_s + _dep_s
 
-            _o = mac_oran_bul(_lig, _ev, _dep)
+            _o = mac_oran_bul(_lig, _ev, _dep, "", _ev_s, _dep_s, _state, _durum)
             if not _o:
                 continue
 
