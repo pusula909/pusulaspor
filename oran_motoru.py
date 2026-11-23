@@ -120,7 +120,7 @@ def gercek_oranlari_getir(lig_adi):
                     for k, v in sorted(baremler.items())
                     if v["ust"] > 0 or v["alt"] > 0
                 ]
-                ana_b = sirali_baremler[0] if sirali_baremler else {"barem": 0.0, "ust": 0.0, "alt": 0.0}
+                ana_b = next(iter(sirali_baremler), {"barem": 0.0, "ust": 0.0, "alt": 0.0})
 
                 if ms1 > 0 or ms2 > 0 or sirali_baremler:
                     mac_sozluk[anahtar] = {
