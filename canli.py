@@ -1265,7 +1265,7 @@ else:
                                 b_kisim = f" | Barem: {o_b['barem']}" if o_b.get("barem", 0) > 0 else ""
                                 oran_yazi = f"{o_b['ms1']}{x_kisim} / {o_b['ms2']}{b_kisim}"
                 except Exception:
-                pass
+                    pass
                 if state == "pre":
                             deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
                             if not deger_rapor["tuzak_notu"]:
