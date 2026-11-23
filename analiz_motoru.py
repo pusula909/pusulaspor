@@ -357,18 +357,30 @@ class PusulaAnalizBeyni:
         karne_dersi = self._karne_oz_ogrenme_ozeti(lig_adi)
         web_istihbarat = self.canli_web_istihbarati(ev_ad, dep_ad, spor_turu)
 
+        oran_metni = "Bu mac icin canli piyasa orani cekilemedi."
+        try:
+            from oran_motoru import mac_oran_bul
+            o_veri = mac_oran_bul(lig_adi, ev_ad, dep_ad)
+            if o_veri:
+                msx_yazi = f" | MS X: {o_veri['msx']}" if o_veri.get("msx", 0) > 0 else ""
+                barem_yazi = f" | Barem {o_veri['barem']} (Ust: {o_veri['ust']} / Alt: {o_veri['alt']})" if o_veri.get("barem", 0) > 0 else ""
+                oran_metni = f"GERCEK BAHIS SIRKETI ORANLARI -> MS 1: {o_veri['ms1']}{msx_yazi} | MS 2: {o_veri['ms2']}{barem_yazi}"
+        except Exception:
+            pass
+
         prompt = (
             f"Sen v{hafiza.get('versiyon', 1)}.0 {spor_turu} Bas Analistisin.\n"
             f"Mac: [{lig_adi}] {ev_ad} vs {dep_ad}\n"
+            f"{oran_metni}\n"
             f"Ozet: {analiz_ozeti}\n"
             f"Saha: {saha_verisi}\n"
             f"Karne Dersi: {karne_dersi}\n"
             f"Resmi Ilk 11, Yedekler, Sakatlik, Hakem & Hava Istihbarati:\n{web_istihbarat}\n"
             f"Kurallar:\n{kural_metni}\n"
-            "Yukaridaki resmi ilk 11/ilk 5, yedek kalan yildiz, sakatlik ve karne derslerini carpistirarak "
-            "TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
-            "🎯 ANA KARAR: (En degerli tek bahis secenegi)\n"
-            "🕵️ İSTİHBARAT & KANIT: (Ilk 11/ilk 5, yedek yildiz veya sakatlik kaniti - 1-2 cumle)\n"
+            "Yukaridaki GERCEK BAHIS ORANLARINI (oranin ima ettigi olasilik ile kendi hesapladigin gercek olasiligi karsilastirarak 'Value / Degerli Oran' analizi yap), "
+            "resmi ilk 11/ilk 5, yedek kalan yildiz, sakatlik ve karne derslerini carpistirarak TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
+            "🎯 ANA KARAR: (Gercek bahis oraniyla birlikte en degerli tek bahis secenegi)\n"
+            "🕵️ İSTİHBARAT & ORAN DEĞERİ: (Gercek bahis orani analizi + ilk 11/yedek yildiz/sakatlik kaniti - 1-2 cumle)\n"
             "⚠️ KRİTİK RİSK: (En somut tehlike)"
         )
         return self._ai_sor(prompt, max_tokens=450)
