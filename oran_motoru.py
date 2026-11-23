@@ -4,7 +4,7 @@ import time
 import requests
 
 CACHE_DOSYA = "gercek_oranlar_cache.json"
-CACHE_SURE_SN = 7200
+CACHE_SURE_SN = 3600
 
 LIG_ODDS_MAP = {
     "NBA": "basketball_nba",
@@ -63,20 +63,26 @@ def gercek_oranlari_getir(lig_adi):
         params = {
             "apiKey": api_key,
             "regions": "eu,us",
-            "markets": "h2h,totals",
+            "markets": "h2h,totals,alternate_totals",
             "oddsFormat": "decimal",
         }
-        r = requests.get(u, params=params, timeout=8)
+        r = requests.get(u, params=params, timeout=10)
+        if r.status_code != 200:
+            params["markets"] = "h2h,totals"
+            r = requests.get(u, params=params, timeout=10)
+
         if r.status_code == 200:
             for ev in r.json():
                 ev_ad = ev.get("home_team", "")
                 dep_ad = ev.get("away_team", "")
                 anahtar = f"{_isim_norm(ev_ad)}_{_isim_norm(dep_ad)}"
                 ms1, msx, ms2 = 0.0, 0.0, 0.0
-                barem, ust_oran, alt_oran = 0.0, 0.0, 0.0
+                baremler = {}
+
                 for bk in ev.get("bookmakers", list()):
                     for m in bk.get("markets", list()):
-                        if m.get("key") == "h2h" and ms1 == 0.0:
+                        mkey = m.get("key", "")
+                        if mkey == "h2h" and ms1 == 0.0:
                             for out in m.get("outcomes", list()):
                                 nm = out.get("name", "")
                                 pr = float(out.get("price", 0) or 0)
@@ -86,29 +92,37 @@ def gercek_oranlari_getir(lig_adi):
                                     ms2 = pr
                                 elif nm.lower() == "draw":
                                     msx = pr
-                        elif m.get("key") == "totals" and barem == 0.0:
+                        elif mkey in ("totals", "alternate_totals"):
                             for out in m.get("outcomes", list()):
                                 nm = out.get("name", "").lower()
                                 pr = float(out.get("price", 0) or 0)
                                 pt = float(out.get("point", 0) or 0)
-                                if pt > 0:
-                                    barem = pt
-                                if nm == "over":
-                                    ust_oran = pr
-                                elif nm == "under":
-                                    alt_oran = pr
-                    if ms1 > 0 and barem > 0:
-                        break
-                if ms1 > 0 or ms2 > 0:
+                                if pt > 0 and pr > 0:
+                                    if pt not in baremler:
+                                        baremler[pt] = {"ust": 0.0, "alt": 0.0}
+                                    if nm == "over" and baremler[pt]["ust"] == 0.0:
+                                        baremler[pt]["ust"] = pr
+                                    elif nm == "under" and baremler[pt]["alt"] == 0.0:
+                                        baremler[pt]["alt"] = pr
+
+                sirali_baremler = [
+                    {"barem": k, "ust": v["ust"], "alt": v["alt"]}
+                    for k, v in sorted(baremler.items())
+                    if v["ust"] > 0 or v["alt"] > 0
+                ]
+                ana_b = sirali_baremler[0] if sirali_baremler else {"barem": 0.0, "ust": 0.0, "alt": 0.0}
+
+                if ms1 > 0 or ms2 > 0 or sirali_baremler:
                     mac_sozluk[anahtar] = {
                         "ev": ev_ad,
                         "dep": dep_ad,
                         "ms1": ms1,
                         "msx": msx,
                         "ms2": ms2,
-                        "barem": barem,
-                        "ust": ust_oran,
-                        "alt": alt_oran,
+                        "barem": ana_b["barem"],
+                        "ust": ana_b["ust"],
+                        "alt": ana_b["alt"],
+                        "tum_baremler": sirali_baremler,
                     }
             cache[sport_key] = {"zaman": simdi, "maclar": mac_sozluk}
             with open(CACHE_DOSYA, "w", encoding="utf-8") as f:
