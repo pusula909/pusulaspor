@@ -1266,10 +1266,7 @@ else:
                                 oran_yazi = f"{o_b['ms1']}{x_kisim} / {o_b['ms2']}{b_kisim}"
                 except Exception:
                     pass
-                if state == "pre":
-                            deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
-                            if not deger_rapor["tuzak_notu"]:
-                                banka_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "lig": aktif_lig_ad, "ev": ev_ad, "dep": dep_ad, "ozet": f"{deger_rapor['ana_tercih']} | {deger_rapor['barem_tercih']} | Oran: {oran_yazi} | Deger: {deger_rapor['deger_puani']}/10", "guven": f"%{deger_rapor['guven']}", "guven_int": deger_rapor["guven"]})
+              
                     
                 maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": en_guclu, "Durum": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Piyasa Oranlari": oran_yazi, "Deplasman": dep_ad, "IY / Periyot": iy_ceyrek_str, "Hizli AI Ozet": ozet_tahmin})
             except Exception:
