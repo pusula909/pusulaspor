@@ -1435,8 +1435,9 @@ if "maclar" in locals() and maclar:
             _ana_secim = "-"
             _gerekce = ""
             if _uygun_baremler:
-                _b1 = _uygun_baremler
-                _b2 = _uygun_baremler[1] if len(_uygun_baremler) > 1 else None
+                _it_b = iter(_uygun_baremler)
+                _b1 = next(_it_b, {})
+                _b2 = next(_it_b, None)
                 _u1 = _b1.get("ust", 0)
                 _a1 = _b1.get("alt", 0)
                 if _state == "in" and _top_skor > 0:
