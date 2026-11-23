@@ -157,3 +157,14 @@ def mac_oran_bul(lig_adi, ev_ad, dep_ad):
         if (k1[:4] and k1[:4] in anahtar) and (k2[:4] and k2[:4] in anahtar):
             return veri
     return None
+def oran_durum_test():
+    api_key = _api_anahtari_al()
+    try:
+        r = requests.get(
+            "https://the-odds-api.com",
+            params={"apiKey": api_key, "regions": "eu,us", "markets": "h2h,totals", "oddsFormat": "decimal"},
+            timeout=8,
+        )
+        return f"HTTP {r.status_code} | Kalan Kota: {r.headers.get('x-requests-remaining', '?')} | Veri: {r.text[:250]}"
+    except Exception as e:
+        return f"Baglanti Hatasi: {e}"
