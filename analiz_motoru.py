@@ -225,7 +225,7 @@ class PusulaAnalizBeyni:
         elif kotu_hava and spor_turu == "Futbol":
             tuzak_notu = "🌧️ HAVA & ZEMIN UYARISI: Kotu hava kosullari nedeniyle UST yerine ALT odaklanilmali."
 
-        toplam_skor = ev_skor + dep_skor
+       toplam_skor = ev_skor + dep_skor
         if spor_turu == "Futbol":
             if state == "in":
                 barem_tercih = f"Canli {toplam_skor + 0.5} UST"
@@ -238,17 +238,47 @@ class PusulaAnalizBeyni:
                 barem_guven = 74
         else:
             ref_barem = float(piyasa_barem) if piyasa_barem and float(piyasa_barem) > 0 else (224.0 if "NBA" in lig_adi else 162.0)
-            if state == "in" and any(k in detay_sure for k in ("Half", "HT", "IY")):
-                projeksiyon = toplam_skor * 2
-                if projeksiyon >= ref_barem + 10:
-                    barem_tercih = f"Canli UST Firsati (Projeksiyon: {projeksiyon} / Barem: {ref_barem})"
-                    barem_guven = 81
-                elif projeksiyon <= ref_barem - 12:
-                    barem_tercih = f"Canli ALT Firsati (Projeksiyon: {projeksiyon} / Barem: {ref_barem})"
-                    barem_guven = 79
+            if state == "in" and toplam_skor > 0:
+                top_dk = 48.0 if "NBA" in lig_adi else 40.0
+                per_dk = 12.0 if "NBA" in lig_adi else 10.0
+                s_alt = str(detay_sure).lower()
+                oynanan_dk = top_dk * 0.5
+                try:
+                    kalan_p_dk = 0.0
+                    if ":" in s_alt:
+                        parca = s_alt.split("-")[0].strip() if "-" in s_alt else s_alt.split(" ")[0].strip()
+                        if ":" in parca:
+                            dak, san = parca.split(":")[:2]
+                            kalan_p_dk = float(dak) + (float(san) / 60.0)
+                    if any(k in s_alt for k in ("half", "ht", "iy")):
+                        oynanan_dk = per_dk * 2
+                    elif any(k in s_alt for k in ("end of 1st", "1. ceyrek sonu")):
+                        oynanan_dk = per_dk
+                    elif any(k in s_alt for k in ("end of 3rd", "3. ceyrek sonu")):
+                        oynanan_dk = per_dk * 3
+                    elif any(k in s_alt for k in ("1st", "1p", "q1")):
+                        oynanan_dk = max(2.0, per_dk - kalan_p_dk)
+                    elif any(k in s_alt for k in ("2nd", "2p", "q2")):
+                        oynanan_dk = (per_dk * 2) - kalan_p_dk
+                    elif any(k in s_alt for k in ("3rd", "3p", "q3")):
+                        oynanan_dk = (per_dk * 3) - kalan_p_dk
+                    elif any(k in s_alt for k in ("4th", "4p", "q4", "ot")):
+                        oynanan_dk = max(per_dk * 3.1, (per_dk * 4) - kalan_p_dk)
+                except Exception:
+                    oynanan_dk = top_dk * 0.5
+
+                projeksiyon = round((toplam_skor / max(4.0, oynanan_dk)) * top_dk, 1)
+                canli_hat = round(projeksiyon) - 0.5
+                if projeksiyon >= ref_barem + 8:
+                    barem_tercih = f"Canli {canli_hat} UST (Tempo Projeksiyonu: {projeksiyon})"
+                    barem_guven = min(86, int(72 + (projeksiyon - ref_barem) * 0.6))
+                elif projeksiyon <= ref_barem - 8:
+                    barem_tercih = f"Canli {canli_hat} ALT (Tempo Projeksiyonu: {projeksiyon})"
+                    barem_guven = min(85, int(72 + (ref_barem - projeksiyon) * 0.6))
                 else:
-                    barem_tercih = f"Piyasa Dengede (Barem: {ref_barem})"
-                    barem_guven = 65
+                    yon_txt = "UST" if projeksiyon >= canli_hat else "ALT"
+                    barem_tercih = f"Canli {canli_hat} {yon_txt} (Projeksiyon: {projeksiyon})"
+                    barem_guven = 68
             else:
                 barem_tercih = f"Piyasa Baremi: {ref_barem}"
                 barem_guven = 70
