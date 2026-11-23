@@ -172,8 +172,11 @@ def mac_oran_bul(lig_adi, ev_ad, dep_ad, lig_yolu=""):
 
 
 def oran_durum_test():
-    veriler = gercek_oranlari_getir("NBA", "basketball/nba") or gercek_oranlari_getir("Ingiltere Premier Lig", "soccer/eng.1")
-    if veriler:
-        ilk = next(iter(veriler.values()))
-        return f"AKTIF ({len(veriler)} mac cekildi) | Ornek: {ilk['ev']} vs {ilk['dep']} -> MS1:{ilk['ms1']} MS2:{ilk['ms2']} Barem:{ilk['barem']}"
-    return "Su an acik mac orani bulunamadi."
+    try:
+        r = requests.get("https://espn.com", headers=TARAYICI_HEADERS, timeout=8)
+        ev = next(iter(r.json().get("events", list())), {})
+        comp = next(iter(ev.get("competitions", list())), {})
+        od = next(iter(comp.get("odds", list())), {})
+        return f"NBA Status:{r.status_code} | Events:{len(r.json().get('events', list()))} | Odds:{str(od)[:320]}"
+    except Exception as e:
+        return f"Hata: {e}"
