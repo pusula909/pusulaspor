@@ -1255,9 +1255,10 @@ else:
                         st.toast(f"SKOR DEGISTI! {ev_ad} {skor_gosterim} {dep_ad}")
                     st.session_state.eski_skorlar[mac_id] = skor_gosterim
                 iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
-                
-               oran_yazi = "-"
-                        try:
+                ozet_tahmin, en_guclu, _ = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor, aktif_lig_ad, 0, 0, state, ev_s_int, dep_s_int)
+                        
+                oran_yazi = "-"
+                try:
                             from oran_motoru import mac_oran_bul
                             o_b = mac_oran_bul(aktif_lig_ad, ev_ad, dep_ad)
                             if o_b:
