@@ -39,7 +39,7 @@ class PusulaAnalizBeyni:
         if q_key:
             q_host = ".".join(["api", "groq", "com"])
             q_url = f"https://{q_host}/openai/v1/chat/completions"
-            for m in ("llama-3.3-70b-versatile", "qwen/qwen3-32b"):
+            for m in ("llama-3.3-70b-versatile", "llama-3.1-8b-instant"):
                 try:
                     r = requests.post(
                         q_url,
@@ -350,7 +350,7 @@ class PusulaAnalizBeyni:
             pass
         return "\n".join(bulgular[:7]) if bulgular else "Canli web aramasinda ek son dakika kadro/ilk 11 haberi bulunamadi."
 
-    def ai_karar_ve_onay(self, spor_turu, lig_adi, ev_ad, dep_ad, analiz_ozeti, saha_verisi=""):
+   def ai_karar_ve_onay(self, spor_turu, lig_adi, ev_ad, dep_ad, analiz_ozeti, saha_verisi=""):
         hafiza = self._evrim_hafizasi_oku()
         ogrenilenler = hafiza.get("ogrenilen_kurallar", list())[-5:]
         kural_metni = "\n".join(ogrenilenler) if ogrenilenler else "Henuz ek ozel kural yok."
@@ -363,8 +363,9 @@ class PusulaAnalizBeyni:
             o_veri = mac_oran_bul(lig_adi, ev_ad, dep_ad)
             if o_veri:
                 msx_yazi = f" | MS X: {o_veri['msx']}" if o_veri.get("msx", 0) > 0 else ""
-                barem_yazi = f" | Barem {o_veri['barem']} (Ust: {o_veri['ust']} / Alt: {o_veri['alt']})" if o_veri.get("barem", 0) > 0 else ""
-                oran_metni = f"GERCEK BAHIS SIRKETI ORANLARI -> MS 1: {o_veri['ms1']}{msx_yazi} | MS 2: {o_veri['ms2']}{barem_yazi}"
+                barem_yazi = f" | Acilan Barem: {o_veri['barem']} (Ust: {o_veri['ust']} / Alt: {o_veri['alt']})" if o_veri.get("barem", 0) > 0 else ""
+                hdp_yazi = f" | Handikap: {o_veri['handikap']}" if o_veri.get("handikap", 0) != 0 else ""
+                oran_metni = f"GERCEK BAHIS SIRKETI ORANLARI -> MS 1: {o_veri['ms1']}{msx_yazi} | MS 2: {o_veri['ms2']}{barem_yazi}{hdp_yazi}"
         except Exception:
             pass
 
@@ -372,15 +373,16 @@ class PusulaAnalizBeyni:
             f"Sen v{hafiza.get('versiyon', 1)}.0 {spor_turu} Bas Analistisin.\n"
             f"Mac: [{lig_adi}] {ev_ad} vs {dep_ad}\n"
             f"{oran_metni}\n"
-            f"Ozet: {analiz_ozeti}\n"
-            f"Saha: {saha_verisi}\n"
+            f"Mac Durumu & Ozet: {analiz_ozeti}\n"
+            f"Saha & Skor Verisi: {saha_verisi}\n"
             f"Karne Dersi: {karne_dersi}\n"
             f"Resmi Ilk 11, Yedekler, Sakatlik, Hakem & Hava Istihbarati:\n{web_istihbarat}\n"
             f"Kurallar:\n{kural_metni}\n"
-            "Yukaridaki GERCEK BAHIS ORANLARINI (oranin ima ettigi olasilik ile kendi hesapladigin gercek olasiligi karsilastirarak 'Value / Degerli Oran' analizi yap), "
-            "resmi ilk 11/ilk 5, yedek kalan yildiz, sakatlik ve karne derslerini carpistirarak TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
-            "🎯 ANA KARAR: (Gercek bahis oraniyla birlikte en degerli tek bahis secenegi)\n"
-            "🕵️ İSTİHBARAT & ORAN DEĞERİ: (Gercek bahis orani analizi + ilk 11/yedek yildiz/sakatlik kaniti - 1-2 cumle)\n"
+            "Bahis sirketlerinin hem mac oncesi hem canli olarak actigi yukaridaki GERCEK SECENEKLERI VE ORANLARI (MS 1/X/2, acilan barem, ust/alt oranlari ve handikap) "
+            "macin mevcut skoru, dakikasi, resmi ilk 11/ilk 5, sakatlik ve karne dersleriyle tek tek suzerek "
+            "gelme ihtimali en yuksek ve orani en mantikli TEK TERCIHI belirle. TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
+            "🎯 ANA KARAR: (Acilan secenekler icinden suzulen en guclu tek bahis secenegi ve gercek orani)\n"
+            "🕵️ İSTİHBARAT & ORAN SÜZME ANALİZİ: (Acilan oranlar/baremler neden bu secenege elendi + ilk 11/sakatlik/skor kaniti - 1-2 cumle)\n"
             "⚠️ KRİTİK RİSK: (En somut tehlike)"
         )
         return self._ai_sor(prompt, max_tokens=450)
