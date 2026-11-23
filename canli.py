@@ -1390,8 +1390,7 @@ else:
     else:
         st.warning("Bu tarihte mac bulunamadi. Sol menuden tarihi degistirin.")
 
-    except Exception as _oran_err:
-        st.warning(f"Oran suzgeci gecici olarak beklemede: {_oran_err}")
+    
 
 if otomatik_yenile:
     time.sleep(30)
