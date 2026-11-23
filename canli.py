@@ -1257,6 +1257,7 @@ else:
                 iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
                 
                 ozet_tahmin, en_guclu, _ = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor, aktif_lig_ad, 0, 0, state, ev_s_int, dep_s_int)
+                oran_yazi = "-"
                 try:
                             from oran_motoru import mac_oran_bul
                             o_b = mac_oran_bul(aktif_lig_ad, ev_ad, dep_ad)
@@ -1269,8 +1270,8 @@ else:
               
                     
                 maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": en_guclu, "Durum": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Piyasa Oranlari": oran_yazi, "Deplasman": dep_ad, "IY / Periyot": iy_ceyrek_str, "Hizli AI Ozet": ozet_tahmin})
-            except Exception as e:
-                     st.error(str(e))
+           except Exception:
+                     continue
                 
 
     if maclar:
