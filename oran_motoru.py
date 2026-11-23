@@ -104,7 +104,7 @@ def _odds_ayristir(od):
             "tum_baremler": tum_b,
         }
     return None
-    @st.cache_data(ttl=180, show_spinner=False)
+@st.cache_data(ttl=180, show_spinner=False)
 def gercek_oranlari_getir(lig_adi, lig_yolu=""):
     mac_sozluk = {}
     yol = _yol_coz(lig_adi, lig_yolu)
