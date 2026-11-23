@@ -4,7 +4,7 @@ import time
 import requests
 
 CACHE_DOSYA = "gercek_oranlar_cache.json"
-CACHE_SURE_SN = 300
+CACHE_SURE_SN = 180
 
 LIG_ESPN_YOLLARI = {
     "NBA": "basketball/nba",
@@ -57,14 +57,14 @@ def _yol_coz(lig_adi, lig_yolu=""):
 
 def _odds_detay_cek(yol, event_id):
     try:
-        u = f"https://espn.com{yol.split('/')[0]}/leagues/{yol.split('/')[1]}/events/{event_id}/competitions/{event_id}/odds"
+        sp_ad, _, lg_ad = yol.partition("/")
+        u = f"https://espn.com{sp_ad}/leagues/{lg_ad}/events/{event_id}/competitions/{event_id}/odds"
         r = requests.get(u, timeout=6)
         if r.status_code != 200:
             return None
-        items = r.json().get("items", [])
-        if not items:
+        od = next(iter(r.json().get("items", list())), None)
+        if not od:
             return None
-        od = items
         ms1 = _us_to_decimal(od.get("homeTeamOdds", {}).get("moneyLine", 0))
         ms2 = _us_to_decimal(od.get("awayTeamOdds", {}).get("moneyLine", 0))
         msx = _us_to_decimal(od.get("drawOdds", {}).get("moneyLine", 0))
@@ -72,7 +72,7 @@ def _odds_detay_cek(yol, event_id):
         ust = _us_to_decimal(od.get("overOdds", 0))
         alt = _us_to_decimal(od.get("underOdds", 0))
         handikap = float(od.get("spread", 0) or 0)
-        tum_baremler = []
+        tum_baremler = list()
         if barem > 0:
             tum_baremler.append({"barem": barem, "ust": ust or 1.85, "alt": alt or 1.85})
         if ms1 > 0 or ms2 > 0 or barem > 0:
@@ -114,15 +114,13 @@ def gercek_oranlari_getir(lig_adi, lig_yolu=""):
         u = f"https://espn.com{yol}/scoreboard"
         r = requests.get(u, timeout=8)
         if r.status_code == 200:
-            for ev in r.json().get("events", []):
+            for ev in r.json().get("events", list()):
                 ev_id = str(ev.get("id", ""))
-                comps = ev.get("competitions", [])
-                if not comps:
+                comp = next(iter(ev.get("competitions", list())), None)
+                if not comp:
                     continue
-                comp = comps
-                takimlar = comp.get("competitors", [])
                 ev_ad, dep_ad = "", ""
-                for t in takimlar:
+                for t in comp.get("competitors", list()):
                     if t.get("homeAway") == "home":
                         ev_ad = t.get("team", {}).get("displayName", "")
                     elif t.get("homeAway") == "away":
@@ -130,9 +128,8 @@ def gercek_oranlari_getir(lig_adi, lig_yolu=""):
 
                 anahtar = f"{_isim_norm(ev_ad)}_{_isim_norm(dep_ad)}"
                 veri = None
-                odds_list = comp.get("odds", [])
-                if odds_list:
-                    od = odds_list
+                od = next(iter(comp.get("odds", list())), None)
+                if od:
                     ms1 = _us_to_decimal(od.get("homeTeamOdds", {}).get("moneyLine", 0))
                     ms2 = _us_to_decimal(od.get("awayTeamOdds", {}).get("moneyLine", 0))
                     msx = _us_to_decimal(od.get("drawOdds", {}).get("moneyLine", 0))
@@ -141,7 +138,7 @@ def gercek_oranlari_getir(lig_adi, lig_yolu=""):
                     alt = _us_to_decimal(od.get("underOdds", 0))
                     handikap = float(od.get("spread", 0) or 0)
                     if ms1 > 0 or ms2 > 0 or barem > 0:
-                        tum_b = [{"barem": barem, "ust": ust or 1.85, "alt": alt or 1.85}] if barem > 0 else []
+                        tum_b = [{"barem": barem, "ust": ust or 1.85, "alt": alt or 1.85}] if barem > 0 else list()
                         veri = {
                             "ms1": ms1,
                             "msx": msx,
@@ -187,8 +184,8 @@ def mac_oran_bul(lig_adi, ev_ad, dep_ad, lig_yolu=""):
 
 
 def oran_durum_test():
-    veriler = gercek_oranlari_getir("NBA", "basketball/nba")
+    veriler = gercek_oranlari_getir("Ingiltere Premier Lig", "soccer/eng.1") or gercek_oranlari_getir("NBA", "basketball/nba")
     if veriler:
         ilk = next(iter(veriler.values()))
         return f"AKTIF ({len(veriler)} mac cekildi) | Ornek: {ilk['ev']} vs {ilk['dep']} -> MS1:{ilk['ms1']} MS2:{ilk['ms2']} Barem:{ilk['barem']}"
-    return "ESPN uzerinden su an acik oran bulunamadi."
+    return "Su an acik mac orani bulunamadi."
