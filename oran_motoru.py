@@ -6,6 +6,12 @@ import requests
 CACHE_DOSYA = "gercek_oranlar_cache.json"
 CACHE_SURE_SN = 180
 
+TARAYICI_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
 LIG_ESPN_YOLLARI = {
     "NBA": "basketball/nba",
     "EuroLeague": "basketball/euroleague",
@@ -55,40 +61,42 @@ def _yol_coz(lig_adi, lig_yolu=""):
     return ""
 
 
+def _odds_ayristir(od):
+    if not isinstance(od, dict):
+        return None
+    ms1 = _us_to_decimal(od.get("homeTeamOdds", {}).get("moneyLine", 0))
+    ms2 = _us_to_decimal(od.get("awayTeamOdds", {}).get("moneyLine", 0))
+    msx = _us_to_decimal(od.get("drawOdds", {}).get("moneyLine", 0))
+    barem = float(od.get("overUnder", 0) or 0)
+    ust = _us_to_decimal(od.get("overOdds", 0))
+    alt = _us_to_decimal(od.get("underOdds", 0))
+    handikap = float(od.get("spread", 0) or 0)
+    if ms1 > 0 or ms2 > 0 or barem > 0:
+        tum_b = [{"barem": barem, "ust": ust or 1.85, "alt": alt or 1.85}] if barem > 0 else list()
+        return {
+            "ms1": ms1,
+            "msx": msx,
+            "ms2": ms2,
+            "barem": barem,
+            "ust": ust or (1.85 if barem > 0 else 0.0),
+            "alt": alt or (1.85 if barem > 0 else 0.0),
+            "handikap": handikap,
+            "tum_baremler": tum_b,
+        }
+    return None
+
+
 def _odds_detay_cek(yol, event_id):
     try:
         sp_ad, _, lg_ad = yol.partition("/")
         u = f"https://espn.com{sp_ad}/leagues/{lg_ad}/events/{event_id}/competitions/{event_id}/odds"
-        r = requests.get(u, timeout=6)
+        r = requests.get(u, headers=TARAYICI_HEADERS, timeout=6)
         if r.status_code != 200:
             return None
         od = next(iter(r.json().get("items", list())), None)
-        if not od:
-            return None
-        ms1 = _us_to_decimal(od.get("homeTeamOdds", {}).get("moneyLine", 0))
-        ms2 = _us_to_decimal(od.get("awayTeamOdds", {}).get("moneyLine", 0))
-        msx = _us_to_decimal(od.get("drawOdds", {}).get("moneyLine", 0))
-        barem = float(od.get("overUnder", 0) or 0)
-        ust = _us_to_decimal(od.get("overOdds", 0))
-        alt = _us_to_decimal(od.get("underOdds", 0))
-        handikap = float(od.get("spread", 0) or 0)
-        tum_baremler = list()
-        if barem > 0:
-            tum_baremler.append({"barem": barem, "ust": ust or 1.85, "alt": alt or 1.85})
-        if ms1 > 0 or ms2 > 0 or barem > 0:
-            return {
-                "ms1": ms1,
-                "msx": msx,
-                "ms2": ms2,
-                "barem": barem,
-                "ust": ust or (1.85 if barem > 0 else 0.0),
-                "alt": alt or (1.85 if barem > 0 else 0.0),
-                "handikap": handikap,
-                "tum_baremler": tum_baremler,
-            }
+        return _odds_ayristir(od)
     except Exception:
-        pass
-    return None
+        return None
 
 
 def gercek_oranlari_getir(lig_adi, lig_yolu=""):
@@ -112,7 +120,7 @@ def gercek_oranlari_getir(lig_adi, lig_yolu=""):
     mac_sozluk = {}
     try:
         u = f"https://espn.com{yol}/scoreboard"
-        r = requests.get(u, timeout=8)
+        r = requests.get(u, headers=TARAYICI_HEADERS, timeout=8)
         if r.status_code == 200:
             for ev in r.json().get("events", list()):
                 ev_id = str(ev.get("id", ""))
@@ -127,28 +135,8 @@ def gercek_oranlari_getir(lig_adi, lig_yolu=""):
                         dep_ad = t.get("team", {}).get("displayName", "")
 
                 anahtar = f"{_isim_norm(ev_ad)}_{_isim_norm(dep_ad)}"
-                veri = None
                 od = next(iter(comp.get("odds", list())), None)
-                if od:
-                    ms1 = _us_to_decimal(od.get("homeTeamOdds", {}).get("moneyLine", 0))
-                    ms2 = _us_to_decimal(od.get("awayTeamOdds", {}).get("moneyLine", 0))
-                    msx = _us_to_decimal(od.get("drawOdds", {}).get("moneyLine", 0))
-                    barem = float(od.get("overUnder", 0) or 0)
-                    ust = _us_to_decimal(od.get("overOdds", 0))
-                    alt = _us_to_decimal(od.get("underOdds", 0))
-                    handikap = float(od.get("spread", 0) or 0)
-                    if ms1 > 0 or ms2 > 0 or barem > 0:
-                        tum_b = [{"barem": barem, "ust": ust or 1.85, "alt": alt or 1.85}] if barem > 0 else list()
-                        veri = {
-                            "ms1": ms1,
-                            "msx": msx,
-                            "ms2": ms2,
-                            "barem": barem,
-                            "ust": ust or (1.85 if barem > 0 else 0.0),
-                            "alt": alt or (1.85 if barem > 0 else 0.0),
-                            "handikap": handikap,
-                            "tum_baremler": tum_b,
-                        }
+                veri = _odds_ayristir(od)
 
                 if not veri and ev_id:
                     veri = _odds_detay_cek(yol, ev_id)
@@ -184,11 +172,8 @@ def mac_oran_bul(lig_adi, ev_ad, dep_ad, lig_yolu=""):
 
 
 def oran_durum_test():
-    try:
-        r = requests.get("https://espn.com", timeout=8)
-        ev = next(iter(r.json().get("events", list())), {})
-        comp = next(iter(ev.get("competitions", list())), {})
-        od = next(iter(comp.get("odds", list())), {})
-        return f"NBA Ham Odds: {str(od)[:320]}"
-    except Exception as e:
-        return f"Hata: {e}"
+    veriler = gercek_oranlari_getir("NBA", "basketball/nba") or gercek_oranlari_getir("Ingiltere Premier Lig", "soccer/eng.1")
+    if veriler:
+        ilk = next(iter(veriler.values()))
+        return f"AKTIF ({len(veriler)} mac cekildi) | Ornek: {ilk['ev']} vs {ilk['dep']} -> MS1:{ilk['ms1']} MS2:{ilk['ms2']} Barem:{ilk['barem']}"
+    return "Su an acik mac orani bulunamadi."
