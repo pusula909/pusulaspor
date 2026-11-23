@@ -348,7 +348,7 @@ class PusulaAnalizBeyni:
                             bulgular.append(f"- {baslik}: {ozet[:175]}")
         except Exception:
             pass
-    return "\n".join(bulgular[:7]) if bulgular else "Canli web aramasinda ek son dakika kadro/ilk 11 haberi bulunamadi."
+            return "\n".join(bulgular[:7]) if bulgular else "Canli web aramasinda ek son dakika kadro/ilk 11 haberi bulunamadi."
 
     def ai_karar_ve_onay(self, spor_turu, lig_adi, ev_ad, dep_ad, analiz_ozeti, saha_verisi=""):
         hafiza = self._evrim_hafizasi_oku()
