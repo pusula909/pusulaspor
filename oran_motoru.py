@@ -1,9 +1,7 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import requests
 import streamlit as st
-
-RUNDOWN_HOST = "://rapidapi.com"
 
 LIG_SPORT_ID = {
     "NBA": 4,
@@ -27,7 +25,7 @@ def _rapid_key_al():
             k = str(st.secrets.get("RAPIDAPI_KEY", "")).strip()
         except Exception:
             pass
-    return k
+    return k or "3dcc052969msh6de1b2856f30599p144ecajsn0253f8249b50"
 
 
 def _us_to_decimal(us_oran):
@@ -62,75 +60,77 @@ def _sport_id_bul(lig_adi):
 def gercek_oranlari_getir(lig_adi, lig_yolu=""):
     mac_sozluk = {}
     api_key = _rapid_key_al()
-    if not api_key:
-        return mac_sozluk
-
     sport_id = _sport_id_bul(lig_adi)
-    tarih_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    simdi_utc = datetime.now(timezone.utc)
+    tarihler = [
+        (simdi_utc - timedelta(hours=6)).strftime("%Y-%m-%d"),
+        simdi_utc.strftime("%Y-%m-%d"),
+    ]
     headers = {
         "X-RapidAPI-Key": api_key,
-        "X-RapidAPI-Host": RUNDOWN_HOST,
+        "X-RapidAPI-Host": "://rapidapi.com",
     }
 
-    try:
-        u = f"https://{RUNDOWN_HOST}/sports/{sport_id}/events/{tarih_str}"
-        r = requests.get(u, headers=headers, params={"include": "scores,all_periods"}, timeout=9)
-        if r.status_code != 200:
-            return mac_sozluk
-
-        for ev in r.json().get("events", list()):
-            ev_ad, dep_ad = "", ""
-            for t in ev.get("teams_normalized", list()) or ev.get("teams", list()):
-                if t.get("is_home"):
-                    ev_ad = t.get("name", "")
-                elif t.get("is_away"):
-                    dep_ad = t.get("name", "")
-            if not ev_ad or not dep_ad:
+    for tarih_str in dict.fromkeys(tarihler):
+        try:
+            u = f"https://://rapidapi.com/sports/{sport_id}/events/{tarih_str}"
+            r = requests.get(u, headers=headers, params={"include": "scores,all_periods"}, timeout=9)
+            if r.status_code != 200:
                 continue
 
-            anahtar = f"{_isim_norm(ev_ad)}_{_isim_norm(dep_ad)}"
-            lines = ev.get("lines", {}) or {}
-            ms1, msx, ms2, barem, ust, alt, hdp = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-            tum_baremler = list()
+            for ev in r.json().get("events", list()):
+                ev_ad, dep_ad = "", ""
+                for t in ev.get("teams_normalized", list()) or ev.get("teams", list()):
+                    if t.get("is_home"):
+                        ev_ad = t.get("name", "")
+                    elif t.get("is_away"):
+                        dep_ad = t.get("name", "")
+                if not ev_ad or not dep_ad:
+                    continue
 
-            for _bk_id, ln in lines.items():
-                ml = ln.get("moneyline", {}) or {}
-                tot = ln.get("total", {}) or {}
-                spr = ln.get("spread", {}) or {}
+                anahtar = f"{_isim_norm(ev_ad)}_{_isim_norm(dep_ad)}"
+                lines = ev.get("lines", {}) or {}
+                ms1, msx, ms2, barem, ust, alt, hdp = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                tum_baremler = list()
 
-                if ms1 == 0.0:
-                    ms1 = _us_to_decimal(ml.get("moneyline_home", 0))
-                    ms2 = _us_to_decimal(ml.get("moneyline_away", 0))
-                    msx = _us_to_decimal(ml.get("moneyline_draw", 0))
+                for _bk_id, ln in lines.items():
+                    ml = ln.get("moneyline", {}) or {}
+                    tot = ln.get("total", {}) or {}
+                    spr = ln.get("spread", {}) or {}
 
-                pt = float(tot.get("total_over", 0) or 0)
-                uo = _us_to_decimal(tot.get("total_over_money", 0))
-                ao = _us_to_decimal(tot.get("total_under_money", 0))
-                if pt > 0 and (uo > 0 or ao > 0):
-                    if barem == 0.0:
-                        barem, ust, alt = pt, (uo or 1.85), (ao or 1.85)
-                    if not any(b["barem"] == pt for b in tum_baremler):
-                        tum_baremler.append({"barem": pt, "ust": uo or 1.85, "alt": ao or 1.85})
+                    if ms1 == 0.0:
+                        ms1 = _us_to_decimal(ml.get("moneyline_home", 0))
+                        ms2 = _us_to_decimal(ml.get("moneyline_away", 0))
+                        msx = _us_to_decimal(ml.get("moneyline_draw", 0))
 
-                if hdp == 0.0:
-                    hdp = float(spr.get("point_spread_home", 0) or 0)
+                    pt = float(tot.get("total_over", 0) or 0)
+                    uo = _us_to_decimal(tot.get("total_over_money", 0))
+                    ao = _us_to_decimal(tot.get("total_under_money", 0))
+                    if pt > 0 and (uo > 0 or ao > 0):
+                        if barem == 0.0:
+                            barem, ust, alt = pt, (uo or 1.85), (ao or 1.85)
+                        if not any(b["barem"] == pt for b in tum_baremler):
+                            tum_baremler.append({"barem": pt, "ust": uo or 1.85, "alt": ao or 1.85})
 
-            tum_baremler.sort(key=lambda x: x["barem"])
-            if ms1 > 0 or ms2 > 0 or barem > 0:
-                mac_sozluk[anahtar] = {
-                    "ev": ev_ad,
-                    "dep": dep_ad,
-                    "ms1": ms1,
-                    "msx": msx,
-                    "ms2": ms2,
-                    "barem": barem,
-                    "ust": ust,
-                    "alt": alt,
-                    "handikap": hdp,
-                    "tum_baremler": tum_baremler,
-                }
-    except Exception:
-        pass
+                    if hdp == 0.0:
+                        hdp = float(spr.get("point_spread_home", 0) or 0)
+
+                tum_baremler.sort(key=lambda x: x["barem"])
+                if ms1 > 0 or ms2 > 0 or barem > 0:
+                    mac_sozluk[anahtar] = {
+                        "ev": ev_ad,
+                        "dep": dep_ad,
+                        "ms1": ms1,
+                        "msx": msx,
+                        "ms2": ms2,
+                        "barem": barem,
+                        "ust": ust,
+                        "alt": alt,
+                        "handikap": hdp,
+                        "tum_baremler": tum_baremler,
+                    }
+        except Exception:
+            pass
     return mac_sozluk
 
 
@@ -150,10 +150,8 @@ def mac_oran_bul(lig_adi, ev_ad, dep_ad, lig_yolu="", ev_skor=0, dep_skor=0, sta
 
 
 def oran_durum_test():
-    api_key = _rapid_key_al()
-    headers = {"X-RapidAPI-Key": api_key, "X-RapidAPI-Host": RUNDOWN_HOST}
-    try:
-        r = requests.get(f"https://{RUNDOWN_HOST}/sports/4/events/2026-11-22", headers=headers, timeout=8)
-        return f"HTTP {r.status_code} | Veri: {r.text[:260]}"
-    except Exception as e:
-        return f"Hata: {e}"
+    veriler = gercek_oranlari_getir("NBA")
+    if veriler:
+        ilk = next(iter(veriler.values()))
+        return f"THERUNDOWN AKTIF ({len(veriler)} mac) | Ornek: {ilk['ev']} vs {ilk['dep']} -> MS1:{ilk['ms1']} MS2:{ilk['ms2']} Barem:{ilk['barem']}"
+    return "TheRundown uzerinden su an acik mac orani bulunamadi."
