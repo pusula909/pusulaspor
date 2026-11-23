@@ -4,19 +4,27 @@ import time
 import requests
 
 CACHE_DOSYA = "gercek_oranlar_cache.json"
-CACHE_SURE_SN = 3600
+CACHE_SURE_SN = 1800
 
 LIG_ODDS_MAP = {
     "NBA": "basketball_nba",
     "EuroLeague": "basketball_euroleague",
+    "Trendyol Super Lig": "soccer_turkey_super_league",
     "Turkiye Super Lig": "soccer_turkey_super_league",
+    "Super Lig": "soccer_turkey_super_league",
     "Ingiltere Premier Lig": "soccer_epl",
+    "Premier Lig": "soccer_epl",
     "Ispanya La Liga": "soccer_spain_la_liga",
+    "La Liga": "soccer_spain_la_liga",
     "Italya Serie A": "soccer_italy_serie_a",
+    "Serie A": "soccer_italy_serie_a",
     "Almanya Bundesliga": "soccer_germany_bundesliga",
+    "Bundesliga": "soccer_germany_bundesliga",
     "Fransa Ligue 1": "soccer_france_ligue_one",
+    "Ligue 1": "soccer_france_ligue_one",
     "Sampiyonlar Ligi": "soccer_uefa_champs_league",
     "Avrupa Ligi": "soccer_uefa_europa_league",
+    "Isvec Allsvenskan": "soccer_sweden_allsvenskan",
 }
 
 
@@ -32,14 +40,20 @@ def _api_anahtari_al():
 
 
 def _isim_norm(ad):
-    s = str(ad).lower().strip()
-    for sil in ("fc", "sk", "jk", "fk", "as", "ac", "cf", "sc", "club", "united", "city"):
+    tr_map = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
+    s = str(ad).translate(tr_map).lower().strip()
+    for sil in ("fc", "sk", "jk", "fk", "as", "ac", "cf", "sc", "if", "ff", "ik", "bk", "club", "united", "city", "istanbul", "calcio", "ud", "cd", "rcd"):
         s = s.replace(f" {sil}", "").replace(f"{sil} ", "")
     return "".join(c for c in s if c.isalnum())
 
 
 def gercek_oranlari_getir(lig_adi):
     sport_key = LIG_ODDS_MAP.get(lig_adi, "")
+    if not sport_key:
+        for k, v in LIG_ODDS_MAP.items():
+            if k.lower() in str(lig_adi).lower() or str(lig_adi).lower() in k.lower():
+                sport_key = v
+                break
     if not sport_key:
         return {}
 
@@ -53,7 +67,7 @@ def gercek_oranlari_getir(lig_adi):
 
     simdi = time.time()
     lig_kayit = cache.get(sport_key, {})
-    if lig_kayit and (simdi - lig_kayit.get("zaman", 0)) < CACHE_SURE_SN:
+    if lig_kayit and lig_kayit.get("maclar") and (simdi - lig_kayit.get("zaman", 0)) < CACHE_SURE_SN:
         return lig_kayit.get("maclar", {})
 
     api_key = _api_anahtari_al()
@@ -62,15 +76,11 @@ def gercek_oranlari_getir(lig_adi):
         u = f"https://the-odds-api.com{sport_key}/odds"
         params = {
             "apiKey": api_key,
-            "regions": "eu,us",
-            "markets": "h2h,totals,alternate_totals",
+            "regions": "eu,uk,us",
+            "markets": "h2h,totals",
             "oddsFormat": "decimal",
         }
         r = requests.get(u, params=params, timeout=10)
-        if r.status_code != 200:
-            params["markets"] = "h2h,totals"
-            r = requests.get(u, params=params, timeout=10)
-
         if r.status_code == 200:
             for ev in r.json():
                 ev_ad = ev.get("home_team", "")
@@ -92,7 +102,7 @@ def gercek_oranlari_getir(lig_adi):
                                     ms2 = pr
                                 elif nm.lower() == "draw":
                                     msx = pr
-                        elif mkey in ("totals", "alternate_totals"):
+                        elif mkey == "totals":
                             for out in m.get("outcomes", list()):
                                 nm = out.get("name", "").lower()
                                 pr = float(out.get("price", 0) or 0)
@@ -124,9 +134,10 @@ def gercek_oranlari_getir(lig_adi):
                         "alt": ana_b["alt"],
                         "tum_baremler": sirali_baremler,
                     }
-            cache[sport_key] = {"zaman": simdi, "maclar": mac_sozluk}
-            with open(CACHE_DOSYA, "w", encoding="utf-8") as f:
-                json.dump(cache, f, ensure_ascii=False, indent=2)
+            if mac_sozluk:
+                cache[sport_key] = {"zaman": simdi, "maclar": mac_sozluk}
+                with open(CACHE_DOSYA, "w", encoding="utf-8") as f:
+                    json.dump(cache, f, ensure_ascii=False, indent=2)
     except Exception:
         return lig_kayit.get("maclar", {})
 
@@ -143,6 +154,6 @@ def mac_oran_bul(lig_adi, ev_ad, dep_ad):
     if tam in maclar:
         return maclar[tam]
     for anahtar, veri in maclar.items():
-        if (k1[:5] and k1[:5] in anahtar) and (k2[:5] and k2[:5] in anahtar):
+        if (k1[:4] and k1[:4] in anahtar) and (k2[:4] and k2[:4] in anahtar):
             return veri
     return None
