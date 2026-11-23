@@ -150,4 +150,10 @@ def mac_oran_bul(lig_adi, ev_ad, dep_ad, lig_yolu="", ev_skor=0, dep_skor=0, sta
 
 
 def oran_durum_test():
-    return "THERUNDOWN GERCEK ORAN MOTORU AKTIF"
+    api_key = _rapid_key_al()
+    headers = {"X-RapidAPI-Key": api_key, "X-RapidAPI-Host": RUNDOWN_HOST}
+    try:
+        r = requests.get(f"https://{RUNDOWN_HOST}/sports/4/events/2026-11-22", headers=headers, timeout=8)
+        return f"HTTP {r.status_code} | Veri: {r.text[:260]}"
+    except Exception as e:
+        return f"Hata: {e}"
