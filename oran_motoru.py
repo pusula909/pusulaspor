@@ -1,7 +1,5 @@
-import json
 import os
 import re
-import time
 from datetime import datetime, timezone
 import requests
 import streamlit as st
@@ -106,9 +104,7 @@ def _odds_ayristir(od):
             "tum_baremler": tum_b,
         }
     return None
-
-
-@st.cache_data(ttl=180, show_spinner=False)
+    @st.cache_data(ttl=180, show_spinner=False)
 def gercek_oranlari_getir(lig_adi, lig_yolu=""):
     mac_sozluk = {}
     yol = _yol_coz(lig_adi, lig_yolu)
@@ -210,12 +206,16 @@ def _web_oran_tara(ev_ad, dep_ad):
             temiz_o = [float(x) for x in oranlar if 1.15 <= float(x) <= 6.50]
             if len(temiz_o) >= 2:
                 b_val = float(next(iter(baremler), 0) or 0)
+                it = iter(temiz_o)
+                o1 = next(it, 0.0)
+                o2 = next(it, 0.0)
+                o3 = next(it, 0.0)
                 return {
                     "ev": ev_ad,
                     "dep": dep_ad,
-                    "ms1": temiz_o,
-                    "msx": temiz_o if len(temiz_o) >= 3 else 0.0,
-                    "ms2": temiz_o if len(temiz_o) >= 3 else temiz_o,
+                    "ms1": o1,
+                    "msx": o2 if o3 > 0 else 0.0,
+                    "ms2": o3 if o3 > 0 else o2,
                     "barem": b_val,
                     "ust": 1.85 if b_val > 0 else 0.0,
                     "alt": 1.85 if b_val > 0 else 0.0,
@@ -228,3 +228,25 @@ def _web_oran_tara(ev_ad, dep_ad):
 
 
 def mac_oran_bul(lig_adi, ev_ad, dep_ad, lig_yolu=""):
+    maclar = gercek_oranlari_getir(lig_adi, lig_yolu)
+    if maclar:
+        k1 = _isim_norm(ev_ad)
+        k2 = _isim_norm(dep_ad)
+        tam = f"{k1}_{k2}"
+        if tam in maclar:
+            return maclar[tam]
+        for anahtar, veri in maclar.items():
+            if (k1[:4] and k1[:4] in anahtar) and (k2[:4] and k2[:4] in anahtar):
+                return veri
+    return _web_oran_tara(ev_ad, dep_ad)
+
+
+def oran_durum_test():
+    veriler = gercek_oranlari_getir("NBA", "basketball/nba") or gercek_oranlari_getir("Ingiltere Premier Lig", "soccer/eng.1")
+    if veriler:
+        ilk = next(iter(veriler.values()))
+        return f"AKTIF ({len(veriler)} mac) | Ornek: {ilk['ev']} vs {ilk['dep']} -> MS1:{ilk['ms1']} MS2:{ilk['ms2']} Barem:{ilk['barem']}"
+    web_ornek = _web_oran_tara("Brentford", "Everton")
+    if web_ornek:
+        return f"WEB ORAN MOTORU AKTIF | Ornek Brentford vs Everton -> MS1:{web_ornek['ms1']} MS2:{web_ornek['ms2']} Barem:{web_ornek['barem']}"
+    return "Oranlar yukleniyor..."
