@@ -1256,17 +1256,17 @@ else:
                     st.session_state.eski_skorlar[mac_id] = skor_gosterim
                 iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
                 ozet_tahmin, en_guclu = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor, aktif_lig_ad, 0, 0, state, ev_s_int, dep_s_int)
-                        oran_yazi = "-"
-                        try:
+                oran_yazi = "-"
+                try:
                             from oran_motoru import mac_oran_bul
                             o_b = mac_oran_bul(aktif_lig_ad, ev_ad, dep_ad)
                             if o_b:
                                 x_kisim = f" / {o_b['msx']}" if o_b.get("msx", 0) > 0 else ""
                                 b_kisim = f" | Barem: {o_b['barem']}" if o_b.get("barem", 0) > 0 else ""
                                 oran_yazi = f"{o_b['ms1']}{x_kisim} / {o_b['ms2']}{b_kisim}"
-                        except Exception:
-                            pass
-                        if state == "pre":
+                except Exception:
+                pass
+                if state == "pre":
                             deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
                             if not deger_rapor["tuzak_notu"]:
                                 banka_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "lig": aktif_lig_ad, "ev": ev_ad, "dep": dep_ad, "ozet": f"{deger_rapor['ana_tercih']} | {deger_rapor['barem_tercih']} | Oran: {oran_yazi} | Deger: {deger_rapor['deger_puani']}/10", "guven": f"%{deger_rapor['guven']}", "guven_int": deger_rapor["guven"]})
