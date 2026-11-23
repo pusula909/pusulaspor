@@ -1258,17 +1258,17 @@ else:
                 ozet_tahmin, en_guclu, _ = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor, aktif_lig_ad, 0, 0, state, ev_s_int, dep_s_int)
                         
                 oran_yazi = "-"
-                try:
+                        try:
                             from oran_motoru import mac_oran_bul
                             o_b = mac_oran_bul(aktif_lig_ad, ev_ad, dep_ad)
                             if o_b:
                                 x_kisim = f" / {o_b['msx']}" if o_b.get("msx", 0) > 0 else ""
                                 b_kisim = f" | Barem: {o_b['barem']}" if o_b.get("barem", 0) > 0 else ""
                                 oran_yazi = f"{o_b['ms1']}{x_kisim} / {o_b['ms2']}{b_kisim}"
-                except Exception:
-                    pass
-                maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": en_guclu, "Durum": durum_gosterim, "Ev Sahibi": ev_ad, "Ev Form": ev_rec, "Canli Skor": skor_gosterim, "Piyasa Oranlari": oran_yazi, "Deplasman": dep_ad, "Dep Form": dep_rec, "IY / Periyot": iy_ceyrek_str, "Hizli AI Ozet": ozet_tahmin})
-    except Exception:
+                        except Exception:
+                            pass
+                        maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": en_guclu, "Durum": durum_gosterim, "Ev Sahibi": ev_ad, "Ev Form": ev_rec, "Canli Skor": skor_gosterim, "Piyasa Oranlari": oran_yazi, "Deplasman": dep_ad, "Dep Form": dep_rec, "IY / Periyot": iy_ceyrek_str, "Hizli AI Ozet": ozet_tahmin})
+                    except Exception:
                         continue
                 
 
