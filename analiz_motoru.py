@@ -225,7 +225,7 @@ class PusulaAnalizBeyni:
         elif kotu_hava and spor_turu == "Futbol":
             tuzak_notu = "🌧️ HAVA & ZEMIN UYARISI: Kotu hava kosullari nedeniyle UST yerine ALT odaklanilmali."
 
-       toplam_skor = ev_skor + dep_skor
+        toplam_skor = ev_skor + dep_skor
         if spor_turu == "Futbol":
             if state == "in":
                 barem_tercih = f"Canli {toplam_skor + 0.5} UST"
