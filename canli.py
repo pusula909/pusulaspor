@@ -1270,7 +1270,7 @@ else:
               
                     
                 maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": en_guclu, "Durum": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Piyasa Oranlari": oran_yazi, "Deplasman": dep_ad, "IY / Periyot": iy_ceyrek_str, "Hizli AI Ozet": ozet_tahmin})
-           except Exception:
+                except Exception:
                      continue
                 
 
