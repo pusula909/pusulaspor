@@ -1244,21 +1244,43 @@ if gorunum == "Canli Kupon Takip":
             for _mo in _secili_objeler:
                 _sy, _st_top, _, _dt = _havuz_canli_skor_cek(_mo)
                 _mac_detay_list.append(f"{_mo.get('etiket')} (Skor: {_sy}, Durum: {_dt})")
-            _mac_basi_ort = round(_hv_barem / len(_secili_objeler), 2)
-            _ai_hv_sonuc = f"Maç Başı Gerekli Ortalama: {_mac_basi_ort} sayı/gol."
+           _mac_basi_ort = round(_hv_barem / len(_secili_objeler), 2)
+            _beklenen_top = 0.0
+            for _mo_p in _secili_objeler:
+                _sp_tip = str(_mo_p.get("spor", "Basketbol"))
+                _yol_tip = str(_mo_p.get("yol", ""))
+                _sk_p, _top_p, _bit_p, _det_p = _havuz_canli_skor_cek(_mo_p)
+                if _bit_p:
+                    _beklenen_top += _top_p
+                elif _top_p > 0:
+                    _oran_tam = 0.85 if "Q4" in _det_p else (0.52 if ("Q3" in _det_p or "Devre" in _det_p or "HT" in _det_p) else (0.30 if "Q2" in _det_p else 0.18))
+                    _beklenen_top += round(_top_p / _oran_tam, 1)
+                else:
+                    _beklenen_top += 224.0 if "nba" in _yol_tip else (164.0 if _sp_tip == "Basketbol" else 2.65)
+            _beklenen_top = round(_beklenen_top, 1)
+            _fark_p = (_hv_barem - _beklenen_top) if _hv_tercih == "ALT" else (_beklenen_top - _hv_barem)
+            _ref_olcek = max(6.0, _hv_barem * 0.06)
+            _mat_yuzde = max(32, min(88, int(round(56 + (_fark_p / _ref_olcek) * 22))))
+            _ai_hv_sonuc = (
+                f"• GELME İHTİMALİ: **%{_mat_yuzde}** (Maç Başı Sınır: {_mac_basi_ort})\n"
+                f"• BEKLENEN TOPLAM PROJEKSİYON: **{_beklenen_top}** (Hedef: {_hv_barem} {_hv_tercih})\n"
+                f"• TEMEL ANALİZ: Mevcut canlı tempo ve lig ortalamalarına göre toplam skorun {_beklenen_top} civarında tamamlanması bekleniyor."
+            )
             if groq_api_key:
                 try:
                     _p_hv = (
-                        f"Secilen {len(_secili_objeler)} macin toplam sayi/gol havuzu analizi:\n"
+                        f"Secilen {len(_secili_objeler)} macin toplam skor istatistik analizi:\n"
                         + "\n".join(_mac_detay_list)
-                        + f"\nAcilan Toplam Havuz Baremi: {_hv_barem} {_hv_tercih} (Mac basi ortalama: {_mac_basi_ort}) | Oran: {_hv_oran}.\n"
-                        "Takimlarin tempolarini, mevcut skorlarini ve kalan sureleri analiz ederek SADECE su 3 kisa satirda Turkce rapor ver:\n"
-                        "• GELME IHTIMALI: %[40-88 arasi net yuzde]\n"
-                        "• BEKLENEN TOPLAM PROJEKSIYON: [Tahmini toplam sayi/gol]\n"
-                        "• AI DEGERLENDIRME: [En fazla 18 kelimelik net gerekce]"
+                        + f"\nHedef Esik Deger: {_hv_barem} {_hv_tercih} (Mac basi: {_mac_basi_ort}) | Matematiksel Projeksiyon: {_beklenen_top} (%{_mat_yuzde}).\n"
+                        "Takimlarin tempolarini, canli skorlarini ve kalan surelerini analiz ederek SADECE su 3 kisa satirda Turkce rapor ver:\n"
+                        "• GELME İHTİMALİ: %[40-88 arasi net yuzde]\n"
+                        "• BEKLENEN TOPLAM PROJEKSİYON: [Tahmini toplam sayi/gol]\n"
+                        "• AI DEĞERLENDİRME: [En fazla 18 kelimelik net taktik gerekce]"
                     )
+                    _q_hv_host = "api" + ".groq.com"
+                    _q_hv_path = "/openai/v1/chat/completions"
                     _q_hv = requests.post(
-                        "https://" + "api" + "://",
+                        "https://" + _q_hv_host + _q_hv_path,
                         headers={"Authorization": f"Bearer {groq_api_key}", "Content-Type": "application/json"},
                         json={"model": "openai/gpt-oss-120b", "messages": list(({"role": "user", "content": _p_hv},)), "temperature": 0.2},
                         timeout=8,
