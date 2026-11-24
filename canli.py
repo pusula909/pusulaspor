@@ -1244,31 +1244,33 @@ if gorunum == "Canli Kupon Takip":
             for _mo in _secili_objeler:
                 _sy, _st_top, _, _dt = _havuz_canli_skor_cek(_mo)
                 _mac_detay_list.append(f"{_mo.get('etiket')} (Skor: {_sy}, Durum: {_dt})")
-            _mac_basi_ort = round(_hv_barem / len(_secili_objeler), 2)
-            _beklenen_top = 0.0
+           _mac_basi_ort = round(_hv_barem / len(_secili_objeler), 2)
+            _anlik_top_b = 0
+            _sure_top_b = 0.0
             for _mo_p in _secili_objeler:
-                _sp_tip = str(_mo_p.get("spor", "Basketbol"))
-                _yol_tip = str(_mo_p.get("yol", ""))
                 _sk_p, _top_p, _bit_p, _det_p = _havuz_canli_skor_cek(_mo_p)
+                _anlik_top_b += _top_p
                 if _bit_p:
-                    _beklenen_top += _top_p
+                    _sure_top_b += 1.0
                 elif _top_p > 0:
                     _du_p = _det_p.upper()
-                    _oran_tam = 0.88 if ("Q4" in _du_p or "OT" in _du_p or "UZ" in _du_p) else (0.62 if "Q3" in _du_p else (0.48 if ("DEVRE" in _du_p or "HT" in _du_p) else (0.32 if "Q2" in _du_p else (0.18 if "Q1" in _du_p else 0.50))))
-                    _beklenen_top += round(_top_p / _oran_tam, 1)
+                    _sure_top_b += 0.88 if ("Q4" in _du_p or "OT" in _du_p or "UZ" in _du_p) else (0.65 if "Q3" in _du_p else (0.50 if ("DEVRE" in _du_p or "HT" in _du_p) else (0.35 if "Q2" in _du_p else (0.18 if "Q1" in _du_p else 0.50))))
+            _sure_yz_b = round((_sure_top_b / max(1, len(_secili_objeler))) * 100)
+            if _hv_tercih == "ÜST":
+                _mat_yuzde = 100 if _anlik_top_b > _hv_barem else min(99, int(round((_anlik_top_b / max(1.0, _hv_barem)) * 100)))
+            else:
+                if _anlik_top_b > _hv_barem:
+                    _mat_yuzde = 0
                 else:
-                    _beklenen_top += 224.0 if "nba" in _yol_tip else (164.0 if _sp_tip == "Basketbol" else 2.65)
-            _beklenen_top = round(_beklenen_top, 1)
-            _fark_p = (_hv_barem - _beklenen_top) if _hv_tercih == "ALT" else (_beklenen_top - _hv_barem)
-            _ref_olcek = max(5.0, _hv_barem * 0.055)
-            _mat_yuzde = max(5, min(96, int(round(55 + (_fark_p / _ref_olcek) * 24))))
-            _ai_yorum_kisa = "Mevcut tempo ve kalan süre dengesine göre istatistiksel takip aktif."
+                    _kalan_or_b = max(0.0, (_hv_barem - _anlik_top_b) / max(1.0, _hv_barem))
+                    _mat_yuzde = max(10, min(99, int(round((_sure_yz_b * 0.65) + (_kalan_or_b * 100 * 0.35)))))
+            _ai_yorum_kisa = "Maçların süre ilerlemesi ve kalan sınır payına göre takip aktif."
             if groq_api_key:
                 try:
                     _p_hv = (
                         f"Secilen {len(_secili_objeler)} macin canli skor ozeti:\n"
                         + "\n".join(_mac_detay_list)
-                        + f"\nHedef Barem: {_hv_barem} {_hv_tercih} | Matematiksel Projeksiyon: {_beklenen_top} | Gelme Ihtimali: %{_mat_yuzde}.\n"
+                        + f"\nHedef Barem: {_hv_barem} {_hv_tercih} | Su Anki Toplam: {_anlik_top_b} | Kupon Ilerlemesi: %{_mat_yuzde}.\n"
                         "SADECE tek cumlelik (en fazla 15 kelime) Turkce taktik yorum yaz, baska hicbir sey yazma:"
                     )
                     _q_hv = requests.post(
@@ -1284,11 +1286,10 @@ if gorunum == "Canli Kupon Takip":
                 except Exception:
                     pass
             _ai_hv_sonuc = (
-                f"• GELME İHTİMALİ: **%{_mat_yuzde}**\n"
-                f"• BEKLENEN TOPLAM PROJEKSİYON: **{_beklenen_top}** (Hedef: {_hv_barem} {_hv_tercih})\n"
+                f"• KUPON BAŞARI İLERLEMESİ: %{_mat_yuzde} (Süre İlerlemesi: %{_sure_yz_b})\n"
+                f"• TOPLAM SKOR DURUMU: {_anlik_top_b} / {_hv_barem} {_hv_tercih} (Kalan Pay: {round(_hv_barem - _anlik_top_b, 1)})\n"
                 f"• AI DEĞERLENDİRME: {_ai_yorum_kisa}"
             )
-            _hv_dep["aktif"] = True
             _hv_dep["maclar"] = list(_hv_secilen_maclar)
             _hv_dep["objeler"] = _secili_objeler
             _hv_dep["barem"] = float(_hv_barem)
