@@ -1341,7 +1341,7 @@ if gorunum == "Canli Kupon Takip":
                 f"• BEKLENEN TOPLAM PROJEKSİYON: **{_proj_top_b}** (Şu An: {_anlik_top_b} / Hedef: {_hv_barem} {_hv_tercih})\n"
                 f"• AI DEĞERLENDİRME: {_ai_yorum_kisa}"
             )
-               
+            _hv_dep["aktif"] = True   
             
             _hv_dep["maclar"] = list(_hv_secilen_maclar)
             _hv_dep["objeler"] = _secili_objeler
