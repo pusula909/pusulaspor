@@ -216,6 +216,9 @@ TUM_LIGLER = {
         "Isvec Allsvenskan": "soccer/swe.1",
         "Sampiyonlar Ligi": "soccer/uefa.champions",
         "Avrupa Ligi": "soccer/uefa.europa",
+        "Sampiyonlar Ligi": "soccer/uefa.champions",
+        "Avrupa Ligi": "soccer/uefa.europa",
+        "Konferans Ligi": "soccer/uefa.europa.conf",
     },
     "Basketbol": {
         "NBA": "basketball/nba",
