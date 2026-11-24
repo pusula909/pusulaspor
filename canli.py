@@ -1274,48 +1274,73 @@ if gorunum == "Canli Kupon Takip":
             for _mo in _secili_objeler:
                 _sy, _st_top, _, _dt = _havuz_canli_skor_cek(_mo)
                 _mac_detay_list.append(f"{_mo.get('etiket')} (Skor: {_sy}, Durum: {_dt})")
-            _mac_basi_ort = round(_hv_barem / max(1, len(_secili_objeler)), 2)
+           _mac_basi_ort = round(_hv_barem / max(1, len(_secili_objeler)), 2)
             _anlik_top_b = 0
             _sure_top_b = 0.0
+            _proj_top_b = 0.0
             for _mo_p in _secili_objeler:
                 _sk_p, _top_p, _bit_p, _det_p = _havuz_canli_skor_cek(_mo_p)
                 _anlik_top_b += _top_p
+                _yol_p = str(_mo_p.get("yol", ""))
+                _sp_p = str(_mo_p.get("spor", "Basketbol"))
+                _lig_ort_p = 225.5 if "nba" in _yol_p else (164.5 if _sp_p == "Basketbol" else 2.75)
                 if _bit_p:
                     _sure_top_b += 1.0
+                    _proj_top_b += _top_p
                 elif _top_p > 0:
                     _du_p = _det_p.upper()
-                    _sure_top_b += 0.88 if ("Q4" in _du_p or "OT" in _du_p or "UZ" in _du_p) else (0.65 if "Q3" in _du_p else (0.50 if ("DEVRE" in _du_p or "HT" in _du_p) else (0.35 if "Q2" in _du_p else (0.18 if "Q1" in _du_p else 0.50))))
-            _sure_yz_b = round((_sure_top_b / max(1, len(_secili_objeler))) * 100)
-            if _hv_tercih == "ÜST":
-                _mat_yuzde = 100 if _anlik_top_b > _hv_barem else min(99, int(round((_anlik_top_b / max(1.0, _hv_barem)) * 100)))
-            else:
-                if _anlik_top_b > _hv_barem:
-                    _mat_yuzde = 0
+                    _or_p = 0.88 if ("Q4" in _du_p or "OT" in _du_p or "UZ" in _du_p) else (0.65 if "Q3" in _du_p else (0.50 if ("DEVRE" in _du_p or "HT" in _du_p) else (0.35 if "Q2" in _du_p else (0.18 if "Q1" in _du_p else 0.50))))
+                    _sure_top_b += _or_p
+                    _proj_top_b += (_top_p * _or_p + _lig_ort_p * (1.0 - _or_p)) / max(0.25, _or_p) if _or_p >= 0.35 else (_top_p + _lig_ort_p * (1.0 - _or_p))
                 else:
-                    _kalan_or_b = max(0.0, (_hv_barem - _anlik_top_b) / max(1.0, _hv_barem))
-                    _mat_yuzde = max(10, min(99, int(round((_sure_yz_b * 0.65) + (_kalan_or_b * 100 * 0.35)))))
-            _ai_yorum_kisa = "Maçların süre ilerlemesi ve kalan sınır payına göre takip aktif."
+                    _proj_top_b += _lig_ort_p
+            _proj_top_b = round(_proj_top_b, 1)
+            _sure_yz_b = round((_sure_top_b / max(1, len(_secili_objeler))) * 100)
+            _fark_b = (_hv_barem - _proj_top_b) if _hv_tercih == "ALT" else (_proj_top_b - _hv_barem)
+            _olcek_b = max(4.0, _hv_barem * 0.055)
+            _mat_yuzde = max(8, min(95, int(round(54 + (_fark_b / _olcek_b) * 24))))
+            _ai_yorum_kisa = "Takımların sezonluk sayı/gol temposuna ve barem mesafesine göre istatistiksel takip aktif."
             if groq_api_key:
                 try:
                     _p_hv = (
-                        f"Secilen {len(_secili_objeler)} macin canli skor ozeti:\n"
+                        f"Secilen {len(_secili_objeler)} macin toplam skor/gol havuzu istatistik analizi:\n"
                         + "\n".join(_mac_detay_list)
-                        + f"\nHedef Barem: {_hv_barem} {_hv_tercih} | Su Anki Toplam: {_anlik_top_b} | Kupon Ilerlemesi: %{_mat_yuzde}.\n"
-                        "SADECE tek cumlelik (en fazla 15 kelime) Turkce taktik yorum yaz, baska hicbir sey yazma:"
+                        + f"\nHedef Barem: {_hv_barem} {_hv_tercih} (Mac basi ort: {_mac_basi_ort}) | Su Anki Toplam: {_anlik_top_b} | Lig Ort Projeksiyonu: {_proj_top_b}.\n"
+                        "Bu takimlarin gercek sezonluk hucum/savunma tempolarini, sakatlik/eksik durumlarini ve mevcut skorlari analiz ederek SADECE su 3 satiri yaz (baska hicbir sey yazma):\n"
+                        "IHTIMAL: [25 ile 88 arasi gercekci tam sayi]\n"
+                        "PROJEKSIYON: [Tahmini toplam sayi/gol ornegin 668.5]\n"
+                        "YORUM: [En fazla 16 kelimelik net Turkce teknik gerekce]"
                     )
                     _q_hv = requests.post(
                         "https://" + "api" + ".groq.com" + "/openai/v1/chat/completions",
                         headers={"Authorization": f"Bearer {groq_api_key}", "Content-Type": "application/json"},
-                        json={"model": "openai/gpt-oss-120b", "messages": list(({"role": "user", "content": _p_hv},)), "temperature": 0.2},
-                        timeout=8,
+                        json={"model": "openai/gpt-oss-120b", "messages": list(({"role": "user", "content": _p_hv},)), "temperature": 0.25},
+                        timeout=10,
                     ).json()
                     _c_hv = next(iter(_q_hv.get("choices") or ()), {})
                     _txt_hv = (_c_hv.get("message") or {}).get("content", "").strip()
                     if _txt_hv:
-                        _ai_yorum_kisa = _txt_hv
+                        for _ln_h in _txt_hv.splitlines():
+                            _ln_s = _ln_h.strip()
+                            if _ln_s.upper().startswith("IHTIMAL:"):
+                                _rakam_i = "".join(ch for ch in _ln_s.split(":", 1)[1] if ch.isdigit())
+                                if _rakam_i:
+                                    _mat_yuzde = max(15, min(92, int(_rakam_i)))
+                            elif _ln_s.upper().startswith("PROJEKSIYON:"):
+                                _rakam_p = "".join(ch for ch in _ln_s.split(":", 1)[1] if (ch.isdigit() or ch == "."))
+                                if _rakam_p:
+                                    _proj_top_b = round(float(_rakam_p), 1)
+                            elif _ln_s.upper().startswith("YORUM:"):
+                                _ai_yorum_kisa = _ln_s.split(":", 1)[1].strip()
                 except Exception:
                     pass
+            _hv_dep["baslangic_ihtimal"] = _mat_yuzde
+            _hv_dep["baslangic_proj"] = _proj_top_b
             _ai_hv_sonuc = (
+                f"• GELME İHTİMALİ: **%{_mat_yuzde}** (Süre İlerlemesi: %{_sure_yz_b})\n"
+                f"• BEKLENEN TOPLAM PROJEKSİYON: **{_proj_top_b}** (Şu An: {_anlik_top_b} / Hedef: {_hv_barem} {_hv_tercih})\n"
+                f"• AI DEĞERLENDİRME: {_ai_yorum_kisa}"
+            )
                 f"• KUPON BAŞARI İLERLEMESİ: %{_mat_yuzde} (Süre İlerlemesi: %{_sure_yz_b})\n"
                 f"• TOPLAM SKOR DURUMU: {_anlik_top_b} / {_hv_barem} {_hv_tercih} (Kalan Pay: {round(_hv_barem - _anlik_top_b, 1)})\n"
                 f"• AI DEĞERLENDİRME: {_ai_yorum_kisa}"
@@ -1353,26 +1378,50 @@ if gorunum == "Canli Kupon Takip":
                 _biten_havuz_mac += 1
             _hv_tablo_satir.append({"Maç": _mo_t.get("etiket", "-"), "Saat / Süre": _dur_str, "Canlı Skor": _sk_str, "Maç Toplamı": _m_top})
 
-        _sure_orani_top = 0.0
+       _sure_orani_top = 0.0
+        _canli_proj_top = 0.0
+        _bas_proj = float(_hv_dep.get("baslangic_proj") or _hv_dep["barem"])
+        _mac_say_c = max(1, len(_hv_dep["objeler"]))
+        _mac_basi_bas = _bas_proj / _mac_say_c
         for _mo_c in _hv_dep["objeler"]:
             _sk_c, _top_c, _bit_c, _det_c = _havuz_canli_skor_cek(_mo_c)
             if _bit_c:
                 _sure_orani_top += 1.0
+                _canli_proj_top += _top_c
             elif _top_c > 0:
                 _d_up = _det_c.upper()
-                _sure_orani_top += 0.88 if ("Q4" in _d_up or "OT" in _d_up or "UZ" in _d_up) else (0.65 if "Q3" in _d_up else (0.50 if ("DEVRE" in _d_up or "HT" in _d_up) else (0.35 if "Q2" in _d_up else (0.18 if "Q1" in _d_up else 0.50))))
-        _genel_sure_yuzde = round((_sure_orani_top / max(1, len(_hv_dep["objeler"]))) * 100)
+                _or_c = 0.88 if ("Q4" in _d_up or "OT" in _d_up or "UZ" in _d_up) else (0.65 if "Q3" in _d_up else (0.50 if ("DEVRE" in _d_up or "HT" in _d_up) else (0.35 if "Q2" in _d_up else (0.18 if "Q1" in _d_up else 0.50))))
+                _sure_orani_top += _or_c
+                _canli_proj_top += _top_c + (_mac_basi_bas * (1.0 - _or_c))
+            else:
+                _canli_proj_top += _mac_basi_bas
+        _canli_proj_top = round(_canli_proj_top, 1)
+        _genel_sure_yuzde = round((_sure_orani_top / _mac_say_c) * 100)
         _hedef_val = float(_hv_dep["barem"])
+        _bas_ih = int(_hv_dep.get("baslangic_ihtimal") or 55)
 
         if _hv_dep["tercih"] == "ÜST":
-            _genel_kupon_yuzde = 100 if _anlik_toplam > _hedef_val else min(99, int(round((_anlik_toplam / max(1.0, _hedef_val)) * 100)))
+            if _anlik_toplam > _hedef_val:
+                _genel_kupon_yuzde = 100
+            elif _genel_sure_yuzde == 0:
+                _genel_kupon_yuzde = _bas_ih
+            else:
+                _fark_c = _canli_proj_top - _hedef_val
+                _olcek_c = max(4.0, _hedef_val * 0.055)
+                _tempo_ih = max(5, min(98, int(round(54 + (_fark_c / _olcek_c) * 24))))
+                _agirlik_c = min(1.0, _genel_sure_yuzde / 75.0)
+                _genel_kupon_yuzde = max(5, min(99, int(round(_bas_ih * (1.0 - _agirlik_c) + _tempo_ih * _agirlik_c))))
         else:
             if _anlik_toplam > _hedef_val:
                 _genel_kupon_yuzde = 0
+            elif _genel_sure_yuzde == 0:
+                _genel_kupon_yuzde = _bas_ih
             else:
-                _kalan_guven = min(1.0, max(0.0, (_hedef_val - _anlik_toplam) / max(1.0, _hedef_val * 0.08)))
-                _genel_kupon_yuzde = max(10, min(99, int(round(_genel_sure_yuzde * (0.75 + 0.25 * _kalan_guven)))))
-
+                _fark_c = _hedef_val - _canli_proj_top
+                _olcek_c = max(4.0, _hedef_val * 0.055)
+                _tempo_ih = max(5, min(98, int(round(54 + (_fark_c / _olcek_c) * 24))))
+                _agirlik_c = min(1.0, _genel_sure_yuzde / 75.0)
+                _genel_kupon_yuzde = max(5, min(99, int(round(_bas_ih * (1.0 - _agirlik_c) + _tempo_ih * _agirlik_c))))
         with st.container(border=True):
             _ai_kisa_not = _hv_dep.get("ai_rapor", "").split("DEĞERLENDİRME:").pop(-1).strip() if "DEĞERLENDİRME:" in _hv_dep.get("ai_rapor", "") else ""
             st.info(
