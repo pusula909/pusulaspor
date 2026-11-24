@@ -74,7 +74,7 @@ def _el_get(t):
                 continue
 
             d_obj = datetime.strptime(d_raw, "%b %d, %Y")
-            if 0 <= (d_obj.date() - datetime.strptime(t, "%Y%m%d").date()).days <= 3:
+            if d_obj.strftime("%Y%m%d") == t:
                 h_ad = i.findtext("hometeam", "").strip()
                 a_ad = i.findtext("awayteam", "").strip()
                 s_time = i.findtext("startime", "20:00").strip()
@@ -1216,7 +1216,19 @@ else:
     banko_havuzu = list()
     for aktif_lig_ad, aktif_yol in secili_ligler:
         try:
-            r = _el_get(tarih) if aktif_yol == "euroleague_resmi" else requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
+            if aktif_yol == "euroleague_resmi":
+                    r = _el_get(tarih)
+                    if not r.get("events"):
+                        for ek_g in range(1, 5):
+                            ileri_t = (datetime.strptime(tarih, "%Y%m%d") + timedelta(days=ek_g)).strftime("%Y%m%d")
+                            r = _el_get(ileri_t)
+                            if r.get("events"):
+                                break
+                else:
+                    r = requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
+                    if spor == "Basketbol" and not r.get("events"):
+                        ertesi_t = (datetime.strptime(tarih, "%Y%m%d") + timedelta(days=1)).strftime("%Y%m%d")
+                        r = requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={ertesi_t}&limit=100", headers=basliklar, timeout=8).json()
         except Exception:
             r = {}
         for ev in r.get("events", list()):
