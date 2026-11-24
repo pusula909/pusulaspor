@@ -1342,11 +1342,13 @@ if gorunum == "Canli Kupon Takip":
         _canli_ihtimal = max(5, min(96, int(round(55 + (_c_fark / _c_olcek) * 24))))
 
         with st.container(border=True):
-            _cm1, _cm2, _cm3 = st.columns(3)
-            _cm1.metric("⚡ Anlık Canlı Gelme İhtimali", f"%{_canli_ihtimal}", delta=f"{'Avantajlı' if _canli_ihtimal >= 55 else 'Riskli'} Tempo")
-            _cm2.metric("📈 Canlı Final Projeksiyonu", f"{_canli_proj_top}", delta=f"Hedef: {_hv_dep['barem']} {_hv_dep['tercih']}")
-            _cm3.metric("🎯 Anlık Toplam Skor", f"{_anlik_toplam}", delta=f"Biten: {_biten_havuz_mac}/{len(_hv_dep['objeler'])}")
-            st.info(f"**🤖 Başlangıç AI Havuz Analizi:**\n\n{_hv_dep.get('ai_rapor', '')}")
+            _ai_kisa_not = _hv_dep.get("ai_rapor", "").split("DEĞERLENDİRME:").pop(-1).strip() if "DEĞERLENDİRME:" in _hv_dep.get("ai_rapor", "") else ""
+            st.info(
+                f"**🤖 Canlı Havuz Analizi ({_hv_dep['barem']} {_hv_dep['tercih']} | Oran: {_hv_dep['oran']}):**\n\n"
+                f"• **ANLIK GELME İHTİMALİ:** **%{_canli_ihtimal}** ({'Avantajlı Tempo' if _canli_ihtimal >= 55 else 'Riskli Tempo'})\n"
+                f"• **CANLI FİNAL PROJEKSİYONU:** **{_canli_proj_top}** (Şu Anki Toplam: {_anlik_toplam})\n"
+                + (f"• **AI DEĞERLENDİRME:** {_ai_kisa_not}" if _ai_kisa_not else "")
+            )
             st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
             _hedef_b = float(_hv_dep["barem"])
             _sec_t = _hv_dep["tercih"]
