@@ -1073,6 +1073,8 @@ if gorunum == "Canli Kupon Takip":
             k1.metric("Tekli Maclar Ortalama Ihtimal", f"%{ort_ihtimal}")
 
         if k2.button("📲 Kuponu Kaydet & Telegram'a Gonder", use_container_width=True):
+            _k_havuz["bildirim_atildi"] = False
+            st.session_state.kupon_bildirim_gonderildi = False
             tarih_etiket = datetime.now(timezone(timedelta(hours=3))).strftime("%d.%m.%Y %H:%M")
             baslik_ikon = "🔗" if kupon_turu == "Kombine Kupon" else "🎯"
 
@@ -1100,7 +1102,9 @@ if gorunum == "Canli Kupon Takip":
                 st.error("❌ Telegram gonderilemedi! Sol menuden TG_TOKEN ve TG_CHAT_ID ayarlarini kontrol et.")
 
         if k3.button("🗑️ Temizle", use_container_width=True):
-            st.session_state.kupon_listesi = list()
+            _k_havuz["liste"].clear()
+            _k_havuz["bildirim_atildi"] = False
+            st.session_state.kupon_listesi = _k_havuz["liste"]
             st.session_state.kupon_bildirim_gonderildi = False
             st.rerun()
 
