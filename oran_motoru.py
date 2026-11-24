@@ -134,24 +134,91 @@ def gercek_oranlari_getir(lig_adi, lig_yolu=""):
     return mac_sozluk
 
 
-def mac_oran_bul(lig_adi, ev_ad, dep_ad, lig_yolu="", ev_skor=0, dep_skor=0, state="pre", dakikastr=""):
-    maclar = gercek_oranlari_getir(lig_adi, lig_yolu)
-    if not maclar:
+@st.cache_data(ttl=120, show_spinner=False)
+def _espn_yedek_oran(lig_adi, ev_ad, dep_ad):
+    yol_map = {
+        "NBA": "basketball/nba",
+        "Ingiltere Premier Lig": "soccer/eng.1",
+        "Ispanya La Liga": "soccer/esp.1",
+        "Almanya Bundesliga": "soccer/ger.1",
+        "Italya Serie A": "soccer/ita.1",
+        "Fransa Ligue 1": "soccer/fra.1",
+        "Sampiyonlar Ligi": "soccer/uefa.champions",
+        "Avrupa Ligi": "soccer/uefa.europa",
+        "Trendyol Super Lig": "soccer/tur.1",
+        "Turkiye Super Lig": "soccer/tur.1",
+    }
+    yol = yol_map.get(lig_adi)
+    if not yol:
+        if "nba" in str(lig_adi).lower():
+            yol = "basketball/nba"
+        elif any(k in str(lig_adi).lower() for k in ("premier", "ingiltere")):
+            yol = "soccer/eng.1"
+        elif "la liga" in str(lig_adi).lower() or "ispanya" in str(lig_adi).lower():
+            yol = "soccer/esp.1"
+        elif "bundesliga" in str(lig_adi).lower() or "almanya" in str(lig_adi).lower():
+            yol = "soccer/ger.1"
+        elif "serie a" in str(lig_adi).lower() or "italya" in str(lig_adi).lower():
+            yol = "soccer/ita.1"
+        elif "ligue 1" in str(lig_adi).lower() or "fransa" in str(lig_adi).lower():
+            yol = "soccer/fra.1"
+        elif "sampiyonlar" in str(lig_adi).lower() or "champions" in str(lig_adi).lower():
+            yol = "soccer/uefa.champions"
+        elif "super lig" in str(lig_adi).lower() or "turkiye" in str(lig_adi).lower():
+            yol = "soccer/tur.1"
+    if not yol:
         return None
     k1 = _isim_norm(ev_ad)
     k2 = _isim_norm(dep_ad)
-    tam = f"{k1}_{k2}"
-    if tam in maclar:
-        return maclar[tam]
-    for anahtar, veri in maclar.items():
-        if (k1[:4] and k1[:4] in anahtar) and (k2[:4] and k2[:4] in anahtar):
-            return veri
+    simdi = datetime.now(timezone.utc)
+    for g in (0, 1, -1):
+        t_str = (simdi + timedelta(days=g)).strftime("%Y%m%d")
+        try:
+            r = requests.get(f"https://espn.com{yol}/scoreboard?dates={t_str}", timeout=7).json()
+            for ev in r.get("events", list()):
+                comp = ev.get("competitions", list(({},))).pop(0)
+                taks = comp.get("competitors", list())
+                if len(taks) < 2:
+                    continue
+                h_ad = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "home"), "")
+                a_ad = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "away"), "")
+                hn, an = _isim_norm(h_ad), _isim_norm(a_ad)
+                if (k1[:4] and k1[:4] in hn) and (k2[:4] and k2[:4] in an):
+                    odds_list = comp.get("odds", list())
+                    if not odds_list:
+                        continue
+                    od = odds_list.pop(0)
+                    barem = float(od.get("overUnder", 0) or 0)
+                    hdp = float(od.get("spread", 0) or 0)
+                    ms1 = _us_to_decimal(od.get("homeTeamOdds", {}).get("moneyLine", 0))
+                    ms2 = _us_to_decimal(od.get("awayTeamOdds", {}).get("moneyLine", 0))
+                    msx = _us_to_decimal(od.get("drawOdds", {}).get("moneyLine", 0))
+                    if barem > 0 or ms1 > 0 or ms2 > 0:
+                        return {
+                            "ev": h_ad,
+                            "dep": a_ad,
+                            "ms1": ms1,
+                            "msx": msx,
+                            "ms2": ms2,
+                            "barem": barem,
+                            "ust": 1.88,
+                            "alt": 1.88,
+                            "handikap": hdp,
+                            "tum_baremler": [{"barem": barem, "ust": 1.88, "alt": 1.88}] if barem > 0 else list(),
+                        }
+        except Exception:
+            continue
     return None
 
-
-def oran_durum_test():
-    veriler = gercek_oranlari_getir("NBA")
-    if veriler:
-        ilk = next(iter(veriler.values()))
-        return f"THERUNDOWN AKTIF ({len(veriler)} mac) | Ornek: {ilk['ev']} vs {ilk['dep']} -> MS1:{ilk['ms1']} MS2:{ilk['ms2']} Barem:{ilk['barem']}"
-    return "TheRundown uzerinden su an acik mac orani bulunamadi."
+def mac_oran_bul(lig_adi, ev_ad, dep_ad, lig_yolu="", ev_skor=0, dep_skor=0, state="pre", dakikastr=""):
+    maclar = gercek_oranlari_getir(lig_adi, lig_yolu)
+    k1 = _isim_norm(ev_ad)
+    k2 = _isim_norm(dep_ad)
+    if maclar:
+        tam = f"{k1}_{k2}"
+        if tam in maclar:
+            return maclar[tam]
+        for anahtar, veri in maclar.items():
+            if (k1[:4] and k1[:4] in anahtar) and (k2[:4] and k2[:4] in anahtar):
+                return veri
+    return _espn_yedek_oran(lig_adi, ev_ad, dep_ad)
