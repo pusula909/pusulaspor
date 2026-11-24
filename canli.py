@@ -1309,7 +1309,7 @@ else:
                         st.info(f"💰 Gercek Bahis Piyasasi Cizgisi -> Alt/Ust Baremi: **{ou_val}** | Favori/Handikap: **{det_val}**")
         except Exception:
             pass
-       try:
+        try:
             _ev_k = str(satir.get("Ev Sahibi", ""))
             _dep_k = str(satir.get("Deplasman", ""))
             _ozet_k = str(satir.get("Hizli AI Ozet", ""))
