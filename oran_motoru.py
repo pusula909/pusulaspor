@@ -166,8 +166,59 @@ def _espn_yedek_oran(lig_adi, ev_ad, dep_ad):
             yol = "soccer/uefa.champions"
         elif "super lig" in str(lig_adi).lower() or "turkiye" in str(lig_adi).lower():
             yol = "soccer/tur.1"
-    if not yol:
-        return None
+
+    aranacak_yollar = [yol] if yol else [
+        "basketball/nba",
+        "soccer/eng.1",
+        "soccer/esp.1",
+        "soccer/ger.1",
+        "soccer/ita.1",
+        "soccer/fra.1",
+        "soccer/uefa.champions",
+        "soccer/tur.1",
+    ]
+    k1 = _isim_norm(ev_ad)
+    k2 = _isim_norm(dep_ad)
+    simdi = datetime.now(timezone.utc)
+    for y in aranacak_yollar:
+        for g in (0, 1, -1):
+            t_str = (simdi + timedelta(days=g)).strftime("%Y%m%d")
+            try:
+                r = requests.get(f"https://espn.com{y}/scoreboard?dates={t_str}", timeout=7).json()
+                for ev in r.get("events", list()):
+                    comp = ev.get("competitions", list(({},))).pop(0)
+                    taks = comp.get("competitors", list())
+                    if len(taks) < 2:
+                        continue
+                    h_ad = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "home"), "")
+                    a_ad = next((t.get("team", {}).get("displayName", "") for t in taks if t.get("homeAway") == "away"), "")
+                    hn, an = _isim_norm(h_ad), _isim_norm(a_ad)
+                    if (k1[:4] and k1[:4] in hn) and (k2[:4] and k2[:4] in an):
+                        odds_list = comp.get("odds", list())
+                        if not odds_list:
+                            continue
+                        od = odds_list.pop(0)
+                        barem = float(od.get("overUnder", 0) or 0)
+                        hdp = float(od.get("spread", 0) or 0)
+                        ms1 = _us_to_decimal(od.get("homeTeamOdds", {}).get("moneyLine", 0))
+                        ms2 = _us_to_decimal(od.get("awayTeamOdds", {}).get("moneyLine", 0))
+                        msx = _us_to_decimal(od.get("drawOdds", {}).get("moneyLine", 0))
+                        if barem > 0 or ms1 > 0 or ms2 > 0:
+                            return {
+                                "ev": h_ad,
+                                "dep": a_ad,
+                                "ms1": ms1,
+                                "msx": msx,
+                                "ms2": ms2,
+                                "barem": barem,
+                                "ust": 1.88,
+                                "alt": 1.88,
+                                "handikap": hdp,
+                                "tum_baremler": [{"barem": barem, "ust": 1.88, "alt": 1.88}] if barem > 0 else list(),
+                            }
+            except Exception:
+                continue
+    return None
     k1 = _isim_norm(ev_ad)
     k2 = _isim_norm(dep_ad)
     simdi = datetime.now(timezone.utc)
