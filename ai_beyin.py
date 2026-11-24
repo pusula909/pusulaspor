@@ -121,7 +121,7 @@ def yapilandirilmis_ai_karari_uret(gemini_key, groq_key, analiz_paketi):
             g_resp = requests.post(
                 "https://groq.com",
                 headers={"Authorization": f"Bearer {q_key}", "Content-Type": "application/json"},
-                json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": prompt}], "temperature": 0.25, "max_tokens": 350},
+                json={"model": "openai/gpt-oss-120b", "messages": [{"role": "user", "content": prompt}], "temperature": 0.25, "max_tokens": 350},
                 timeout=12,
             ).json()
             if "choices" in g_resp and g_resp["choices"]:
