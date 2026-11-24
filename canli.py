@@ -1131,29 +1131,64 @@ if gorunum == "Canli Kupon Takip":
     @st.cache_data(ttl=120, show_spinner=False)
     def _havuz_tum_bulten_cek(t_str):
         _tumu = {}
-        for _sp_k, _lig_dict in TUM_LIGLER.items():
-            for _lg_k, _yl_k in _lig_dict.items():
-                try:
-                    _rp = _el_get(t_str) if _yl_k == "euroleague_resmi" else requests.get(f"{url_basi}{_yl_k}/scoreboard?dates={t_str}", headers=basliklar, timeout=5).json()
-                    for _ev_p in _rp.get("events", list()):
-                        _cp = next(iter(_ev_p.get("competitions") or ()), {})
-                        _tkp = _cp.get("competitors", list())
-                        if len(_tkp) >= 2:
-                            _eh = next((t.get("team", {}).get("displayName", "Ev") for t in _tkp if t.get("homeAway") == "home"), "Ev")
-                            _da = next((t.get("team", {}).get("displayName", "Dep") for t in _tkp if t.get("homeAway") == "away"), "Dep")
-                            _etk = f"[{_lg_k}] {_eh} vs {_da}"
-                            _tumu[_etk] = {"id": _ev_p.get("id"), "yol": _yl_k, "spor": _sp_k, "ev": _eh, "dep": _da, "etiket": _etk}
-                except Exception:
-                    continue
+        try:
+            _dt_ana = datetime.strptime(str(t_str), "%Y%m%d")
+            _gunler = (t_str, (_dt_ana + timedelta(days=1)).strftime("%Y%m%d"))
+        except Exception:
+            _gunler = (t_str,)
+
+        for _g_str in _gunler:
+            for _sp_k, _lig_dict in TUM_LIGLER.items():
+                for _lg_k, _yl_k in _lig_dict.items():
+                    if "sampiyonlar" in _lg_k.lower() or "avrupa ligi" in _lg_k.lower() or "konferans" in _lg_k.lower():
+                        _kat = "Futbol - Avrupa Kupaları"
+                    elif _sp_k == "Futbol":
+                        _kat = "Futbol - Normal Sezon Ligleri"
+                    elif "nba" in _lg_k.lower():
+                        _kat = "Basketbol - NBA"
+                    else:
+                        _kat = "Basketbol - EuroLeague & Diğer"
+                    try:
+                        _rp = _el_get(_g_str) if _yl_k == "euroleague_resmi" else requests.get(f"{url_basi}{_yl_k}/scoreboard?dates={_g_str}", headers=basliklar, timeout=5).json()
+                        for _ev_p in _rp.get("events", list()):
+                            _cp = next(iter(_ev_p.get("competitions") or ()), {})
+                            _tkp = _cp.get("competitors", list())
+                            if len(_tkp) >= 2:
+                                _eh = next((t.get("team", {}).get("displayName", "Ev") for t in _tkp if t.get("homeAway") == "home"), "Ev")
+                                _da = next((t.get("team", {}).get("displayName", "Dep") for t in _tkp if t.get("homeAway") == "away"), "Dep")
+                                _etk = f"[{_lg_k}] {_eh} vs {_da}"
+                                if _etk not in _tumu:
+                                    _tumu[_etk] = {"id": _ev_p.get("id"), "yol": _yl_k, "spor": _sp_k, "kat": _kat, "tarih_g": _g_str, "ev": _eh, "dep": _da, "etiket": _etk}
+                    except Exception:
+                        continue
         return _tumu
 
     _hv_map = _havuz_tum_bulten_cek(tarih)
     if not _hv_map:
-        _hv_map = {m.get("etiket", ""): m for m in k_maclar_veri if m.get("etiket")}
-    _tum_mac_secenekleri = list(_hv_map.keys())
+        _hv_map = {m.get("etiket", ""): {**m, "kat": m.get("spor", "Tümü"), "tarih_g": tarih} for m in k_maclar_veri if m.get("etiket")}
+
+    _hf1, _hf2 = st.columns([1.2, 1.8])
+    _hv_kat_sec = _hf1.selectbox(
+        "Kategori Filtresi",
+        ["Tümü (Bütün Maçlar)", "Basketbol - NBA", "Basketbol - EuroLeague & Diğer", "Futbol - Avrupa Kupaları", "Futbol - Normal Sezon Ligleri"],
+        key="hv_kat_filtre"
+    )
+    _hv_arama = _hf2.text_input("🔎 Takım veya Maç Ara (Örn: Galatasaray, Real Madrid, Lakers...)", value="", key="hv_arama_kutusu").strip().lower()
+
+    _tum_mac_secenekleri = list()
+    for _etk_item, _obj_item in _hv_map.items():
+        if _hv_kat_sec != "Tümü (Bütün Maçlar)" and _obj_item.get("kat") != _hv_kat_sec:
+            continue
+        if _hv_arama and _hv_arama not in _etk_item.lower():
+            continue
+        _tum_mac_secenekleri.append(_etk_item)
+
+    for _kayitli_m in _hv_dep.get("maclar", list()):
+        if _kayitli_m in _hv_map and _kayitli_m not in _tum_mac_secenekleri:
+            _tum_mac_secenekleri.insert(0, _kayitli_m)
 
     _hv_secilen_maclar = st.multiselect(
-        "Havuz İçin Maçları Seçin (2 veya daha fazla maç)",
+        f"Havuz İçin Maçları Seçin ({len(_tum_mac_secenekleri)} maç listelendi — en az 2 maç seçin)",
         options=_tum_mac_secenekleri,
         default=[m for m in _hv_dep.get("maclar", list()) if m in _tum_mac_secenekleri],
         key="hv_mac_secim"
@@ -1167,7 +1202,8 @@ if gorunum == "Canli Kupon Takip":
         try:
             _y_h = mac_obj.get("yol", "")
             _id_h = str(mac_obj.get("id", ""))
-            _r_h = _el_get(tarih) if _y_h == "euroleague_resmi" else requests.get(f"{url_basi}{_y_h}/scoreboard?dates={tarih}", headers=basliklar, timeout=6).json()
+            _tg_h = mac_obj.get("tarih_g", tarih)
+            _r_h = _el_get(_tg_h) if _y_h == "euroleague_resmi" else requests.get(f"{url_basi}{_y_h}/scoreboard?dates={_tg_h}", headers=basliklar, timeout=6).json()
             for _ev_h in _r_h.get("events", list()):
                 if str(_ev_h.get("id", "")) == _id_h:
                     _c_h = next(iter(_ev_h.get("competitions") or ()), {})
