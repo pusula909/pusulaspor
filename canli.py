@@ -1241,8 +1241,8 @@ if gorunum == "Canli Kupon Takip":
         else:
             _secili_objeler = [_hv_map[m] for m in _hv_secilen_maclar if m in _hv_map]
             if len(_secili_objeler) < 2:
-            st.warning("Sepetteki maçların tarihi geçmiş olabilir. Lütfen '🗑️ Havuzu Temizle' butonuna basıp güncel bültenden en az 2 maç ekleyin.")
-            st.stop()
+                st.warning("Sepetteki maçların tarihi geçmiş olabilir. Lütfen '🗑️ Havuzu Temizle' butonuna basıp güncel bültenden en az 2 maç ekleyin.")
+                st.stop()
             _mac_detay_list = list()
             for _mo in _secili_objeler:
                 _sy, _st_top, _, _dt = _havuz_canli_skor_cek(_mo)
