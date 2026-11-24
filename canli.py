@@ -1224,11 +1224,11 @@ else:
                             r = _el_get(ileri_t)
                             if r.get("events"):
                                 break
-                else:
-                    r = requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
-                    if spor == "Basketbol" and not r.get("events"):
-                        ertesi_t = (datetime.strptime(tarih, "%Y%m%d") + timedelta(days=1)).strftime("%Y%m%d")
-                        r = requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={ertesi_t}&limit=100", headers=basliklar, timeout=8).json()
+            else:
+                r = requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
+                if spor == "Basketbol" and not r.get("events"):
+                    ertesi_t = (datetime.strptime(tarih, "%Y%m%d") + timedelta(days=1)).strftime("%Y%m%d")
+                    r = requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={ertesi_t}&limit=100", headers=basliklar, timeout=8).json()
         except Exception:
             r = {}
         for ev in r.get("events", list()):
