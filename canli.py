@@ -1325,10 +1325,29 @@ if gorunum == "Canli Kupon Takip":
                 _biten_havuz_mac += 1
             _hv_tablo_satir.append({"Maç": _mo_t.get("etiket", "-"), "Canlı Skor": _sk_str, "Maç Toplamı": _m_top, "Durum": _dur_str})
 
-        with st.container(border=True):
-            st.info(f"**🤖 AI Havuz İhtimal Raporu ({_hv_dep['barem']} {_hv_dep['tercih']} | Oran: {_hv_dep['oran']}):**\n\n{_hv_dep.get('ai_rapor', '')}")
-            st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
+        _canli_proj_top = 0.0
+        for _mo_c in _hv_dep["objeler"]:
+            _sk_c, _top_c, _bit_c, _det_c = _havuz_canli_skor_cek(_mo_c)
+            if _bit_c:
+                _canli_proj_top += _top_c
+            elif _top_c > 0:
+                _d_up = _det_c.upper()
+                _tam_oran = 0.88 if ("Q4" in _d_up or "OT" in _d_up or "UZ" in _d_up) else (0.62 if "Q3" in _d_up else (0.48 if ("DEVRE" in _d_up or "HT" in _d_up) else (0.32 if "Q2" in _d_up else (0.18 if "Q1" in _d_up else 0.50))))
+                _canli_proj_top += round(_top_c / _tam_oran, 1)
+            else:
+                _canli_proj_top += 224.0 if "nba" in str(_mo_c.get("yol", "")) else (164.0 if _mo_c.get("spor") == "Basketbol" else 2.65)
+        _canli_proj_top = round(_canli_proj_top, 1)
+        _c_fark = (float(_hv_dep["barem"]) - _canli_proj_top) if _hv_dep["tercih"] == "ALT" else (_canli_proj_top - float(_hv_dep["barem"]))
+        _c_olcek = max(5.0, float(_hv_dep["barem"]) * 0.055)
+        _canli_ihtimal = max(5, min(96, int(round(55 + (_c_fark / _c_olcek) * 24))))
 
+        with st.container(border=True):
+            _cm1, _cm2, _cm3 = st.columns(3)
+            _cm1.metric("⚡ Anlık Canlı Gelme İhtimali", f"%{_canli_ihtimal}", delta=f"{'Avantajlı' if _canli_ihtimal >= 55 else 'Riskli'} Tempo")
+            _cm2.metric("📈 Canlı Final Projeksiyonu", f"{_canli_proj_top}", delta=f"Hedef: {_hv_dep['barem']} {_hv_dep['tercih']}")
+            _cm3.metric("🎯 Anlık Toplam Skor", f"{_anlik_toplam}", delta=f"Biten: {_biten_havuz_mac}/{len(_hv_dep['objeler'])}")
+            st.info(f"**🤖 Başlangıç AI Havuz Analizi:**\n\n{_hv_dep.get('ai_rapor', '')}")
+            st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
             _hedef_b = float(_hv_dep["barem"])
             _sec_t = _hv_dep["tercih"]
             _kalan_fark = round(_hedef_b - _anlik_toplam, 1)
