@@ -196,6 +196,11 @@ def _espn_yedek_oran(lig_adi, ev_ad, dep_ad):
                     if (k1[:4] and k1[:4] in hn) and (k2[:4] and k2[:4] in an):
                         odds_list = comp.get("odds", list())
                         if not odds_list:
+                            ev_id = ev.get("id", "")
+                            if ev_id:
+                                sum_r = requests.get(f"https://espn.com{y}/summary?event={ev_id}", timeout=6).json()
+                                odds_list = sum_r.get("pickcenter", list())
+                        if not odds_list:
                             continue
                         od = odds_list.pop(0)
                         barem = float(od.get("overUnder", 0) or 0)
