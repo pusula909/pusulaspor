@@ -546,38 +546,35 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
                 ms_guven = min(88, int(54 + fark * 48))
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Sonucu (MS)", "AI Tahmin Secenegi": ms_secenek, "Guven Seviyesi": f"%{ms_guven}", "GuvenInt": ms_guven})
 
-            beklenen_toplam = round(212 + (ev_g + dep_g) * 14) + 0.5
-            if any(k in f"{lig_adi} {ev_ad} {dep_ad}".lower() for k in ("euroleague", "euro", "fenerbahce", "efes", "barcelona", "real madrid", "olympiacos", "panathinaikos", "maccabi", "partizan", "zalgiris", "monaco", "virtus", "baskonia", "bayern", "milano", "asvel", "paris", "alba")):
-                beklenen_toplam = round(154 + (ev_g + dep_g) * 14) + 0.5
-            if state == "in" and (ev_skor + dep_skor) > 150:
-                beklenen_toplam = (ev_skor + dep_skor) + 36.5
-            if (ev_g + dep_g) >= 1.05:
-                au_secenek = f"Mac Toplami {beklenen_toplam} UST"
-                au_guven = min(78, int(56 + (ev_g + dep_g) * 15))
-            else:
-                au_secenek = f"Mac Toplami {beklenen_toplam} ALT"
-                au_guven = min(75, int(68 - (ev_g + dep_g) * 10))
-            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Toplam Sayi", "AI Tahmin Secenegi": au_secenek, "Guven Seviyesi": f"%{au_guven}", "GuvenInt": au_guven})
+            o_veri = None
+        try:
+            from oran_motoru import mac_oran_bul
+            o_veri = mac_oran_bul(lig_adi, ev_ad, dep_ad, "", ev_skor, dep_skor, state)
+        except Exception:
+            o_veri = None
 
-            taban_ev = 77 if any(k in f"{lig_adi} {ev_ad} {dep_ad}".lower() for k in ("euroleague", "euro", "fenerbahce", "efes", "barcelona", "real madrid", "olympiacos", "panathinaikos", "maccabi", "partizan", "zalgiris", "monaco", "virtus", "baskonia", "bayern", "milano", "asvel", "paris", "alba")) else 105
-            ev_barem = round(taban_ev + ev_g * 14) + 0.5
-            if ev_g >= 0.50:
-                ev_sayi_sec = f"{ev_ad} {ev_barem} UST"
-                ev_sayi_guv = min(77, int(52 + ev_g * 30))
+        if o_veri and o_veri.get("barem", 0) > 0:
+            resmi_b = o_veri["barem"]
+            ust_o = o_veri.get("ust", 1.85)
+            alt_o = o_veri.get("alt", 1.85)
+            if (ev_g + dep_g) >= 1.04:
+                au_secenek = f"Mac Toplami {resmi_b} UST (Oran: {ust_o})"
+                au_guven = min(80, int(57 + (ev_g + dep_g) * 14))
             else:
-                ev_sayi_sec = f"{ev_ad} {ev_barem} ALT"
-                ev_sayi_guv = min(74, int(75 - ev_g * 25))
-            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Ev Sahibi Takim Sayisi", "AI Tahmin Secenegi": ev_sayi_sec, "Guven Seviyesi": f"%{ev_sayi_guv}", "GuvenInt": ev_sayi_guv})
+                au_secenek = f"Mac Toplami {resmi_b} ALT (Oran: {alt_o})"
+                au_guven = min(78, int(68 - (ev_g + dep_g) * 9))
+            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Resmi Piyasa Baremi", "AI Tahmin Secenegi": au_secenek, "Guven Seviyesi": f"%{au_guven}", "GuvenInt": au_guven})
+        else:
+            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Resmi Piyasa Baremi", "AI Tahmin Secenegi": "Resmi Barem Henuz Acilmadi (Uydurma Veri Kapali)", "Guven Seviyesi": "%0", "GuvenInt": 0})
 
-            taban_dep = 75 if any(k in f"{lig_adi} {ev_ad} {dep_ad}".lower() for k in ("euroleague", "euro", "fenerbahce", "efes", "barcelona", "real madrid", "olympiacos", "panathinaikos", "maccabi", "partizan", "zalgiris", "monaco", "virtus", "baskonia", "bayern", "milano", "asvel", "paris", "alba")) else 103
-            dep_barem = round(taban_dep + dep_g * 14) + 0.5
-            if dep_g >= 0.50:
-                dep_sayi_sec = f"{dep_ad} {dep_barem} UST"
-                dep_sayi_guv = min(76, int(51 + dep_g * 30))
-            else:
-                dep_sayi_sec = f"{dep_ad} {dep_barem} ALT"
-                dep_sayi_guv = min(75, int(76 - dep_g * 25))
-            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Deplasman Takim Sayisi", "AI Tahmin Secenegi": dep_sayi_sec, "Guven Seviyesi": f"%{dep_sayi_guv}", "GuvenInt": dep_sayi_guv})
+        if o_veri and (o_veri.get("ms1", 0) > 0 or o_veri.get("ms2", 0) > 0):
+            ms1_o = o_veri.get("ms1", 0)
+            ms2_o = o_veri.get("ms2", 0)
+            hdp_o = o_veri.get("handikap", 0)
+            oran_bilgi = f"Resmi Oranlar -> {ev_ad}: {ms1_o} | {dep_ad}: {ms2_o}" + (f" | Handikap: {hdp_o}" if hdp_o != 0 else "")
+            oran_guv = int(round((1.0 / min(ms1_o, ms2_o)) * 100)) if min(ms1_o, ms2_o) > 1.0 else 65
+            oran_guv = max(52, min(86, oran_guv))
+            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Bahis Sirketi Acilis/Canli Orani", "AI Tahmin Secenegi": oran_bilgi, "Guven Seviyesi": f"%{oran_guv}", "GuvenInt": oran_guv})
 
             en_iyi = sorted(satirlar, key=lambda x: x["GuvenInt"], reverse=True).pop(0)
             ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
