@@ -1322,28 +1322,34 @@ if gorunum == "Canli Kupon Takip":
                 _biten_havuz_mac += 1
             _hv_tablo_satir.append({"Maç": _mo_t.get("etiket", "-"), "Canlı Skor": _sk_str, "Maç Toplamı": _m_top, "Durum": _dur_str})
 
-        _canli_proj_top = 0.0
+        _sure_orani_top = 0.0
         for _mo_c in _hv_dep["objeler"]:
             _sk_c, _top_c, _bit_c, _det_c = _havuz_canli_skor_cek(_mo_c)
             if _bit_c:
-                _canli_proj_top += _top_c
+                _sure_orani_top += 1.0
             elif _top_c > 0:
                 _d_up = _det_c.upper()
-                _tam_oran = 0.88 if ("Q4" in _d_up or "OT" in _d_up or "UZ" in _d_up) else (0.62 if "Q3" in _d_up else (0.48 if ("DEVRE" in _d_up or "HT" in _d_up) else (0.32 if "Q2" in _d_up else (0.18 if "Q1" in _d_up else 0.50))))
-                _canli_proj_top += round(_top_c / _tam_oran, 1)
+                _sure_orani_top += 0.88 if ("Q4" in _d_up or "OT" in _d_up or "UZ" in _d_up) else (0.65 if "Q3" in _d_up else (0.50 if ("DEVRE" in _d_up or "HT" in _d_up) else (0.35 if "Q2" in _d_up else (0.18 if "Q1" in _d_up else 0.50))))
+        _genel_sure_yuzde = round((_sure_orani_top / max(1, len(_hv_dep["objeler"]))) * 100)
+        _hedef_val = float(_hv_dep["barem"])
+
+        if _hv_dep["tercih"] == "ÜST":
+            _genel_kupon_yuzde = 100 if _anlik_toplam > _hedef_val else min(99, int(round((_anlik_toplam / max(1.0, _hedef_val)) * 100)))
+        else:
+            if _anlik_toplam > _hedef_val:
+                _genel_kupon_yuzde = 0
             else:
-                _canli_proj_top += 224.0 if "nba" in str(_mo_c.get("yol", "")) else (164.0 if _mo_c.get("spor") == "Basketbol" else 2.65)
-        _canli_proj_top = round(_canli_proj_top, 1)
-        _c_fark = (float(_hv_dep["barem"]) - _canli_proj_top) if _hv_dep["tercih"] == "ALT" else (_canli_proj_top - float(_hv_dep["barem"]))
-        _c_olcek = max(5.0, float(_hv_dep["barem"]) * 0.055)
-        _canli_ihtimal = max(5, min(96, int(round(55 + (_c_fark / _c_olcek) * 24))))
+                _kalan_pay_orani = max(0.0, (_hedef_val - _anlik_toplam) / max(1.0, _hedef_val))
+                _genel_kupon_yuzde = max(10, min(99, int(round((_genel_sure_yuzde * 0.65) + (_kalan_pay_orani * 100 * 0.35)))))
 
         with st.container(border=True):
             _ai_kisa_not = _hv_dep.get("ai_rapor", "").split("DEĞERLENDİRME:").pop(-1).strip() if "DEĞERLENDİRME:" in _hv_dep.get("ai_rapor", "") else ""
             st.info(
-                f"**🤖 Canlı Havuz Analizi ({_hv_dep['barem']} {_hv_dep['tercih']} | Oran: {_hv_dep['oran']}):**\n\n"
-                f"• **ANLIK GELME İHTİMALİ:** **%{_canli_ihtimal}** ({'Avantajlı Tempo' if _canli_ihtimal >= 55 else 'Riskli Tempo'})\n"
-                f"• **CANLI FİNAL PROJEKSİYONU:** **{_canli_proj_top}** (Şu Anki Toplam: {_anlik_toplam})\n"
+                f"**🤖 Canlı Havuz Durumu ({_hv_dep['barem']} {_hv_dep['tercih']} | Oran: {_hv_dep['oran']}):**\n\n"
+                f"• **KUPON BAŞARI İLERLEMESİ:** **%{_genel_kupon_yuzde}** (Maçların Süre İlerlemesi: %{_genel_sure_yuzde})\n"
+                f"• **TOPLAM SKOR DURUMU:** **{_anlik_toplam} / {_hv_dep['barem']} {_hv_dep['tercih']}** (Kalan Pay: **{round(_hedef_val - _anlik_toplam, 1)}**)\n"
+                + (f"• **AI DEĞERLENDİRME:** {_ai_kisa_not}" if _ai_kisa_not else "")
+            )
                 + (f"• **AI DEĞERLENDİRME:** {_ai_kisa_not}" if _ai_kisa_not else "")
             )
             st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
