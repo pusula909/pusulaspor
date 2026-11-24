@@ -1273,7 +1273,32 @@ if gorunum == "Canli Kupon Takip":
             _mac_detay_list = list()
             for _mo in _secili_objeler:
                 _sy, _st_top, _, _dt = _havuz_canli_skor_cek(_mo)
-                _mac_detay_list.append(f"{_mo.get('etiket')} (Skor: {_sy}, Durum: {_dt})")
+                _gercek_veri_not = ""
+                try:
+                    _y_oz = str(_mo.get("yol", ""))
+                    _id_oz = str(_mo.get("id", ""))
+                    if _y_oz and _y_oz != "euroleague_resmi" and _id_oz:
+                        _sum_j = requests.get(f"{url_basi}{_y_oz}/summary?event={_id_oz}", headers=basliklar, timeout=5).json()
+                        _box_t = (_sum_j.get("boxscore") or {}).get("teams", list())
+                        _st_oz = list()
+                        for _bt in _box_t:
+                            _t_nm = (_bt.get("team") or {}).get("abbreviation", "")
+                            _ppg = next((s.get("displayValue") for s in _bt.get("statistics", list()) if s.get("name") in ("avgPoints", "points", "goalsFor")), "")
+                            if _t_nm and _ppg:
+                                _st_oz.append(f"{_t_nm} Ort:{_ppg}")
+                        _inj_list = list()
+                        for _ij_grp in _sum_j.get("injuries", list()):
+                            _ij_tm = (_ij_grp.get("team") or {}).get("abbreviation", "")
+                            for _ij_p in _ij_grp.get("injuries", list())[:3]:
+                                _ath = (_ij_p.get("athlete") or {}).get("shortName", "")
+                                _ist = _ij_p.get("status", "")
+                                if _ath:
+                                    _inj_list.append(f"{_ij_tm}:{_ath}({_ist})")
+                        if _st_oz or _inj_list:
+                            _gercek_veri_not = f" | İstatistik: {', '.join(_st_oz)} | Eksikler: {', '.join(_inj_list) if _inj_list else 'Tam kadro'}"
+                except Exception:
+                    pass
+                _mac_detay_list.append(f"{_mo.get('etiket')} (Skor: {_sy}, Durum: {_dt}{_gercek_veri_not})")
                 _mac_basi_ort = round(_hv_barem / max(1, len(_secili_objeler)), 2)
             _anlik_top_b = 0
             _sure_top_b = 0.0
@@ -1430,7 +1455,7 @@ if gorunum == "Canli Kupon Takip":
             )
             st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
                 
-            st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
+            
             _hedef_b = float(_hv_dep["barem"])
             _sec_t = _hv_dep["tercih"]
             _kalan_fark = round(_hedef_b - _anlik_toplam, 1)
