@@ -1376,7 +1376,7 @@ if gorunum == "Canli Kupon Takip":
                 _biten_havuz_mac += 1
             _hv_tablo_satir.append({"Maç": _mo_t.get("etiket", "-"), "Saat / Süre": _dur_str, "Canlı Skor": _sk_str, "Maç Toplamı": _m_top})
 
-       _sure_orani_top = 0.0
+        _sure_orani_top = 0.0
         _canli_proj_top = 0.0
         _bas_proj = float(_hv_dep.get("baslangic_proj") or _hv_dep["barem"])
         _mac_say_c = max(1, len(_hv_dep["objeler"]))
