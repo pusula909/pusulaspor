@@ -1325,9 +1325,10 @@ else:
                 )
                 ham = ""
                 if motor_adi == "Gemini" and gizli_gemini_key:
-                    _g_url = "https://" + "://googleapis.com" + str(gizli_gemini_key)
+                    _g_host = "generativelanguage" + ".googleapis.com"
+                    _g_path = "/v1beta/models/gemini-2.0-flash:generateContent?key=" + str(gizli_gemini_key)
                     rg = requests.post(
-                        _g_url,
+                        "https://" + _g_host + _g_path,
                         json={"contents": list(({"parts": list(({"text": p_metin},))},))},
                         timeout=7,
                     ).json()
@@ -1335,9 +1336,10 @@ else:
                     _p_g = next(iter((_c_g.get("content") or {}).get("parts") or ()), {})
                     ham = _p_g.get("text", "")
                 elif motor_adi == "Groq" and groq_api_key:
-                    _q_url = "https://" + "://groq.com"
+                    _q_host = "api" + ".groq.com"
+                    _q_path = "/openai/v1/chat/completions"
                     rq = requests.post(
-                        _q_url,
+                        "https://" + _q_host + _q_path,
                         headers={"Authorization": f"Bearer {groq_api_key}", "Content-Type": "application/json"},
                         json={"model": "openai/gpt-oss-120b", "messages": list(({"role": "user", "content": p_metin},)), "temperature": 0.2},
                         timeout=7,
