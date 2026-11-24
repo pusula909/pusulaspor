@@ -1424,10 +1424,11 @@ if gorunum == "Canli Kupon Takip":
             _ai_kisa_not = _hv_dep.get("ai_rapor", "").split("DEĞERLENDİRME:").pop(-1).strip() if "DEĞERLENDİRME:" in _hv_dep.get("ai_rapor", "") else ""
             st.info(
                 f"**🤖 Canlı Havuz Durumu ({_hv_dep['barem']} {_hv_dep['tercih']} | Oran: {_hv_dep['oran']}):**\n\n"
-                f"• **KUPON BAŞARI İLERLEMESİ:** **%{_genel_kupon_yuzde}** (Maçların Süre İlerlemesi: %{_genel_sure_yuzde})\n"
-                f"• **TOPLAM SKOR DURUMU:** **{_anlik_toplam} / {_hv_dep['barem']} {_hv_dep['tercih']}** (Kalan Pay: **{round(_hedef_val - _anlik_toplam, 1)}**)\n"
+                f"• **GELME İHTİMALİ / İLERLEME:** **%{_genel_kupon_yuzde}** (Süre İlerlemesi: %{_genel_sure_yuzde})\n"
+                f"• **BEKLENEN PROJEKSİYON:** **{_canli_proj_top}** (Şu An: {_anlik_toplam} / Hedef: {_hv_dep['barem']} {_hv_tercih})\n"
                 + (f"• **AI DEĞERLENDİRME:** {_ai_kisa_not}" if _ai_kisa_not else "")
             )
+            st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
                 
             st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
             _hedef_b = float(_hv_dep["barem"])
