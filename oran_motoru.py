@@ -73,7 +73,7 @@ def gercek_oranlari_getir(lig_adi, lig_yolu=""):
 
     for tarih_str in dict.fromkeys(tarihler):
         try:
-            u = f"https://://rapidapi.com/sports/{sport_id}/events/{tarih_str}"
+            u = f"https://rapidapi.com{sport_id}/events/{tarih_str}"
             r = requests.get(u, headers=headers, params={"include": "scores,all_periods"}, timeout=9)
             if r.status_code != 200:
                 continue
