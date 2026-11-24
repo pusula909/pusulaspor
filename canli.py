@@ -1262,13 +1262,7 @@ if gorunum == "Canli Kupon Takip":
                     _son_etiket = "✅ HAVUZ KAZANDI!" if _kazandi_son else "❌ HAVUZ KAYBETTİ!"
                     telegram_mesaj_gonder(tg_token, tg_chat_id, f"{_son_etiket} ({_hedef_b} {_sec_t} | Final Toplam: {_anlik_toplam} | Oran: {_hv_dep['oran']})")
                     _hv_dep["bildirim_atildi"] = True
-            else:
-                _doluluk = int(min(100, round((_anlik_toplam / max(1.0, _hedef_b)) * 100)))
-                st.info(f"📊 **Anlık Havuz Toplamı: {_anlik_toplam} / {_hedef_b} {_sec_t}** | Kalan Pay: **{_kalan_fark}** | Biten Maç: **{_biten_havuz_mac}/{len(_hv_dep['objeler'])}**")
-                st.progress(_doluluk)
-                if not _hv_dep.get("bildirim_atildi"):
-                    telegram_mesaj_gonder(tg_token, tg_chat_id, f"❌ HAVUZ KAYBETTİ! ({_hedef_b} ALT | Gerçekleşen Toplam: {_anlik_toplam})")
-                    _hv_dep["bildirim_atildi"] = True
+            
             elif _sec_t == "ÜST" and _anlik_toplam > _hedef_b:
                 st.success(f"🏆 **HAVUZ ŞİMDİDEN KAZANDI!** Toplam Skor ({_anlik_toplam}) sınırı ({_hedef_b} ÜST) geçti!")
                 st.progress(100)
