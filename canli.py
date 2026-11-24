@@ -1231,7 +1231,7 @@ if gorunum == "Canli Kupon Takip":
                     _det_h = ((_c_h.get("status") or {}).get("type") or {}).get("shortDetail", "-")
                     _tr_saat = "-"
                     try:
-                        _raw_dt = str(_ev_h.get("date") or _c_h.get("date") or "")
+                        _raw_dt = str(_ev_h.get("date") or _ev_h.get("startDate") or _c_h.get("date") or _c_h.get("startDate") or "")
                         if _raw_dt:
                             _utc_dt = datetime.fromisoformat(_raw_dt.replace("Z", "+00:00"))
                             _tr_dt = _utc_dt + timedelta(hours=3)
