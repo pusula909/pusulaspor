@@ -1119,6 +1119,136 @@ if gorunum == "Canli Kupon Takip":
                 )
                 telegram_mesaj_gonder(tg_token, tg_chat_id, ozet_msj)
                 st.session_state.kupon_bildirim_gonderildi = True
+        st.divider()
+    st.subheader("🎯 Kombine Toplam Gol / Sayı Havuzu (Manuel Barem & AI İhtimal Analizi)")
+    st.caption("Seçtiğiniz maçların toplam gol veya toplam sayı havuzu için barem ve oranı manuel girin; AI istatistikleri araştırıp gelme ihtimalini hesaplasın ve canlı takip etsin.")
+
+    @st.cache_resource
+    def _kalici_havuz_deposu():
+        return {"aktif": False, "maclar": list(), "barem": 0.0, "tercih": "ALT", "oran": 1.85, "ai_rapor": "", "bildirim_atildi": False}
+
+    _hv_dep = _kalici_havuz_deposu()
+    _tum_mac_secenekleri = list(df_canli["Mac"].tolist()) if (not df_canli.empty and "Mac" in df_canli.columns) else list()
+
+    _hv_secilen_maclar = st.multiselect(
+        "Havuz İçin Maçları Seçin (2 veya daha fazla maç)",
+        options=_tum_mac_secenekleri,
+        default=[m for m in _hv_dep.get("maclar", list()) if m in _tum_mac_secenekleri],
+        key="hv_mac_secim"
+    )
+    _hc1, _hc2, _hc3 = st.columns(3)
+    _hv_barem = _hc1.number_input("Toplam Havuz Baremi (Örn: 731.5 veya 12.5)", min_value=0.5, max_value=2500.0, value=float(_hv_dep.get("barem") or 731.5), step=0.5, key="hv_barem_in")
+    _hv_tercih = _hc2.selectbox("Tercih", ["ALT", "ÜST"], index=0 if _hv_dep.get("tercih", "ALT") == "ALT" else 1, key="hv_tercih_in")
+    _hv_oran = _hc3.number_input("Büro Oranı (Manuel)", min_value=1.01, max_value=100.0, value=float(_hv_dep.get("oran") or 1.85), step=0.05, key="hv_oran_in")
+
+    _hb1, _hb2 = st.columns(2)
+    if _hb1.button("🔍 AI İhtimal Analizi Yap & Canlı Takibi Başlat", use_container_width=True):
+        if len(_hv_secilen_maclar) < 2:
+            st.warning("Lütfen havuz analizi için en az 2 maç seçin.")
+        else:
+            _mac_detay_list = list()
+            for _m_ad_h in _hv_secilen_maclar:
+                _r_h = df_canli[df_canli["Mac"] == _m_ad_h].iloc[0] if not df_canli[df_canli["Mac"] == _m_ad_h].empty else {}
+                _mac_detay_list.append(f"{_m_ad_h} (Skor: {_r_h.get('Skor', '0-0')}, Durum: {_r_h.get('Durum', '-')}, AI Özet: {_r_h.get('Hizli AI Ozet', '-')})")
+            _mac_basi_ort = round(_hv_barem / len(_hv_secilen_maclar), 2)
+            _ai_hv_sonuc = f"Maç Başı Gerekli Ortalama: {_mac_basi_ort} sayı/gol."
+            if groq_api_key:
+                try:
+                    _p_hv = (
+                        f"Secilen {len(_hv_secilen_maclar)} macin toplam sayi/gol havuzu analizi:\n"
+                        + "\n".join(_mac_detay_list)
+                        + f"\nAcilan Toplam Havuz Baremi: {_hv_barem} {_hv_tercih} (Mac basi ortalama: {_mac_basi_ort}) | Oran: {_hv_oran}.\n"
+                        "Takimlarin tempolarini, mevcut skorlarini ve kalan sureleri analiz ederek SADECE su 3 kisa satirda Turkce rapor ver:\n"
+                        "• GELME IHTIMALI: %[40-88 arasi net yuzde]\n"
+                        "• BEKLENEN TOPLAM PROJEKSIYON: [Tahmini toplam sayi/gol]\n"
+                        "• AI DEGERLENDIRME: [En fazla 18 kelimelik net gerekce]"
+                    )
+                    _q_hv = requests.post(
+                        "https://" + "api" + "://",
+                        headers={"Authorization": f"Bearer {groq_api_key}", "Content-Type": "application/json"},
+                        json={"model": "openai/gpt-oss-120b", "messages": list(({"role": "user", "content": _p_hv},)), "temperature": 0.2},
+                        timeout=8,
+                    ).json()
+                    _c_hv = next(iter(_q_hv.get("choices") or ()), {})
+                    _txt_hv = (_c_hv.get("message") or {}).get("content", "").strip()
+                    if _txt_hv:
+                        _ai_hv_sonuc = _txt_hv
+                except Exception:
+                    pass
+            _hv_dep["aktif"] = True
+            _hv_dep["maclar"] = list(_hv_secilen_maclar)
+            _hv_dep["barem"] = float(_hv_barem)
+            _hv_dep["tercih"] = _hv_tercih
+            _hv_dep["oran"] = float(_hv_oran)
+            _hv_dep["ai_rapor"] = _ai_hv_sonuc
+            _hv_dep["bildirim_atildi"] = False
+            telegram_mesaj_gonder(
+                tg_token,
+                tg_chat_id,
+                f"🎯 YENİ KOMBİNE HAVUZ TAKİBİ BAŞLADI\n• Barem: {_hv_barem} {_hv_tercih} | Oran: {_hv_oran}\n• Maç Sayısı: {len(_hv_secilen_maclar)}\n{_ai_hv_sonuc}"
+            )
+            st.rerun()
+
+    if _hb2.button("🗑️ Havuzu Temizle", use_container_width=True):
+        _hv_dep["aktif"] = False
+        _hv_dep["maclar"] = list()
+        _hv_dep["ai_rapor"] = ""
+        _hv_dep["bildirim_atildi"] = False
+        st.rerun()
+
+    if _hv_dep.get("aktif") and _hv_dep.get("maclar"):
+        _anlik_toplam = 0
+        _biten_havuz_mac = 0
+        _hv_tablo_satir = list()
+        for _hm in _hv_dep["maclar"]:
+            _sat_h = df_canli[df_canli["Mac"] == _hm].iloc[0] if not df_canli[df_canli["Mac"] == _hm].empty else {}
+            _sk_str = str(_sat_h.get("Skor", "0 - 0"))
+            _dur_str = str(_sat_h.get("Durum", "-"))
+            _parcalar = [int(s.strip()) for s in _sk_str.replace(":", "-").split("-") if s.strip().isdigit()]
+            _m_top = sum(_parcalar) if len(_parcalar) >= 2 else 0
+            _anlik_toplam += _m_top
+            _bitti_mi = any(k in _dur_str.upper() for k in ("MS", "BITTI", "FINAL", "FT"))
+            if _bitti_mi:
+                _biten_havuz_mac += 1
+            _hv_tablo_satir.append({"Maç": _hm, "Canlı Skor": _sk_str, "Maç Toplamı": _m_top, "Durum": _dur_str})
+
+        with st.container(border=True):
+            st.info(f"**🤖 AI Havuz İhtimal Raporu ({_hv_dep['barem']} {_hv_dep['tercih']} | Oran: {_hv_dep['oran']}):**\n\n{_hv_dep.get('ai_rapor', '')}")
+            st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
+
+            _hedef_b = float(_hv_dep["barem"])
+            _sec_t = _hv_dep["tercih"]
+            _kalan_fark = round(_hedef_b - _anlik_toplam, 1)
+            _tamam_mi = (_biten_havuz_mac == len(_hv_dep["maclar"]))
+
+            if _sec_t == "ALT" and _anlik_toplam > _hedef_b:
+                st.error(f"❌ **HAVUZ KAYBETTİ!** Toplam Skor ({_anlik_toplam}) sınırı ({_hedef_b} ALT) aştı!")
+                st.progress(0)
+                if not _hv_dep.get("bildirim_atildi"):
+                    telegram_mesaj_gonder(tg_token, tg_chat_id, f"❌ HAVUZ KAYBETTİ! ({_hedef_b} ALT | Gerçekleşen Toplam: {_anlik_toplam})")
+                    _hv_dep["bildirim_atildi"] = True
+            elif _sec_t == "ÜST" and _anlik_toplam > _hedef_b:
+                st.success(f"🏆 **HAVUZ ŞİMDİDEN KAZANDI!** Toplam Skor ({_anlik_toplam}) sınırı ({_hedef_b} ÜST) geçti!")
+                st.progress(100)
+                if not _hv_dep.get("bildirim_atildi"):
+                    telegram_mesaj_gonder(tg_token, tg_chat_id, f"✅ HAVUZ KAZANDI! ({_hedef_b} ÜST | Gerçekleşen Toplam: {_anlik_toplam})")
+                    _hv_dep["bildirim_atildi"] = True
+            elif _tamam_mi:
+                _kazandi_son = (_anlik_toplam < _hedef_b) if _sec_t == "ALT" else (_anlik_toplam > _hedef_b)
+                if _kazandi_son:
+                    st.success(f"🏆 **TEBRİKLER, HAVUZ KAZANDI!** ({_hedef_b} {_sec_t} | Final Toplam: {_anlik_toplam} | Oran: {_hv_dep['oran']})")
+                    st.progress(100)
+                else:
+                    st.error(f"❌ **HAVUZ KAYBETTİ!** ({_hedef_b} {_sec_t} | Final Toplam: {_anlik_toplam})")
+                    st.progress(0)
+                if not _hv_dep.get("bildirim_atildi"):
+                    _son_etiket = "✅ HAVUZ KAZANDI!" if _kazandi_son else "❌ HAVUZ KAYBETTİ!"
+                    telegram_mesaj_gonder(tg_token, tg_chat_id, f"{_son_etiket} ({_hedef_b} {_sec_t} | Final Toplam: {_anlik_toplam} | Oran: {_hv_dep['oran']})")
+                    _hv_dep["bildirim_atildi"] = True
+            else:
+                _doluluk = int(min(100, round((_anlik_toplam / max(1.0, _hedef_b)) * 100)))
+                st.info(f"📊 **Anlık Havuz Toplamı: {_anlik_toplam} / {_hedef_b} {_sec_t}** | Kalan Pay: **{_kalan_fark}** | Biten Maç: **{_biten_havuz_mac}/{len(_hv_dep['maclar'])}**")
+                st.progress(_doluluk)
 elif gorunum == "AI Dogruluk Karnesi":
     st.subheader("📊 AI Dogruluk Karnesi & Lig Bazli Basari Analizi")
     import json, os
