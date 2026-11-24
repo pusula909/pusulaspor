@@ -560,7 +560,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
             if (ev_g + dep_g) >= 1.04:
                 au_secenek = f"Mac Toplami {resmi_b} UST (Oran: {ust_o})"
                 au_guven = min(80, int(57 + (ev_g + dep_g) * 14))
-           else:
+        else:
             au_secenek = "Resmi Barem Henuz Acilmadi"
             au_guven = 0
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Resmi Piyasa Baremi", "AI Tahmin Secenegi": "Resmi Barem Henuz Acilmadi (Uydurma Veri Kapali)", "Guven Seviyesi": "%0", "GuvenInt": 0})
