@@ -1232,7 +1232,8 @@ else:
                             r = requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={ileri_t}&limit=100", headers=basliklar, timeout=8).json()
                             if r.get("events"):
                                 break
-        except Exception:
+        except Exception as err:
+                st.error(f"Basketbol Veri Hatasi ({aktif_lig_ad}): {err}")
                 r = {}
         for ev in r.get("events", list()):
             try:
