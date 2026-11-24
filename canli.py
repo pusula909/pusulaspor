@@ -1314,7 +1314,7 @@ if gorunum == "Canli Kupon Takip":
                     _q_hv = requests.post(
                         "https://" + "api" + ".groq.com" + "/openai/v1/chat/completions",
                         headers={"Authorization": f"Bearer {groq_api_key}", "Content-Type": "application/json"},
-                        json={"model": "openai/gpt-oss-120b", "messages": list(({"role": "user", "content": _p_hv},)), "temperature": 0.25},
+                        json={"model": "openai/gpt-oss-120b", "messages": list(({"role": "user", "content": _p_hv},)), "temperature": 0.0, "seed": 42},
                         timeout=10,
                     ).json()
                     _c_hv = next(iter(_q_hv.get("choices") or ()), {})
