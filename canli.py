@@ -153,6 +153,7 @@ def _el_get(t):
                 ev.append(
                     {
                         "id": gc,
+                        "date": (datetime.strptime(f"{d_raw} {s_time}", "%b %d, %Y %H:%M") - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
                         "status": {"type": {"state": st_code, "shortDetail": detay}},
                         "competitions": list(
                             (
