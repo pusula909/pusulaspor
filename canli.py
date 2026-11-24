@@ -546,12 +546,25 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
                 ms_guven = min(88, int(54 + fark * 48))
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Sonucu (MS)", "AI Tahmin Secenegi": ms_secenek, "Guven Seviyesi": f"%{ms_guven}", "GuvenInt": ms_guven})
 
-            try:
-                from oran_motoru import mac_oran_bul
-                o_veri = mac_oran_bul(lig_adi, ev_ad, dep_ad, "", ev_skor, dep_skor, state)
-            except Exception as oran_err:
-                st.warning(f"Oran Motoru Hatasi: {oran_err}")
-                o_veri = None
+           _ham_od = st.session_state.get(f"odds_{ev_ad}_{dep_ad}", {})
+        o_veri = None
+        if _ham_od:
+            _b = float(_ham_od.get("overUnder", 0) or 0)
+            _h = float(_ham_od.get("spread", 0) or 0)
+            def _us2dec(v):
+                try:
+                    x = float(str(v).replace("+", "").strip())
+                    return round(1.0 + (x / 100.0), 2) if x > 0 else (round(1.0 + (100.0 / abs(x)), 2) if x < 0 else 0.0)
+                except Exception:
+                    return 0.0
+            o_veri = {
+                "barem": _b,
+                "handikap": _h,
+                "ms1": _us2dec((_ham_od.get("homeTeamOdds") or {}).get("moneyLine", 0)),
+                "ms2": _us2dec((_ham_od.get("awayTeamOdds") or {}).get("moneyLine", 0)),
+                "ust": 1.88,
+                "alt": 1.88,
+            }
 
         if o_veri and o_veri.get("barem", 0) > 0:
             resmi_b = o_veri["barem"]
@@ -1266,6 +1279,9 @@ else:
                         st.toast(f"SKOR DEGISTI! {ev_ad} {skor_gosterim} {dep_ad}")
                     st.session_state.eski_skorlar[mac_id] = skor_gosterim
                 iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
+                _comps_tmp = ev.get("competitions") or list()
+                _odds_tmp = (_comps_tmp[0].get("odds") if _comps_tmp else None) or list()
+                st.session_state[f"odds_{ev_ad}_{dep_ad}"] = _odds_tmp[0] if _odds_tmp else {}
                 _, ozet_tahmin, en_guclu = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor, aktif_lig_ad, 0, 0, state, ev_s_int, dep_s_int)
                 if state == "pre":
                  deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
