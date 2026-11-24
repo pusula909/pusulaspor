@@ -1239,7 +1239,7 @@ if gorunum == "Canli Kupon Takip":
         if len(_hv_secilen_maclar) < 2:
             st.warning("Lütfen havuz analizi için en az 2 maç seçin.")
         else:
-        _secili_objeler = [_hv_map[m] for m in _hv_secilen_maclar if m in _hv_map]
+            _secili_objeler = [_hv_map[m] for m in _hv_secilen_maclar if m in _hv_map]
             if len(_secili_objeler) < 2:
             st.warning("Sepetteki maçların tarihi geçmiş olabilir. Lütfen '🗑️ Havuzu Temizle' butonuna basıp güncel bültenden en az 2 maç ekleyin.")
             st.stop()
