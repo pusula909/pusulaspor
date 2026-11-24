@@ -37,7 +37,7 @@ def _el_get(t):
         }
         yil = int(t[:4])
         ay = int(t[4:6])
-        sezon_kodu = f"E{yil if ay >= 8 else yil - 1}"
+        sezon_kodu = "E2025" if yil >= 2026 else f"E{yil if ay >= 8 else yil - 1}"
         el_host = "https://api-live." + "euroleague.net/v1/"
 
         win_map, loss_map, results_map = {}, {}, {}
