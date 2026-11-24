@@ -1183,16 +1183,31 @@ if gorunum == "Canli Kupon Takip":
             continue
         _tum_mac_secenekleri.append(_etk_item)
 
-    for _kayitli_m in _hv_dep.get("maclar", list()):
-        if _kayitli_m in _hv_map and _kayitli_m not in _tum_mac_secenekleri:
-            _tum_mac_secenekleri.insert(0, _kayitli_m)
+    if "sepet" not in _hv_dep:
+        _hv_dep["sepet"] = list(_hv_dep.get("maclar", list()))
+
+    _hs1, _hs2 = st.columns([2.2, 1.0])
+    _hv_aday_mac = _hs1.selectbox(
+        f"Bulunan Maçlar ({len(_tum_mac_secenekleri)} maç)",
+        options=_tum_mac_secenekleri if _tum_mac_secenekleri else ["Maç bulunamadı"],
+        key="hv_aday_secim"
+    )
+    _hs2.write("")
+    _hs2.write("")
+    if _hs2.button("➕ Havuz Sepetine Ekle", use_container_width=True):
+        if _hv_aday_mac in _hv_map and _hv_aday_mac not in _hv_dep["sepet"]:
+            _hv_dep["sepet"].append(_hv_aday_mac)
+            st.rerun()
 
     _hv_secilen_maclar = st.multiselect(
-        f"Havuz İçin Maçları Seçin ({len(_tum_mac_secenekleri)} maç listelendi — en az 2 maç seçin)",
-        options=_tum_mac_secenekleri,
-        default=[m for m in _hv_dep.get("maclar", list()) if m in _tum_mac_secenekleri],
+        f"🛒 Havuz Sepetinizdeki Maçlar ({len(_hv_dep['sepet'])} maç eklendi — istediğiniz kadar ekleyip çıkarabilirsiniz)",
+        options=list(_hv_dep["sepet"]),
+        default=list(_hv_dep["sepet"]),
         key="hv_mac_secim"
     )
+    if len(_hv_secilen_maclar) != len(_hv_dep["sepet"]):
+        _hv_dep["sepet"] = list(_hv_secilen_maclar)
+        st.rerun()
     _hc1, _hc2, _hc3 = st.columns(3)
     _hv_barem = _hc1.number_input("Toplam Havuz Baremi (Örn: 731.5 veya 12.5)", min_value=0.5, max_value=2500.0, value=float(_hv_dep.get("barem") or 731.5), step=0.5, key="hv_barem_in")
     _hv_tercih = _hc2.selectbox("Tercih", ["ALT", "ÜST"], index=0 if _hv_dep.get("tercih", "ALT") == "ALT" else 1, key="hv_tercih_in")
