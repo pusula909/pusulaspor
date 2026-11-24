@@ -1024,6 +1024,31 @@ if gorunum == "Canli Kupon Takip":
             )
 
         st.dataframe(pd.DataFrame(kupon_tablosu), use_container_width=True, hide_index=True)
+        _toplam_m = len(kupon_tablosu)
+        _gelen_m = sum(1 for r_k in kupon_tablosu if "TUTTU" in str(r_k.get("Durum", "")))
+        _onde_m = sum(1 for r_k in kupon_tablosu if "Su An Tutuyor" in str(r_k.get("Durum", "")))
+        _yatan_m = sum(1 for r_k in kupon_tablosu if "YATTI" in str(r_k.get("Durum", "")))
+        _bekleyen_m = _toplam_m - (_gelen_m + _onde_m + _yatan_m)
+        _ilerleme_yuzde = int(round(((_gelen_m * 1.0 + _onde_m * 0.65 + _bekleyen_m * 0.35) / max(1, _toplam_m)) * 100)) if _yatan_m == 0 else 0
+
+        if _yatan_m > 0:
+            st.error(f"❌ **KUPON KAYBETTİ!** ({_yatan_m} maç yattı | Gelen: {_gelen_m}/{_toplam_m} | İlerleme: %0)")
+            st.progress(0)
+        elif hepsi_bitti_ve_tuttu and _toplam_m > 0:
+            st.success(f"🏆 **TEBRİKLER, KUPON KAZANDI!** ({_gelen_m}/{_toplam_m} Maç Tamamlandı | Başarı: %100)")
+            st.progress(100)
+        else:
+            st.info(f"📊 **Kupon Canlı İlerlemesi: %{_ilerleme_yuzde}** — ✅ Gelen: **{_gelen_m}/{_toplam_m}** | 🟢 Şu An Tutan: **{_onde_m}** | ⏳ Bekleyen: **{_bekleyen_m}**")
+            st.progress(max(0, min(100, _ilerleme_yuzde)))
+
+        if not st.session_state.get("kupon_bildirim_gonderildi", False) and _toplam_m > 0:
+            if _yatan_m > 0 or hepsi_bitti_ve_tuttu:
+                _sonuc_baslik = "✅ KUPON KAZANDI!" if (hepsi_bitti_ve_tuttu and _yatan_m == 0) else "❌ KUPON KAYBETTİ!"
+                _ozet_satirlar = list((f"{_sonuc_baslik} (Gelen: {_gelen_m}/{_toplam_m})", "-------------------------"))
+                for _rm in kupon_tablosu:
+                    _ozet_satirlar.append(f"• {_rm.get('Mac')} | {_rm.get('Oynanan')} -> {_rm.get('Skor')} ({_rm.get('Durum')})")
+                telegram_mesaj_gonder(tg_token, tg_chat_id, "\n".join(_ozet_satirlar))
+                st.session_state.kupon_bildirim_gonderildi = True
 
         st.divider()
         kupon_turu = st.radio(
