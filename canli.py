@@ -130,7 +130,7 @@ def _el_get(t):
                             _el_saat = str(lj.get("Clock") or lj.get("RemainingTime") or "").strip()
                             detay = f"Q{aktif_q}" + (f" ({_el_saat})" if _el_saat else "") + (f" | Çeyrekler: {_q_ozet}" if _q_ozet else "")
                         elif st_code == "post" and _q_ozet:
-                        detay = f"Bitti | Çeyrekler: {_q_ozet}"
+                            detay = f"Bitti | Çeyrekler: {_q_ozet}"
                     except Exception:
                         pass
 
