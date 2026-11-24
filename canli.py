@@ -560,11 +560,9 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
             if (ev_g + dep_g) >= 1.04:
                 au_secenek = f"Mac Toplami {resmi_b} UST (Oran: {ust_o})"
                 au_guven = min(80, int(57 + (ev_g + dep_g) * 14))
-            else:
-                au_secenek = f"Mac Toplami {resmi_b} ALT (Oran: {alt_o})"
-                au_guven = min(78, int(68 - (ev_g + dep_g) * 9))
-            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Resmi Piyasa Baremi", "AI Tahmin Secenegi": au_secenek, "Guven Seviyesi": f"%{au_guven}", "GuvenInt": au_guven})
-        else:
+           else:
+            au_secenek = "Resmi Barem Henuz Acilmadi"
+            au_guven = 0
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Resmi Piyasa Baremi", "AI Tahmin Secenegi": "Resmi Barem Henuz Acilmadi (Uydurma Veri Kapali)", "Guven Seviyesi": "%0", "GuvenInt": 0})
 
         if o_veri and (o_veri.get("ms1", 0) > 0 or o_veri.get("ms2", 0) > 0):
@@ -576,9 +574,9 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
             oran_guv = max(52, min(86, oran_guv))
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Bahis Sirketi Acilis/Canli Orani", "AI Tahmin Secenegi": oran_bilgi, "Guven Seviyesi": f"%{oran_guv}", "GuvenInt": oran_guv})
 
-            en_iyi = sorted(satirlar, key=lambda x: x["GuvenInt"], reverse=True).pop(0)
-            ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
-            return satirlar, ozet_metin, en_iyi
+        en_iyi = sorted(satirlar, key=lambda x: x["GuvenInt"], reverse=True).pop(0)
+        ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
+        return satirlar, ozet_metin, en_iyi
     except Exception:
         varsayilan = list(({"Analiz Tipi": "Genel", "Bahis Kategorisi": "Genel Analiz", "AI Tahmin Secenegi": "Form Verisi Bekleniyor", "Guven Seviyesi": "%55", "GuvenInt": 55},))
         return varsayilan, "Veri Bekleniyor (%55)", varsayilan.pop(0)
