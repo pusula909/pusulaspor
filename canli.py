@@ -1350,8 +1350,7 @@ if gorunum == "Canli Kupon Takip":
                 f"• **TOPLAM SKOR DURUMU:** **{_anlik_toplam} / {_hv_dep['barem']} {_hv_dep['tercih']}** (Kalan Pay: **{round(_hedef_val - _anlik_toplam, 1)}**)\n"
                 + (f"• **AI DEĞERLENDİRME:** {_ai_kisa_not}" if _ai_kisa_not else "")
             )
-                + (f"• **AI DEĞERLENDİRME:** {_ai_kisa_not}" if _ai_kisa_not else "")
-            )
+                
             st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
             _hedef_b = float(_hv_dep["barem"])
             _sec_t = _hv_dep["tercih"]
