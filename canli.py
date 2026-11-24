@@ -1197,8 +1197,16 @@ if gorunum == "Canli Kupon Takip":
     if _hs2.button("➕ Havuz Sepetine Ekle", use_container_width=True):
         if _hv_aday_mac in _hv_map and _hv_aday_mac not in _hv_dep["sepet"]:
             _hv_dep["sepet"].append(_hv_aday_mac)
+            st.session_state["hv_mac_secim"] = list(_hv_dep["sepet"])
             st.rerun()
 
+    _hv_secilen_maclar = st.multiselect(
+        f"🛒 Havuz Sepetinizdeki Maçlar ({len(_hv_dep['sepet'])} maç eklendi — istediğiniz kadar ekleyip çıkarabilirsiniz)",
+        options=list(_hv_dep["sepet"]),
+        default=list(_hv_dep["sepet"]),
+        key="hv_mac_secim"
+    )
+    _hv_dep["sepet"] = list(_hv_secilen_maclar)
     _hv_secilen_maclar = st.multiselect(
         f"🛒 Havuz Sepetinizdeki Maçlar ({len(_hv_dep['sepet'])} maç eklendi — istediğiniz kadar ekleyip çıkarabilirsiniz)",
         options=list(_hv_dep["sepet"]),
