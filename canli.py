@@ -547,7 +547,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Sonucu (MS)", "AI Tahmin Secenegi": ms_secenek, "Guven Seviyesi": f"%{ms_guven}", "GuvenInt": ms_guven})
 
             beklenen_toplam = round(212 + (ev_g + dep_g) * 14) + 0.5
-            "euroleague" in str(lig_adi).lower()
+            if "euroleague" in str(lig_adi).lower():
                 beklenen_toplam = round(154 + (ev_g + dep_g) * 14) + 0.5
             if state == "in" and (ev_skor + dep_skor) > 150:
                 beklenen_toplam = (ev_skor + dep_skor) + 36.5
