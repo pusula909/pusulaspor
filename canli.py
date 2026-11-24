@@ -37,7 +37,7 @@ def _el_get(t):
         }
         yil = int(t[:4])
         ay = int(t[4:6])
-        sezon_kodu = "E2025" if yil >= 2026 else f"E{yil if ay >= 8 else yil - 1}"
+        sezon_kodu = f"E{yil if ay >= 8 else yil - 1}"
         el_host = "https://api-live." + "euroleague.net/v1/"
 
         win_map, loss_map, results_map = {}, {}, {}
@@ -74,7 +74,7 @@ def _el_get(t):
                 continue
 
             d_obj = datetime.strptime(d_raw, "%b %d, %Y")
-            if d_obj.strftime("%Y%m%d") == t:
+            if 0 <= (d_obj.date() - datetime.strptime(t, "%Y%m%d").date()).days <= 3:
                 h_ad = i.findtext("hometeam", "").strip()
                 a_ad = i.findtext("awayteam", "").strip()
                 s_time = i.findtext("startime", "20:00").strip()
