@@ -124,9 +124,13 @@ def _el_get(t):
                                     tot_b += int(qb)
                             if tot_a > 0 or tot_b > 0:
                                 hs, ds = str(tot_a), str(tot_b)
-                            if st_code == "in":
-                                aktif_q = len(ceyrekler_ev) if ceyrekler_ev else 1
-                                detay = f"Canli (Q{aktif_q})"
+                            _q_ozet = ", ".join(f"{a.get('displayValue','0')}-{b.get('displayValue','0')}" for a, b in zip(ceyrekler_ev, ceyrekler_dep))
+                    if st_code == "in":
+                        aktif_q = len(ceyrekler_ev) if ceyrekler_ev else 1
+                        _el_saat = str(lj.get("Clock") or lj.get("RemainingTime") or "").strip()
+                        detay = f"Q{aktif_q}" + (f" ({_el_saat})" if _el_saat else "") + (f" | Çeyrekler: {_q_ozet}" if _q_ozet else "")
+                    elif st_code == "post" and _q_ozet:
+                        detay = f"Bitti | Çeyrekler: {_q_ozet}"
                     except Exception:
                         pass
 
@@ -1230,16 +1234,28 @@ if gorunum == "Canli Kupon Takip":
                     _sk_yazi = " - ".join(str(t.get("score", "0")) for t in _t_h[:2])
                     _st_h = ((_c_h.get("status") or {}).get("type") or {}).get("state", "pre")
                     _det_h = ((_c_h.get("status") or {}).get("type") or {}).get("shortDetail", "-")
+                    _clk_h = str((_c_h.get("status") or {}).get("displayClock") or "").strip()
+                    _per_h = (_c_h.get("status") or {}).get("period", 0)
                     _tr_saat = "-"
                     try:
                         _raw_dt = str(_ev_h.get("date") or _ev_h.get("startDate") or _c_h.get("date") or _c_h.get("startDate") or "")
                         if _raw_dt:
                             _utc_dt = datetime.fromisoformat(_raw_dt.replace("Z", "+00:00"))
-                            _tr_dt = _utc_dt + timedelta(hours=3)
-                            _tr_saat = _tr_dt.strftime("%d.%m %H:%M")
+                            _tr_saat = (_utc_dt + timedelta(hours=3)).strftime("%d.%m %H:%M")
                     except Exception:
                         pass
-                    _sure_bilgi = f"Başlangıç: {_tr_saat}" if _st_h == "pre" else (f"Bitti ({_tr_saat})" if _st_h == "post" else f"Canlı: {_det_h}")
+                    _lin_list = list()
+                    if len(_t_h) >= 2:
+                        _l1 = _t_h.get("linescores", list())
+                        _l2 = _t_h[1].get("linescores", list())
+                        _lin_list = [f"{int(float(a.get('value',0)))}-{int(float(b.get('value',0)))}" for a, b in zip(_l1, _l2)]
+                    _lin_str = f" | Periyotlar: {', '.join(_lin_list)}" if _lin_list else ""
+                    if _st_h == "pre":
+                        _sure_bilgi = f"Başlangıç: {_tr_saat}"
+                    elif _st_h == "post":
+                        _sure_bilgi = f"Bitti ({_tr_saat}){_lin_str}"
+                    else:
+                        _sure_bilgi = f"{_det_h}" + (f" [{_clk_h}]" if (_clk_h and _clk_h not in _det_h) else "") + _lin_str
                     return _sk_yazi, _s_top, (_st_h == "post"), _sure_bilgi
         except Exception:
             pass
