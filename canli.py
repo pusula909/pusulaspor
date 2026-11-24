@@ -546,7 +546,9 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
                 ms_guven = min(88, int(54 + fark * 48))
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Sonucu (MS)", "AI Tahmin Secenegi": ms_secenek, "Guven Seviyesi": f"%{ms_guven}", "GuvenInt": ms_guven})
 
-            o_veri = None
+           try:
+            from oran_motoru import mac_oran_bul
+            o_veri = mac_oran_bul(lig_adi, ev_ad, dep_ad, "", ev_skor, dep_skor, state)
         except Exception as oran_err:
             st.warning(f"Oran Motoru Hatasi: {oran_err}")
             o_veri = None
