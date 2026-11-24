@@ -546,7 +546,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
                 ms_guven = min(88, int(54 + fark * 48))
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Sonucu (MS)", "AI Tahmin Secenegi": ms_secenek, "Guven Seviyesi": f"%{ms_guven}", "GuvenInt": ms_guven})
 
-           _ham_od = st.session_state.get(f"odds_{ev_ad}_{dep_ad}", {})
+            _ham_od = st.session_state.get(f"odds_{ev_ad}_{dep_ad}", {})
         o_veri = None
         if _ham_od:
             _b = float(_ham_od.get("overUnder", 0) or 0)
