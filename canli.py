@@ -1244,7 +1244,7 @@ if gorunum == "Canli Kupon Takip":
             for _mo in _secili_objeler:
                 _sy, _st_top, _, _dt = _havuz_canli_skor_cek(_mo)
                 _mac_detay_list.append(f"{_mo.get('etiket')} (Skor: {_sy}, Durum: {_dt})")
-                _mac_basi_ort = round(_hv_barem / len(_secili_objeler), 2)
+               _mac_basi_ort = round(_hv_barem / len(_secili_objeler), 2)
             _beklenen_top = 0.0
             for _mo_p in _secili_objeler:
                 _sp_tip = str(_mo_p.get("spor", "Basketbol"))
@@ -1253,34 +1253,26 @@ if gorunum == "Canli Kupon Takip":
                 if _bit_p:
                     _beklenen_top += _top_p
                 elif _top_p > 0:
-                    _oran_tam = 0.85 if "Q4" in _det_p else (0.52 if ("Q3" in _det_p or "Devre" in _det_p or "HT" in _det_p) else (0.30 if "Q2" in _det_p else 0.18))
+                    _du_p = _det_p.upper()
+                    _oran_tam = 0.88 if ("Q4" in _du_p or "OT" in _du_p or "UZ" in _du_p) else (0.62 if "Q3" in _du_p else (0.48 if ("DEVRE" in _du_p or "HT" in _du_p) else (0.32 if "Q2" in _du_p else (0.18 if "Q1" in _du_p else 0.50))))
                     _beklenen_top += round(_top_p / _oran_tam, 1)
                 else:
                     _beklenen_top += 224.0 if "nba" in _yol_tip else (164.0 if _sp_tip == "Basketbol" else 2.65)
             _beklenen_top = round(_beklenen_top, 1)
             _fark_p = (_hv_barem - _beklenen_top) if _hv_tercih == "ALT" else (_beklenen_top - _hv_barem)
-            _ref_olcek = max(6.0, _hv_barem * 0.06)
-            _mat_yuzde = max(32, min(88, int(round(56 + (_fark_p / _ref_olcek) * 22))))
-            _ai_hv_sonuc = (
-                f"• GELME İHTİMALİ: **%{_mat_yuzde}** (Maç Başı Sınır: {_mac_basi_ort})\n"
-                f"• BEKLENEN TOPLAM PROJEKSİYON: **{_beklenen_top}** (Hedef: {_hv_barem} {_hv_tercih})\n"
-                f"• TEMEL ANALİZ: Mevcut canlı tempo ve lig ortalamalarına göre toplam skorun {_beklenen_top} civarında tamamlanması bekleniyor."
-            )
+            _ref_olcek = max(5.0, _hv_barem * 0.055)
+            _mat_yuzde = max(5, min(96, int(round(55 + (_fark_p / _ref_olcek) * 24))))
+            _ai_yorum_kisa = "Mevcut tempo ve kalan süre dengesine göre istatistiksel takip aktif."
             if groq_api_key:
                 try:
                     _p_hv = (
-                        f"Secilen {len(_secili_objeler)} macin toplam skor istatistik analizi:\n"
+                        f"Secilen {len(_secili_objeler)} macin canli skor ozeti:\n"
                         + "\n".join(_mac_detay_list)
-                        + f"\nHedef Esik Deger: {_hv_barem} {_hv_tercih} (Mac basi: {_mac_basi_ort}) | Matematiksel Projeksiyon: {_beklenen_top} (%{_mat_yuzde}).\n"
-                        "Takimlarin tempolarini, canli skorlarini ve kalan surelerini analiz ederek SADECE su 3 kisa satirda Turkce rapor ver:\n"
-                        "• GELME İHTİMALİ: %[40-88 arasi net yuzde]\n"
-                        "• BEKLENEN TOPLAM PROJEKSİYON: [Tahmini toplam sayi/gol]\n"
-                        "• AI DEĞERLENDİRME: [En fazla 18 kelimelik net taktik gerekce]"
+                        + f"\nHedef Barem: {_hv_barem} {_hv_tercih} | Matematiksel Projeksiyon: {_beklenen_top} | Gelme Ihtimali: %{_mat_yuzde}.\n"
+                        "SADECE tek cumlelik (en fazla 15 kelime) Turkce taktik yorum yaz, baska hicbir sey yazma:"
                     )
-                    _q_hv_host = "api" + ".groq.com"
-                    _q_hv_path = "/openai/v1/chat/completions"
                     _q_hv = requests.post(
-                        "https://" + _q_hv_host + _q_hv_path,
+                        "https://" + "api" + ".groq.com" + "/openai/v1/chat/completions",
                         headers={"Authorization": f"Bearer {groq_api_key}", "Content-Type": "application/json"},
                         json={"model": "openai/gpt-oss-120b", "messages": list(({"role": "user", "content": _p_hv},)), "temperature": 0.2},
                         timeout=8,
@@ -1288,9 +1280,14 @@ if gorunum == "Canli Kupon Takip":
                     _c_hv = next(iter(_q_hv.get("choices") or ()), {})
                     _txt_hv = (_c_hv.get("message") or {}).get("content", "").strip()
                     if _txt_hv:
-                        _ai_hv_sonuc = _txt_hv
+                        _ai_yorum_kisa = _txt_hv
                 except Exception:
                     pass
+            _ai_hv_sonuc = (
+                f"• GELME İHTİMALİ: **%{_mat_yuzde}**\n"
+                f"• BEKLENEN TOPLAM PROJEKSİYON: **{_beklenen_top}** (Hedef: {_hv_barem} {_hv_tercih})\n"
+                f"• AI DEĞERLENDİRME: {_ai_yorum_kisa}"
+            )
             _hv_dep["aktif"] = True
             _hv_dep["maclar"] = list(_hv_secilen_maclar)
             _hv_dep["objeler"] = _secili_objeler
