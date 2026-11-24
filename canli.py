@@ -188,10 +188,15 @@ if "eski_skorlar" not in st.session_state:
     st.session_state.eski_skorlar = {}
 if "radar_sonuclari" not in st.session_state:
     st.session_state.radar_sonuclari = list()
+@st.cache_resource
+def _kalici_kupon_havuzu():
+    return {"liste": list(), "bildirim_atildi": False}
+
+_k_havuz = _kalici_kupon_havuzu()
 if "kupon_listesi" not in st.session_state:
-    st.session_state.kupon_listesi = list()
+    st.session_state.kupon_listesi = _k_havuz["liste"]
 if "kupon_bildirim_gonderildi" not in st.session_state:
-    st.session_state.kupon_bildirim_gonderildi = False
+    st.session_state.kupon_bildirim_gonderildi = _k_havuz["bildirim_atildi"]
 if "gonderilen_kritik_uyarilar" not in st.session_state:
     st.session_state.gonderilen_kritik_uyarilar = list()
 
