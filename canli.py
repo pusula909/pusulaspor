@@ -1133,7 +1133,7 @@ if gorunum == "Canli Kupon Takip":
         _tumu = {}
         try:
             _dt_ana = datetime.strptime(str(t_str), "%Y%m%d")
-            _gunler = (t_str, (_dt_ana + timedelta(days=1)).strftime("%Y%m%d"))
+            _gunler = ((_dt_ana - timedelta(days=1)).strftime("%Y%m%d"), t_str, (_dt_ana + timedelta(days=1)).strftime("%Y%m%d"))
         except Exception:
             _gunler = (t_str,)
 
