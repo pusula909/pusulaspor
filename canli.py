@@ -1341,9 +1341,7 @@ if gorunum == "Canli Kupon Takip":
                 f"• BEKLENEN TOPLAM PROJEKSİYON: **{_proj_top_b}** (Şu An: {_anlik_top_b} / Hedef: {_hv_barem} {_hv_tercih})\n"
                 f"• AI DEĞERLENDİRME: {_ai_yorum_kisa}"
             )
-                f"• KUPON BAŞARI İLERLEMESİ: %{_mat_yuzde} (Süre İlerlemesi: %{_sure_yz_b})\n"
-                f"• TOPLAM SKOR DURUMU: {_anlik_top_b} / {_hv_barem} {_hv_tercih} (Kalan Pay: {round(_hv_barem - _anlik_top_b, 1)})\n"
-                f"• AI DEĞERLENDİRME: {_ai_yorum_kisa}"
+               
             )
             _hv_dep["maclar"] = list(_hv_secilen_maclar)
             _hv_dep["objeler"] = _secili_objeler
