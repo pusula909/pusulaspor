@@ -1309,6 +1309,68 @@ else:
                         st.info(f"💰 Gercek Bahis Piyasasi Cizgisi -> Alt/Ust Baremi: **{ou_val}** | Favori/Handikap: **{det_val}**")
         except Exception:
             pass
+        try:
+            _ev_k = str(satir.get("Ev Sahibi", ""))
+            _dep_k = str(satir.get("Deplasman", ""))
+            _ozet_k = str(satir.get("Hizli AI Ozet", ""))
+            _mb_tercih = "MS 1" if "MS 1" in _ozet_k else ("MS 2" if "MS 2" in _ozet_k else ("MS X" if "MS X" in _ozet_k else "1X / Dengeli"))
+            _mb_guv = int(satir.get("En Guclu Guven", 65) or 65)
+
+            @st.cache_data(ttl=300, show_spinner=False)
+            def _konsey_oyu_al(motor_adi, ev_isim, dep_isim, lig_isim, ozet_veri, piyasa_veri):
+                p_metin = (
+                    f"Mac: {ev_isim} vs {dep_isim} ({lig_isim}). "
+                    f"Istatistik Ozeti: {ozet_veri}. {piyasa_veri}. "
+                    "Bu mac icin SADECE tek satir su formatta cevap ver: TERCIH: [MS 1 veya MS X veya MS 2] | GUVEN: [50-85 arasi tam sayi] | NEDEN: [en fazla 10 kelimelik kisa sebep]"
+                )
+                ham = ""
+                if motor_adi == "Gemini" and gizli_gemini_key:
+                    rg = requests.post(
+                        f"https://googleapis.com{gizli_gemini_key}",
+                        json={"contents": [{"parts": [{"text": p_metin}]}]},
+                        timeout=7,
+                    ).json()
+                    ham = rg.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                elif motor_adi == "Groq" and groq_api_key:
+                    rq = requests.post(
+                        "https://groq.com",
+                        headers={"Authorization": f"Bearer {groq_api_key}", "Content-Type": "application/json"},
+                        json={"model": "openai/gpt-oss-120b", "messages": [{"role": "user", "content": p_metin}], "temperature": 0.2},
+                        timeout=7,
+                    ).json()
+                    ham = rq.get("choices", [{}])[0].get("message", {}).get("content", "")
+                if not ham:
+                    return None
+                sec = "MS 1" if "MS 1" in ham else ("MS 2" if "MS 2" in ham else ("MS X" if "MS X" in ham else _mb_tercih))
+                import re as _re_k
+                m_g = _re_k.search(r"GUVEN:\s*(\d{2})", ham)
+                g_val = max(50, min(88, int(m_g.group(1)))) if m_g else _mb_guv
+                n_val = ham.split("NEDEN:")[-1].strip() if "NEDEN:" in ham else ham.strip()[:80]
+                return {"motor": motor_adi, "tercih": sec, "guven": g_val, "neden": n_val}
+
+            _oylar = [{"motor": "Merkez Beyin (Matematik)", "tercih": _mb_tercih, "guven": _mb_guv, "neden": _ozet_k[:75]}]
+            for _m_ad in ("Gemini", "Groq"):
+                _res_k = _konsey_oyu_al(_m_ad, _ev_k, _dep_k, str(satir.get("Lig", "")), _ozet_k, piyasa_notu)
+                if _res_k:
+                    _oylar.append(_res_k)
+
+            from collections import Counter as _CntK
+            _sayim = _CntK([x["tercih"] for x in _oylar]).most_common(1)[0]
+            _ort_tercih, _oy_adedi = _sayim[0], _sayim[1]
+            _ort_guven = int(round(sum(x["guven"] for x in _oylar) / len(_oylar)))
+            _etiket_map = {"MS 1": f"{_ev_k} Kazanır (MS 1)", "MS 2": f"{_dep_k} Kazanır (MS 2)", "MS X": "Beraberlik (MS X)", "1X / Dengeli": f"{_ev_k} Kaybetmez (1X)"}
+            _mutabakat = f"{_oy_adedi}/{len(_oylar)} Tam Mutabakat" if _oy_adedi == len(_oylar) else f"{_oy_adedi}/{len(_oylar)} Çoğunluk Kararı"
+
+            with st.container(border=True):
+                st.markdown(f"### 🏛️ Yapay Zeka Ortak Karar Konseyi | {_ev_k} vs {_dep_k}")
+                st.success(f"**🏆 ORTAK KARAR ({_mutabakat}):** **{_etiket_map.get(_ort_tercih, _ort_tercih)}** — **Ortalama Güven: %{_ort_guven}**")
+                _k_cols = st.columns(len(_oylar))
+                for _idx_k, _oy_item in enumerate(_oylar):
+                    with _k_cols[_idx_k]:
+                        st.metric(label=_oy_item["motor"], value=_oy_item["tercih"], delta=f"%{ _oy_item['guven']} Güven")
+                        st.caption(_oy_item["neden"])
+        except Exception:
+            pass
         ev_kadro, dep_kadro, ev_eksikler, dep_eksikler, kaynak = ai_kadro_ve_eksik_getir(
             yol, satir["ID"], satir["EvID"], satir["DepID"], spor
         )
