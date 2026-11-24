@@ -126,9 +126,9 @@ def _el_get(t):
                                 hs, ds = str(tot_a), str(tot_b)
                             _q_ozet = ", ".join(f"{a.get('displayValue','0')}-{b.get('displayValue','0')}" for a, b in zip(ceyrekler_ev, ceyrekler_dep))
                         if st_code == "in":
-                        aktif_q = len(ceyrekler_ev) if ceyrekler_ev else 1
-                        _el_saat = str(lj.get("Clock") or lj.get("RemainingTime") or "").strip()
-                        detay = f"Q{aktif_q}" + (f" ({_el_saat})" if _el_saat else "") + (f" | Çeyrekler: {_q_ozet}" if _q_ozet else "")
+                            aktif_q = len(ceyrekler_ev) if ceyrekler_ev else 1
+                            _el_saat = str(lj.get("Clock") or lj.get("RemainingTime") or "").strip()
+                            detay = f"Q{aktif_q}" + (f" ({_el_saat})" if _el_saat else "") + (f" | Çeyrekler: {_q_ozet}" if _q_ozet else "")
                         elif st_code == "post" and _q_ozet:
                         detay = f"Bitti | Çeyrekler: {_q_ozet}"
                     except Exception:
