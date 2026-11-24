@@ -1274,7 +1274,7 @@ if gorunum == "Canli Kupon Takip":
             for _mo in _secili_objeler:
                 _sy, _st_top, _, _dt = _havuz_canli_skor_cek(_mo)
                 _mac_detay_list.append(f"{_mo.get('etiket')} (Skor: {_sy}, Durum: {_dt})")
-           _mac_basi_ort = round(_hv_barem / max(1, len(_secili_objeler)), 2)
+                _mac_basi_ort = round(_hv_barem / max(1, len(_secili_objeler)), 2)
             _anlik_top_b = 0
             _sure_top_b = 0.0
             _proj_top_b = 0.0
