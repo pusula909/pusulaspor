@@ -1239,12 +1239,15 @@ if gorunum == "Canli Kupon Takip":
         if len(_hv_secilen_maclar) < 2:
             st.warning("Lütfen havuz analizi için en az 2 maç seçin.")
         else:
-            _secili_objeler = [_hv_map[m] for m in _hv_secilen_maclar if m in _hv_map]
+           _secili_objeler = [_hv_map[m] for m in _hv_secilen_maclar if m in _hv_map]
+            if len(_secili_objeler) < 2:
+                st.warning("Sepetteki maçların tarihi geçmiş olabilir. Lütfen '🗑️ Havuzu Temizle' butonuna basıp güncel bültenden en az 2 maç ekleyin.")
+                st.stop()
             _mac_detay_list = list()
             for _mo in _secili_objeler:
                 _sy, _st_top, _, _dt = _havuz_canli_skor_cek(_mo)
                 _mac_detay_list.append(f"{_mo.get('etiket')} (Skor: {_sy}, Durum: {_dt})")
-            _mac_basi_ort = round(_hv_barem / len(_secili_objeler), 2)
+            _mac_basi_ort = round(_hv_barem / max(1, len(_secili_objeler)), 2)
             _anlik_top_b = 0
             _sure_top_b = 0.0
             for _mo_p in _secili_objeler:
