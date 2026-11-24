@@ -1343,8 +1343,8 @@ if gorunum == "Canli Kupon Takip":
             if _anlik_toplam > _hedef_val:
                 _genel_kupon_yuzde = 0
             else:
-                _kalan_pay_orani = max(0.0, (_hedef_val - _anlik_toplam) / max(1.0, _hedef_val))
-                _genel_kupon_yuzde = max(10, min(99, int(round((_genel_sure_yuzde * 0.65) + (_kalan_pay_orani * 100 * 0.35)))))
+                _kalan_guven = min(1.0, max(0.0, (_hedef_val - _anlik_toplam) / max(1.0, _hedef_val * 0.08)))
+                _genel_kupon_yuzde = max(10, min(99, int(round(_genel_sure_yuzde * (0.75 + 0.25 * _kalan_guven)))))
 
         with st.container(border=True):
             _ai_kisa_not = _hv_dep.get("ai_rapor", "").split("DEĞERLENDİRME:").pop(-1).strip() if "DEĞERLENDİRME:" in _hv_dep.get("ai_rapor", "") else ""
