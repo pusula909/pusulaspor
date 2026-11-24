@@ -1342,7 +1342,7 @@ if gorunum == "Canli Kupon Takip":
                 f"• AI DEĞERLENDİRME: {_ai_yorum_kisa}"
             )
                
-            )
+            
             _hv_dep["maclar"] = list(_hv_secilen_maclar)
             _hv_dep["objeler"] = _secili_objeler
             _hv_dep["barem"] = float(_hv_barem)
