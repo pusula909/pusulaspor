@@ -546,50 +546,42 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
                 ms_guven = min(88, int(54 + fark * 48))
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Sonucu (MS)", "AI Tahmin Secenegi": ms_secenek, "Guven Seviyesi": f"%{ms_guven}", "GuvenInt": ms_guven})
 
-            _ham_od = st.session_state.get(f"odds_{ev_ad}_{dep_ad}", {})
-        o_veri = None
-        if _ham_od:
-            _b = float(_ham_od.get("overUnder", 0) or 0)
-            _h = float(_ham_od.get("spread", 0) or 0)
-            def _us2dec(v):
-                try:
-                    x = float(str(v).replace("+", "").strip())
-                    return round(1.0 + (x / 100.0), 2) if x > 0 else (round(1.0 + (100.0 / abs(x)), 2) if x < 0 else 0.0)
-                except Exception:
-                    return 0.0
-            o_veri = {
-                "barem": _b,
-                "handikap": _h,
-                "ms1": _us2dec((_ham_od.get("homeTeamOdds") or {}).get("moneyLine", 0)),
-                "ms2": _us2dec((_ham_od.get("awayTeamOdds") or {}).get("moneyLine", 0)),
-                "ust": 1.88,
-                "alt": 1.88,
-            }
+            beklenen_toplam = round(212 + (ev_g + dep_g) * 14) + 0.5
+            "euroleague" in str(lig_adi).lower()
+                beklenen_toplam = round(154 + (ev_g + dep_g) * 14) + 0.5
+            if state == "in" and (ev_skor + dep_skor) > 150:
+                beklenen_toplam = (ev_skor + dep_skor) + 36.5
+            if (ev_g + dep_g) >= 1.05:
+                au_secenek = f"Mac Toplami {beklenen_toplam} UST"
+                au_guven = min(78, int(56 + (ev_g + dep_g) * 15))
+            else:
+                au_secenek = f"Mac Toplami {beklenen_toplam} ALT"
+                au_guven = min(75, int(68 - (ev_g + dep_g) * 10))
+            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Toplam Sayi", "AI Tahmin Secenegi": au_secenek, "Guven Seviyesi": f"%{au_guven}", "GuvenInt": au_guven})
 
-        if o_veri and o_veri.get("barem", 0) > 0:
-            resmi_b = o_veri["barem"]
-            ust_o = o_veri.get("ust", 1.85)
-            alt_o = o_veri.get("alt", 1.85)
-            if (ev_g + dep_g) >= 1.04:
-                au_secenek = f"Mac Toplami {resmi_b} UST (Oran: {ust_o})"
-                au_guven = min(80, int(57 + (ev_g + dep_g) * 14))
-        else:
-            au_secenek = "Resmi Barem Henuz Acilmadi"
-            au_guven = 0
-            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Resmi Piyasa Baremi", "AI Tahmin Secenegi": "Resmi Barem Henuz Acilmadi (Uydurma Veri Kapali)", "Guven Seviyesi": "%0", "GuvenInt": 0})
+            taban_ev = 77 if "euroleague" in str(lig_adi).lower() else 105
+            ev_barem = round(taban_ev + ev_g * 14) + 0.5
+            if ev_g >= 0.50:
+                ev_sayi_sec = f"{ev_ad} {ev_barem} UST"
+                ev_sayi_guv = min(77, int(52 + ev_g * 30))
+            else:
+                ev_sayi_sec = f"{ev_ad} {ev_barem} ALT"
+                ev_sayi_guv = min(74, int(75 - ev_g * 25))
+            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Ev Sahibi Takim Sayisi", "AI Tahmin Secenegi": ev_sayi_sec, "Guven Seviyesi": f"%{ev_sayi_guv}", "GuvenInt": ev_sayi_guv})
 
-        if o_veri and (o_veri.get("ms1", 0) > 0 or o_veri.get("ms2", 0) > 0):
-            ms1_o = o_veri.get("ms1", 0)
-            ms2_o = o_veri.get("ms2", 0)
-            hdp_o = o_veri.get("handikap", 0)
-            oran_bilgi = f"Resmi Oranlar -> {ev_ad}: {ms1_o} | {dep_ad}: {ms2_o}" + (f" | Handikap: {hdp_o}" if hdp_o != 0 else "")
-            oran_guv = int(round((1.0 / min(ms1_o, ms2_o)) * 100)) if min(ms1_o, ms2_o) > 1.0 else 65
-            oran_guv = max(52, min(86, oran_guv))
-            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Bahis Sirketi Acilis/Canli Orani", "AI Tahmin Secenegi": oran_bilgi, "Guven Seviyesi": f"%{oran_guv}", "GuvenInt": oran_guv})
+            taban_dep = 75 if "euroleague" in str(lig_adi).lower() else 103
+            dep_barem = round(taban_dep + dep_g * 14) + 0.5
+            if dep_g >= 0.50:
+                dep_sayi_sec = f"{dep_ad} {dep_barem} UST"
+                dep_sayi_guv = min(76, int(51 + dep_g * 30))
+            else:
+                dep_sayi_sec = f"{dep_ad} {dep_barem} ALT"
+                dep_sayi_guv = min(75, int(76 - dep_g * 25))
+            satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Deplasman Takim Sayisi", "AI Tahmin Secenegi": dep_sayi_sec, "Guven Seviyesi": f"%{dep_sayi_guv}", "GuvenInt": dep_sayi_guv})
 
-        en_iyi = sorted(satirlar, key=lambda x: x["GuvenInt"], reverse=True).pop(0)
-        ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
-        return satirlar, ozet_metin, en_iyi
+            en_iyi = sorted(satirlar, key=lambda x: x["GuvenInt"], reverse=True).pop(0)
+            ozet_metin = f"{ms_secenek} (%{ms_guven}) | {au_secenek} (%{au_guven})"
+            return satirlar, ozet_metin, en_iyi
     except Exception:
         varsayilan = list(({"Analiz Tipi": "Genel", "Bahis Kategorisi": "Genel Analiz", "AI Tahmin Secenegi": "Form Verisi Bekleniyor", "Guven Seviyesi": "%55", "GuvenInt": 55},))
         return varsayilan, "Veri Bekleniyor (%55)", varsayilan.pop(0)
@@ -1227,25 +1219,9 @@ else:
     banko_havuzu = list()
     for aktif_lig_ad, aktif_yol in secili_ligler:
         try:
-                if aktif_yol == "euroleague_resmi":
-                    r = _el_get(tarih)
-                    if not r.get("events"):
-                        for ek_g in range(1, 6):
-                            ileri_t = (datetime.strptime(tarih, "%Y%m%d") + timedelta(days=ek_g)).strftime("%Y%m%d")
-                            r = _el_get(ileri_t)
-                            if r.get("events"):
-                                break
-                else:
-                    r = requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
-                    if spor == "Basketbol" and not r.get("events"):
-                        for ek_g in range(1, 4):
-                            ileri_t = (datetime.strptime(tarih, "%Y%m%d") + timedelta(days=ek_g)).strftime("%Y%m%d")
-                            r = requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={ileri_t}&limit=100", headers=basliklar, timeout=8).json()
-                            if r.get("events"):
-                                break
-        except Exception as err:
-                st.error(f"Basketbol Veri Hatasi ({aktif_lig_ad}): {err}")
-                r = {}
+            r = _el_get(tarih) if aktif_yol == "euroleague_resmi" else requests.get(f"{url_basi}{aktif_yol}/scoreboard?dates={tarih}&limit=100", headers=basliklar, timeout=8).json()
+        except Exception:
+            r = {}
         for ev in r.get("events", list()):
             try:
                 mac_id = ev.get("id", "")
@@ -1279,19 +1255,15 @@ else:
                         st.toast(f"SKOR DEGISTI! {ev_ad} {skor_gosterim} {dep_ad}")
                     st.session_state.eski_skorlar[mac_id] = skor_gosterim
                 iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
-                deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
-                _c0 = next(iter(ev.get("competitions") or ()), {})
-                _o0 = next(iter(_c0.get("odds") or ()), {})
-                st.session_state[f"odds_{ev_ad}_{dep_ad}"] = _o0 if _o0 else {"overUnder": deger_rapor.get("piyasa_barem", 0)}
                 _, ozet_tahmin, en_guclu = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor, aktif_lig_ad, 0, 0, state, ev_s_int, dep_s_int)
                 if state == "pre":
+                 deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
                  if not deger_rapor["tuzak_notu"]:
                      banko_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "lig": aktif_lig_ad, "ev": ev_ad, "dep": dep_ad, "ozet": f"{deger_rapor['ana_tercih']} | {deger_rapor['barem_tercih']} | Deger: {deger_rapor['deger_puani']}/10", "guven": f"%{deger_rapor['guven']} | Deger: {deger_rapor['deger_puani']}/10", "guven_int": deger_rapor["deger_puani"]})
                     
                 maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": is_fav, "Dakika / Ceyrek": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Deplasman": dep_ad, "IY / Ceyrek Skorlari": iy_ceyrek_str, "Ev Form": ev_rec, "Dep Form": dep_rec, "Hizli AI Ozet": ozet_tahmin, "Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)})
-            except Exception as ic_err:
-                    st.error(f"Mac Islenirken Hata ({ev_ad} vs {dep_ad}): {ic_err}")
-                    continue
+            except Exception:
+                continue
 
     if maclar:
         en_iyi_kartlar = sorted(banko_havuzu, key=lambda x: x["guven_int"], reverse=True)[:3]
