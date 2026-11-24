@@ -1229,7 +1229,17 @@ if gorunum == "Canli Kupon Takip":
                     _sk_yazi = " - ".join(str(t.get("score", "0")) for t in _t_h[:2])
                     _st_h = ((_c_h.get("status") or {}).get("type") or {}).get("state", "pre")
                     _det_h = ((_c_h.get("status") or {}).get("type") or {}).get("shortDetail", "-")
-                    return _sk_yazi, _s_top, (_st_h == "post"), _det_h
+                    _tr_saat = "-"
+                    try:
+                        _raw_dt = str(_ev_h.get("date") or _c_h.get("date") or "")
+                        if _raw_dt:
+                            _utc_dt = datetime.fromisoformat(_raw_dt.replace("Z", "+00:00"))
+                            _tr_dt = _utc_dt + timedelta(hours=3)
+                            _tr_saat = _tr_dt.strftime("%d.%m %H:%M")
+                    except Exception:
+                        pass
+                    _sure_bilgi = f"Başlangıç: {_tr_saat}" if _st_h == "pre" else (f"Bitti ({_tr_saat})" if _st_h == "post" else f"Canlı: {_det_h}")
+                    return _sk_yazi, _s_top, (_st_h == "post"), _sure_bilgi
         except Exception:
             pass
         return "0 - 0", 0, False, "Bekliyor"
@@ -1324,7 +1334,7 @@ if gorunum == "Canli Kupon Takip":
             _anlik_toplam += _m_top
             if _bitti_mi:
                 _biten_havuz_mac += 1
-            _hv_tablo_satir.append({"Maç": _mo_t.get("etiket", "-"), "Canlı Skor": _sk_str, "Maç Toplamı": _m_top, "Durum": _dur_str})
+            _hv_tablo_satir.append({"Maç": _mo_t.get("etiket", "-"), "Saat / Süre": _dur_str, "Canlı Skor": _sk_str, "Maç Toplamı": _m_top})
 
         _sure_orani_top = 0.0
         for _mo_c in _hv_dep["objeler"]:
