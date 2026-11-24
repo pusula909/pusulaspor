@@ -547,7 +547,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Sonucu (MS)", "AI Tahmin Secenegi": ms_secenek, "Guven Seviyesi": f"%{ms_guven}", "GuvenInt": ms_guven})
 
             beklenen_toplam = round(212 + (ev_g + dep_g) * 14) + 0.5
-            if "euroleague" in str(lig_adi).lower():
+            if any(k in f"{lig_adi} {ev_ad} {dep_ad}".lower() for k in ("euroleague", "euro", "fenerbahce", "efes", "barcelona", "real madrid", "olympiacos", "panathinaikos", "maccabi", "partizan", "zalgiris", "monaco", "virtus", "baskonia", "bayern", "milano", "asvel", "paris", "alba")):
                 beklenen_toplam = round(154 + (ev_g + dep_g) * 14) + 0.5
             if state == "in" and (ev_skor + dep_skor) > 150:
                 beklenen_toplam = (ev_skor + dep_skor) + 36.5
@@ -559,7 +559,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
                 au_guven = min(75, int(68 - (ev_g + dep_g) * 10))
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Mac Toplam Sayi", "AI Tahmin Secenegi": au_secenek, "Guven Seviyesi": f"%{au_guven}", "GuvenInt": au_guven})
 
-            taban_ev = 77 if "euroleague" in str(lig_adi).lower() else 105
+            taban_ev = 77 if any(k in f"{lig_adi} {ev_ad} {dep_ad}".lower() for k in ("euroleague", "euro", "fenerbahce", "efes", "barcelona", "real madrid", "olympiacos", "panathinaikos", "maccabi", "partizan", "zalgiris", "monaco", "virtus", "baskonia", "bayern", "milano", "asvel", "paris", "alba")) else 105
             ev_barem = round(taban_ev + ev_g * 14) + 0.5
             if ev_g >= 0.50:
                 ev_sayi_sec = f"{ev_ad} {ev_barem} UST"
@@ -569,7 +569,7 @@ def coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi, ev_e
                 ev_sayi_guv = min(74, int(75 - ev_g * 25))
             satirlar.append({"Analiz Tipi": etiket, "Bahis Kategorisi": "Ev Sahibi Takim Sayisi", "AI Tahmin Secenegi": ev_sayi_sec, "Guven Seviyesi": f"%{ev_sayi_guv}", "GuvenInt": ev_sayi_guv})
 
-            taban_dep = 75 if "euroleague" in str(lig_adi).lower() else 103
+            taban_dep = 75 if any(k in f"{lig_adi} {ev_ad} {dep_ad}".lower() for k in ("euroleague", "euro", "fenerbahce", "efes", "barcelona", "real madrid", "olympiacos", "panathinaikos", "maccabi", "partizan", "zalgiris", "monaco", "virtus", "baskonia", "bayern", "milano", "asvel", "paris", "alba")) else 103
             dep_barem = round(taban_dep + dep_g * 14) + 0.5
             if dep_g >= 0.50:
                 dep_sayi_sec = f"{dep_ad} {dep_barem} UST"
