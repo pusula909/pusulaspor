@@ -1046,7 +1046,7 @@ if gorunum == "Canli Kupon Takip":
             st.info(f"📊 **Kupon Canlı İlerlemesi: %{_ilerleme_yuzde}** — ✅ Gelen: **{_gelen_m}/{_toplam_m}** | 🟢 Şu An Tutan: **{_onde_m}** | ⏳ Bekleyen: **{_bekleyen_m}**")
             st.progress(max(0, min(100, _ilerleme_yuzde)))
 
-        if not st.session_state.get("kupon_bildirim_gonderildi", False) and _toplam_m > 0:
+        if not _k_havuz.get("bildirim_atildi", False) and not st.session_state.get("kupon_bildirim_gonderildi", False) and _toplam_m > 0:
             if _yatan_m > 0 or hepsi_bitti_ve_tuttu:
                 _sonuc_baslik = "✅ KUPON KAZANDI!" if (hepsi_bitti_ve_tuttu and _yatan_m == 0) else "❌ KUPON KAYBETTİ!"
                 _ozet_satirlar = list((f"{_sonuc_baslik} (Gelen: {_gelen_m}/{_toplam_m})", "-------------------------"))
@@ -1054,6 +1054,7 @@ if gorunum == "Canli Kupon Takip":
                     _ozet_satirlar.append(f"• {_rm.get('Mac')} | {_rm.get('Oynanan')} -> {_rm.get('Skor')} ({_rm.get('Durum')})")
                 telegram_mesaj_gonder(tg_token, tg_chat_id, "\n".join(_ozet_satirlar))
                 st.session_state.kupon_bildirim_gonderildi = True
+                _k_havuz["bildirim_atildi"] = True
 
         st.divider()
         kupon_turu = st.radio(
