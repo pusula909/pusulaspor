@@ -1197,25 +1197,19 @@ if gorunum == "Canli Kupon Takip":
     if _hs2.button("➕ Havuz Sepetine Ekle", use_container_width=True):
         if _hv_aday_mac in _hv_map and _hv_aday_mac not in _hv_dep["sepet"]:
             _hv_dep["sepet"].append(_hv_aday_mac)
-            st.session_state["hv_mac_secim"] = list(_hv_dep["sepet"])
             st.rerun()
 
-    _hv_secilen_maclar = st.multiselect(
-        f"🛒 Havuz Sepetinizdeki Maçlar ({len(_hv_dep['sepet'])} maç eklendi — istediğiniz kadar ekleyip çıkarabilirsiniz)",
-        options=list(_hv_dep["sepet"]),
-        default=list(_hv_dep["sepet"]),
-        key="hv_mac_secim"
-    )
-    _hv_dep["sepet"] = list(_hv_secilen_maclar)
-    _hv_secilen_maclar = st.multiselect(
-        f"🛒 Havuz Sepetinizdeki Maçlar ({len(_hv_dep['sepet'])} maç eklendi — istediğiniz kadar ekleyip çıkarabilirsiniz)",
-        options=list(_hv_dep["sepet"]),
-        default=list(_hv_dep["sepet"]),
-        key="hv_mac_secim"
-    )
-    if len(_hv_secilen_maclar) != len(_hv_dep["sepet"]):
-        _hv_dep["sepet"] = list(_hv_secilen_maclar)
-        st.rerun()
+    _hv_secilen_maclar = list(_hv_dep["sepet"])
+    if _hv_secilen_maclar:
+        st.markdown(f"**🛒 Havuz Sepetinizdeki Maçlar ({len(_hv_secilen_maclar)} maç eklendi):**")
+        for _idx_sp, _m_sp in enumerate(_hv_secilen_maclar):
+            _sc1, _sc2 = st.columns([4.5, 0.8])
+            _sc1.write(f"{_idx_sp + 1}. {_m_sp}")
+            if _sc2.button("❌ Çıkar", key=f"hv_sil_{_idx_sp}_{hash(_m_sp)}"):
+                _hv_dep["sepet"].remove(_m_sp)
+                st.rerun()
+    else:
+        st.caption("🛒 Havuz sepetiniz şu an boş. Yukarıdan takım arayıp '➕ Havuz Sepetine Ekle' butonuna basın.")
     _hc1, _hc2, _hc3 = st.columns(3)
     _hv_barem = _hc1.number_input("Toplam Havuz Baremi (Örn: 731.5 veya 12.5)", min_value=0.5, max_value=2500.0, value=float(_hv_dep.get("barem") or 731.5), step=0.5, key="hv_barem_in")
     _hv_tercih = _hc2.selectbox("Tercih", ["ALT", "ÜST"], index=0 if _hv_dep.get("tercih", "ALT") == "ALT" else 1, key="hv_tercih_in")
