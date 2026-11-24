@@ -1128,7 +1128,28 @@ if gorunum == "Canli Kupon Takip":
         return {"aktif": False, "maclar": list(), "barem": 0.0, "tercih": "ALT", "oran": 1.85, "ai_rapor": "", "bildirim_atildi": False}
 
     _hv_dep = _kalici_havuz_deposu()
-    _hv_map = {m.get("etiket", ""): m for m in k_maclar_veri if m.get("etiket")}
+    @st.cache_data(ttl=120, show_spinner=False)
+    def _havuz_tum_bulten_cek(t_str):
+        _tumu = {}
+        for _sp_k, _lig_dict in TUM_LIGLER.items():
+            for _lg_k, _yl_k in _lig_dict.items():
+                try:
+                    _rp = _el_get(t_str) if _yl_k == "euroleague_resmi" else requests.get(f"{url_basi}{_yl_k}/scoreboard?dates={t_str}", headers=basliklar, timeout=5).json()
+                    for _ev_p in _rp.get("events", list()):
+                        _cp = next(iter(_ev_p.get("competitions") or ()), {})
+                        _tkp = _cp.get("competitors", list())
+                        if len(_tkp) >= 2:
+                            _eh = next((t.get("team", {}).get("displayName", "Ev") for t in _tkp if t.get("homeAway") == "home"), "Ev")
+                            _da = next((t.get("team", {}).get("displayName", "Dep") for t in _tkp if t.get("homeAway") == "away"), "Dep")
+                            _etk = f"[{_lg_k}] {_eh} vs {_da}"
+                            _tumu[_etk] = {"id": _ev_p.get("id"), "yol": _yl_k, "spor": _sp_k, "ev": _eh, "dep": _da, "etiket": _etk}
+                except Exception:
+                    continue
+        return _tumu
+
+    _hv_map = _havuz_tum_bulten_cek(tarih)
+    if not _hv_map:
+        _hv_map = {m.get("etiket", ""): m for m in k_maclar_veri if m.get("etiket")}
     _tum_mac_secenekleri = list(_hv_map.keys())
 
     _hv_secilen_maclar = st.multiselect(
