@@ -378,10 +378,10 @@ class PusulaAnalizBeyni:
             f"Karne Dersi: {karne_dersi}\n"
             f"Resmi Ilk 11, Yedekler, Sakatlik, Hakem & Hava Istihbarati:\n{web_istihbarat}\n"
             f"Kurallar:\n{kural_metni}\n"
-            "Bahis sirketlerinin hem mac oncesi hem canli olarak actigi yukaridaki GERCEK SECENEKLERI VE ORANLARI (MS 1/X/2, acilan barem, ust/alt oranlari ve handikap) "
+            "Piyasa verilerinin hem mac oncesi hem canli olarak gosterdigi yukaridaki GERCEK SECENEKLERI VE DEGERLERI (MS 1/X/2, acilan barem, ust/alt ve handikap) "
             "macin mevcut skoru, dakikasi, resmi ilk 11/ilk 5, sakatlik ve karne dersleriyle tek tek suzerek "
-            "gelme ihtimali en yuksek ve orani en mantikli TEK TERCIHI belirle. TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
-            "🎯 ANA KARAR: (Acilan secenekler icinden suzulen en guclu tek bahis secenegi ve gercek orani)\n"
+            "gerceklesme ihtimali en yuksek ve en mantikli TEK ISTATISTIKSEL TERCIHI belirle. TAM OLARAK su 3 kisa maddede Turkce rapor ver:\n"
+            "• ANA KARAR: (Secenekler icinden suzulen en guclu tek istatistiksel sonuc tercihi ve piyasa degeri)\n"
             "🕵️ İSTİHBARAT & ORAN SÜZME ANALİZİ: (Acilan oranlar/baremler neden bu secenege elendi + ilk 11/sakatlik/skor kaniti - 1-2 cumle)\n"
             "⚠️ KRİTİK RİSK: (En somut tehlike)"
         )
