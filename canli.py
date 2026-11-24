@@ -1334,7 +1334,7 @@ if gorunum == "Canli Kupon Takip":
                         "Bu takimlarin gercek sezonluk hucum/savunma tempolarini, sakatlik/eksik durumlarini ve mevcut skorlari analiz ederek SADECE su 3 satiri yaz (baska hicbir sey yazma):\n"
                         "IHTIMAL: [25 ile 88 arasi gercekci tam sayi]\n"
                         "PROJEKSIYON: [Tahmini toplam sayi/gol ornegin 668.5]\n"
-                        "YORUM: [En fazla 16 kelimelik net Turkce teknik gerekce]"
+                        "YORUM: [Her macin adini tek tek yazarak kendi sakatlik ve tempo gerekcesini 1 kisa cumleyle ozetle; ornek: Orlando-Detroit: ... | Washington-Boston: ... | Denver-Dallas: ...]"
                     )
                     _q_hv = requests.post(
                         "https://" + "api" + ".groq.com" + "/openai/v1/chat/completions",
