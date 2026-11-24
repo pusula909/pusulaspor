@@ -1128,7 +1128,7 @@ if gorunum == "Canli Kupon Takip":
         return {"aktif": False, "maclar": list(), "barem": 0.0, "tercih": "ALT", "oran": 1.85, "ai_rapor": "", "bildirim_atildi": False}
 
     _hv_dep = _kalici_havuz_deposu()
-   _hv_map = {m.get("etiket", ""): m for m in k_maclar_veri if m.get("etiket")}
+    _hv_map = {m.get("etiket", ""): m for m in k_maclar_veri if m.get("etiket")}
     _tum_mac_secenekleri = list(_hv_map.keys())
 
     _hv_secilen_maclar = st.multiselect(
