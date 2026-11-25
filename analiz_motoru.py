@@ -355,7 +355,7 @@ class PusulaAnalizBeyni:
         hakem_bilgi = ""
         try:
             import hakem_analiz as _hk_ana
-            hakem_bilgi = _hk_ana.mac_hakem_verisi_cek("https://espn.com", yol, event_id, {"User-Agent": "Mozilla/5.0"})
+            hakem_bilgi = _hk_ana.mac_hakem_verisi_cek("https://espn.com", yol, event_id, {"User-Agent": "Mozilla/5.0"}, ev_ad, dep_ad)
         except Exception:
             pass
        
