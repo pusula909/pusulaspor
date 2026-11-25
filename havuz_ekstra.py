@@ -1,4 +1,5 @@
 import streamlit as st
+import requests
 
 @st.cache_resource
 def kasa_gecmisi_deposu():
@@ -25,44 +26,78 @@ def kalan_ortalama_bilgisi(objeler, skor_fonk, hedef_barem, tercih):
             return f"Barem aşıldı! ({abs(fark)} sayı/gol fazla)"
         return f"Kalan {kalan_mac} maçta maç başı en fazla **{ort_gerek}** sayı/gol payın var."
 
+def _el_takim_ortalamalari():
+    try:
+        r = requests.get("https://euroleague.net", timeout=5)
+        if r.status_code != 200:
+            r = requests.get("https://euroleague.net", timeout=5)
+        veri = r.json()
+        sozluk = dict()
+        for grup in (veri if isinstance(veri, list) else veri.get("standings", list())):
+            satirlar = grup.get("teams", grup) if isinstance(grup, dict) else list()
+            for t in (satirlar if isinstance(satirlar, list) else list()):
+                club = t.get("club") or t.get("team") or dict()
+                ad = (club.get("name") or club.get("editorialName") or "").upper()
+                gp = float(t.get("gamesPlayed") or t.get("played") or 0)
+                pf = float(t.get("pointsFor") or t.get("scored") or 0)
+                pa = float(t.get("pointsAgainst") or t.get("conceded") or 0)
+                if ad and gp > 0 and pf > 0:
+                    sozluk[ad] = (round(pf / gp, 1), round(pa / gp, 1))
+        return sozluk
+    except Exception:
+        return dict()
+
 def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_sor_fonk):
+    el_ort = _el_takim_ortalamalari()
+    analiz_satirlari = list()
+    toplam_beklenti = 0.0
+    veri_kalitesi = 0
+
+    for satir in mac_gercek_verileri:
+        s_str = str(satir)
+        # EuroLeague maçıysa gerçek EuroLeague puan ortalamalarını eşleştir
+        if "EuroLeague" in s_str or "euroleague" in s_str.lower():
+            eslesen = list()
+            for tk_ad, (att, yed) in el_ort.items():
+                kelimeler = [k for k in tk_ad.split() if len(k) >= 4]
+                if any(k in s_str.upper() for k in kelimeler):
+                    eslesen.append((tk_ad, att, yed))
+            if len(eslesen) >= 2:
+                m_bek = round(((eslesen[0][1] + eslesen[1][2]) / 2.0) + ((eslesen[1][1] + eslesen[0][2]) / 2.0), 1)
+                toplam_beklenti += m_bek
+                veri_kalitesi += 1
+                analiz_satirlari.append(f"{s_str} | Gerçek Sezon Ort: {eslesen[0][0]} ({eslesen[0][1]} atıyor / {eslesen[0][2]} yiyor) vs {eslesen[1][0]} ({eslesen[1][1]} atıyor / {eslesen[1][2]} yiyor) -> Maç Beklentisi: {m_bek}")
+            else:
+                toplam_beklenti += 165.0
+                analiz_satirlari.append(f"{s_str} | EuroLeague Lig Ortalaması Baz Alındı: 165.0")
+        elif "SOCCER" in s_str.upper() or "LİG" in s_str.upper() or "PREMIER" in s_str.upper() or "LIGA" in s_str.upper():
+            toplam_beklenti += 2.65
+            analiz_satirlari.append(s_str)
+        else:
+            toplam_beklenti += 224.0
+            analiz_satirlari.append(s_str)
+
+    toplam_beklenti = round(toplam_beklenti, 1)
+    hedef = float(barem)
+    fark = round(toplam_beklenti - hedef, 1) if tercih == "ÜST" else round(hedef - toplam_beklenti, 1)
+    standart_sapma = max(2.0, hedef * 0.085)
+    ham_yz = 50 + int(round((fark / standart_sapma) * 28))
+    suzulen_yz = max(8, min(90, ham_yz))
     basabas_yz = round(100.0 / max(1.01, float(oran)), 1)
+    deger_etiket = "DEĞERLİ FIRSAT (Oran Eşiği Üstü)" if suzulen_yz > basabas_yz else "RİSKLİ / DEĞERSİZ (Oran Eşiği Altı)"
+
     prompt = (
-        f"Sen deneyimli bir spor yorumcusu ve veri analistisin. Hiçbir sabit varsayılan kullanma; SADECE aşağıdaki her takımın kendi gerçek sezon ortalamalarını, son 5 maç formunu, eksiklerini ve hakem verisini hesaplayarak sonuca git.\n"
-        f"Kupon Havuzu ({len(mac_gercek_verileri)} Maç) | Hedef Barem: {barem} {tercih} | Büro Oranı: {oran} (Başabaş Eşiği: %{basabas_yz})\n\n"
-        f"GERÇEK MAÇ VE TAKIM İSTATİSTİKLERİ:\n" + "\n".join(mac_gercek_verileri) + "\n\n"
-        f"ÇIKTI FORMATI (İlk 2 satırı kesin bu formatta ver, ardından yorumu yaz):\n"
-        f"SUZULEN_TOPLAM: [Takımların kendi gerçek ortalamaları ve eksikleri süzüldüğünde beklenen toplam sayı/gol, örn: 498.5]\n"
-        f"SUZULEN_IHTIMAL: [10 ile 90 arası gerçekçi tam sayı yüzde, örn: 46]\n"
-        f"YORUMCU_RAPORU:\n"
-        f"1) GENEL DEĞERLENDİRME: Bu havuz neden gelir veya nerede takılır? ({oran} oran başabaş eşiği %{basabas_yz}'e göre DEĞERLİ mi RİSKLİ mi?)\n"
-        f"2) MAÇ MAÇ ANALİZ: Her maçtaki iki takımın kendi gerçek sayı/gol ortalamalarını, temposunu ve varsa eksik/hakem etkisini tek tek yorumla.\n"
-        f"3) KRİTİK KIRILMA NOKTASI: En çok dikkat edilmesi gereken maç hangisi?"
+        f"SEN BİR VERİ ANALİSTİSİN. KESİN KURAL: Aşağıda verilmeyen hiçbir bilgiyi (sakatlık, kadro, hakem vb.) ASLA UYDURMA. Sadece verilen sayıları özetle.\n"
+        f"Havuz: {len(mac_gercek_verileri)} Maç | Barem: {hedef} {tercih} | Büro Oranı: {oran} (Başabaş Eşiği: %{basabas_yz})\n"
+        f"Sabit Matematiksel Beklenti: {toplam_beklenti} | Sabit İhtimal: %{suzulen_yz} ({deger_etiket})\n"
+        f"Veriler:\n" + "\n".join(analiz_satirlari) + "\n\n"
+        f"3 kısa madde yaz (uydurma bilgi kesinlikle yasak):\n"
+        f"1) MATEMATİKSEL ÖZET: {toplam_beklenti} beklenti ile {hedef} {tercih} baremi arasındaki {fark:+.1f} farkı ve %{suzulen_yz} ihtimali yorumla.\n"
+        f"2) MAÇ BAZLI VERİLER: Sadece yukarıdaki gerçek ortalamaları tek tek özetle.\n"
+        f"3) RİSK KARARI: {oran} oran için başabaş eşiği %{basabas_yz} iken %{suzulen_yz} ihtimalle bu bahis mantıklı mı?"
     )
-    yanit = str(ai_sor_fonk(prompt, max_tokens=600))
-    suzulen_top = float(barem)
-    suzulen_yz = 50
-    rapor_satir = list()
-    rapor_basladi = False
-
-    for satir in yanit.splitlines():
-        s = satir.strip()
-        if s.upper().startswith("SUZULEN_TOPLAM:"):
-            rak = "".join(c for c in s.split(":", 1)[1] if c.isdigit() or c == ".")
-            if rak:
-                suzulen_top = round(float(rak), 1)
-        elif s.upper().startswith("SUZULEN_IHTIMAL:"):
-            rak = "".join(c for c in s.split(":", 1)[1] if c.isdigit())
-            if rak:
-                suzulen_yz = max(8, min(92, int(rak)))
-        elif s.upper().startswith("YORUMCU_RAPORU:"):
-            rapor_basladi = True
-        elif rapor_basladi and s:
-            rapor_satir.append(s)
-
-    deger_etiket = "DEĞERLİ FIRSAT (Oran Eşiği Üstü)" if suzulen_yz > basabas_yz else "RİSKLİ / SINIRDA (Oran Eşiği Altı)"
-    temiz_rapor = "\n".join(rapor_satir) if rapor_satir else yanit
-    return suzulen_yz, suzulen_top, deger_etiket, temiz_rapor
+    yorum = str(ai_sor_fonk(prompt, max_tokens=450))
+    return suzulen_yz, toplam_beklenti, deger_etiket, yorum
 
 def kasa_panosu_ciz(anlik_toplam, hedef_barem, tercih, oran, hepsi_bitti):
     depo = kasa_gecmisi_deposu()
