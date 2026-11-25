@@ -1318,6 +1318,8 @@ if gorunum == "Canli Kupon Takip":
                             _gercek_veri_not = f" | Gerçek Veri: {', '.join(_st_oz)} | Eksikler: {', '.join(_inj_list) if _inj_list else 'Tam kadro'}"
                 except Exception:
                     pass
+                import hakem_analiz as _hk_mod
+                _gercek_veri_not += _hk_mod.mac_hakem_verisi_cek(url_basi, str(_mo.get("yol", "")), str(_mo.get("id", "")), basliklar)
                 _mac_detay_list.append(f"{_mo.get('etiket')} (Skor: {_sy}, Durum: {_dt}{_gercek_veri_not})")
                 _mac_basi_ort = round(_hv_barem / max(1, len(_secili_objeler)), 2)
             _anlik_top_b = 0
