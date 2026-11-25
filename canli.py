@@ -1224,9 +1224,13 @@ if gorunum == "Canli Kupon Takip":
         try:
             _y_h = mac_obj.get("yol", "")
             _id_h = str(mac_obj.get("id", ""))
-            _tg_h = mac_obj.get("tarih_g", tarih)
-            _r_h = _el_get(_tg_h) if _y_h == "euroleague_resmi" else requests.get(f"{url_basi}{_y_h}/scoreboard?dates={_tg_h}", headers=basliklar, timeout=6).json()
-            for _ev_h in _r_h.get("events", list()):
+            _dt_ref = datetime.strptime(tarih, "%Y%m%d")
+            _tar_liste = [(_dt_ref - timedelta(days=1)).strftime("%Y%m%d"), tarih, (_dt_ref + timedelta(days=1)).strftime("%Y%m%d")]
+            _tum_evler = list()
+            for _tg_x in _tar_liste:
+                _r_x = _el_get(_tg_x) if _y_h == "euroleague_resmi" else requests.get(f"{url_basi}{_y_h}/scoreboard?dates={_tg_x}", headers=basliklar, timeout=6).json()
+                _tum_evler.extend(_r_x.get("events", list()))
+            for _ev_h in _tum_evler:
                 if str(_ev_h.get("id", "")) == _id_h:
                     _c_h = next(iter(_ev_h.get("competitions") or ()), {})
                     _t_h = _c_h.get("competitors", list())
