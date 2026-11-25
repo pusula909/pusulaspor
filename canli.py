@@ -1727,7 +1727,7 @@ else:
              with cols[i].container(border=True):
                  st.markdown(f"**🏆 {k['mac']}**")
                  st.caption(f"Lig: {k['lig']} | {k['guven']}")
-                 ai_rapor = beyin.ai_karar_ve_onay(spor, k["lig"], k["ev"], k["dep"], k["ozet"])
+                 ai_rapor = beyin.ai_karar_ve_onay(spor, k["lig"], k["ev"], k["dep"], k["ozet"], k.get("saha", ""), yol=k.get("yol", yol), event_id=str(k.get("id", "")))
                  st.info(ai_rapor if ai_rapor else k["ozet"])
 
         st.subheader(f"{lig} | Canli Skor, IY / Ceyrek Detaylari ve AI Analiz")
