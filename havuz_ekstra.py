@@ -33,7 +33,8 @@ def _el_takim_ortalamalari():
             r = requests.get("https://euroleague.net", timeout=5)
         veri = r.json()
         sozluk = dict()
-        for grup in (veri if isinstance(veri, list) else veri.get("standings", list())):
+        gruplar = veri if isinstance(veri, list) else veri.get("standings", list())
+        for grup in gruplar:
             satirlar = grup.get("teams", grup) if isinstance(grup, dict) else list()
             for t in (satirlar if isinstance(satirlar, list) else list()):
                 club = t.get("club") or t.get("team") or dict()
@@ -51,26 +52,24 @@ def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_s
     el_ort = _el_takim_ortalamalari()
     analiz_satirlari = list()
     toplam_beklenti = 0.0
-    veri_kalitesi = 0
 
     for satir in mac_gercek_verileri:
         s_str = str(satir)
-        # EuroLeague maçıysa gerçek EuroLeague puan ortalamalarını eşleştir
-        if "EuroLeague" in s_str or "euroleague" in s_str.lower():
+        if "EUROLEAGUE" in s_str.upper():
             eslesen = list()
-            for tk_ad, (att, yed) in el_ort.items():
+            for tk_ad, degerler in el_ort.items():
                 kelimeler = [k for k in tk_ad.split() if len(k) >= 4]
                 if any(k in s_str.upper() for k in kelimeler):
-                    eslesen.append((tk_ad, att, yed))
+                    eslesen.append((tk_ad, degerler, degerler))
             if len(eslesen) >= 2:
-                m_bek = round(((eslesen[0][1] + eslesen[1][2]) / 2.0) + ((eslesen[1][1] + eslesen[0][2]) / 2.0), 1)
+                t1, t2 = eslesen, eslesen
+                m_bek = round(((t1 + t2) / 2.0) + ((t1 + t2) / 2.0), 1)
                 toplam_beklenti += m_bek
-                veri_kalitesi += 1
-                analiz_satirlari.append(f"{s_str} | Gerçek Sezon Ort: {eslesen[0][0]} ({eslesen[0][1]} atıyor / {eslesen[0][2]} yiyor) vs {eslesen[1][0]} ({eslesen[1][1]} atıyor / {eslesen[1][2]} yiyor) -> Maç Beklentisi: {m_bek}")
+                analiz_satirlari.append(f"{s_str} | Gerçek Sezon Ort: {t1} ({t1} atıyor/{t1} yiyor) vs {t2} ({t2} atıyor/{t2} yiyor) -> Maç Beklentisi: {m_bek}")
             else:
                 toplam_beklenti += 165.0
-                analiz_satirlari.append(f"{s_str} | EuroLeague Lig Ortalaması Baz Alındı: 165.0")
-        elif "SOCCER" in s_str.upper() or "LİG" in s_str.upper() or "PREMIER" in s_str.upper() or "LIGA" in s_str.upper():
+                analiz_satirlari.append(f"{s_str} | EuroLeague Lig Ortalaması: 165.0")
+        elif any(x in s_str.upper() for x in ("SOCCER", "LİG", "PREMIER", "LIGA", "SERIE", "BUNDESLIGA")):
             toplam_beklenti += 2.65
             analiz_satirlari.append(s_str)
         else:
