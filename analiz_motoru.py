@@ -351,6 +351,12 @@ class PusulaAnalizBeyni:
             return "\n".join(bulgular[:7]) if bulgular else "Canli web aramasinda ek son dakika kadro/ilk 11 haberi bulunamadi."
 
     def ai_karar_ve_onay(self, spor_turu, lig_adi, ev_ad, dep_ad, analiz_ozeti, saha_verisi="", yol="", event_id=""):
+        hakem_bilgi = ""
+        try:
+            import hakem_analiz as _hk_ana
+            hakem_bilgi = _hk_ana.mac_hakem_verisi_cek("https://espn.com", yol, event_id, {"User-Agent": "Mozilla/5.0"})
+        except Exception:
+            pass
         hafiza = self._evrim_hafizasi_oku()
         ogrenilenler = hafiza.get("ogrenilen_kurallar", list())[-5:]
         kural_metni = "\n".join(ogrenilenler) if ogrenilenler else "Henuz ek ozel kural yok."
