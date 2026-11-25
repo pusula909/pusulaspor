@@ -26,86 +26,79 @@ def kalan_ortalama_bilgisi(objeler, skor_fonk, hedef_barem, tercih):
             return f"Barem aşıldı! ({abs(fark)} sayı/gol fazla)"
         return f"Kalan {kalan_mac} maçta maç başı en fazla **{ort_gerek}** sayı/gol payın var."
 
-def _mac_web_istihbarat_cek(mac_metni):
-    parca_ilk = mac_metni.split("|")[0]
-    for etiket in ("[EuroLeague]", "[Şampiyonlar Ligi]", "[Süper Lig]", "[Premier Lig]", "[La Liga]", "[Serie A]", "[Bundesliga]", "[NBA]"):
-        parca_ilk = parca_ilk.replace(etiket, "")
-    temiz_ad = parca_ilk.strip()
-    parcalar = temiz_ad.split("vs") if "vs" in temiz_ad else temiz_ad.split("-")
-    t1 = parcalar[0].strip() if len(parcalar) >= 1 else temiz_ad
-    t2 = parcalar[1].strip() if len(parcalar) >= 2 else ""
-
-    notlar = list()
-    try:
+@st.cache_data(ttl=1800, show_spinner=False)
+def _euroleague_gercek_istatistikler():
+    sozluk = dict()
+    for sezon in ("E2026", "E2025", "E2024"):
         try:
-            from ddgs import DDGS
+            r = requests.get(f"https://euroleague.net{sezon}/seasons/{sezon}/standings", timeout=6)
+            if r.status_code == 200:
+                veri = r.json()
+                gruplar = veri if isinstance(veri, list) else veri.get("standings", list())
+                for grup in gruplar:
+                    satirlar = grup.get("teams", grup) if isinstance(grup, dict) else list()
+                    for t in (satirlar if isinstance(satirlar, list) else list()):
+                        club = t.get("club") or t.get("team") or dict()
+                        ad = (club.get("name") or club.get("editorialName") or "").upper()
+                        gp = float(t.get("gamesPlayed") or t.get("played") or 0)
+                        pf = float(t.get("pointsFor") or t.get("scored") or 0)
+                        pa = float(t.get("pointsAgainst") or t.get("conceded") or 0)
+                        if ad and gp > 0 and pf > 0:
+                            sozluk[ad] = (round(pf / gp, 1), round(pa / gp, 1), int(gp))
+                if sozluk:
+                    return sozluk
         except Exception:
-            from duckduckgo_search import DDGS
-        with DDGS() as ddgs:
-            sorgular = [
-                f"{t1} {t2} stats score average",
-                f"{t1} {t2} injury news form"
-            ]
-            for q in sorgular:
-                sonuclar = list(ddgs.text(q, max_results=3))
-                for s in sonuclar:
-                    baslik = str(s.get("title", "")).strip()
-                    govde = str(s.get("body", "")).strip()
-                    oz = f"{baslik}: {govde}"[:240].replace("\n", " ")
-                    if oz.strip():
-                        notlar.append(oz)
-    except Exception as e:
-        notlar.append(f"Arama notu: {e}")
+            continue
+    return sozluk
 
-    return " // ".join(notlar[:4]) if notlar else "Ek web haberi bulunamadı."
-
-def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_sor_fonk):
+@st.cache_data(ttl=1800, show_spinner=False)
+def _kilitli_analiz_hesapla(mac_anahtari, barem, tercih, oran):
     hedef = float(barem)
     basabas_yz = round(100.0 / max(1.01, float(oran)), 1)
-    zengin_veriler = list()
+    el_veri = _euroleague_gercek_istatistikler()
+    satirlar = mac_anahtari.split(" || ")
+    toplam_beklenti = 0.0
+    detay_maddeler = list()
 
-    for satir in mac_gercek_verileri:
-        s_str = str(satir)
-        web_bilgi = _mac_web_istihbarat_cek(s_str)
-        zengin_veriler.append(f"MAÇ VERİSİ: {s_str}\nCANLI WEB TARAMA SONUÇLARI: {web_bilgi}")
+    for s in satirlar:
+        ust_s = s.upper()
+        if "EUROLEAGUE" in ust_s:
+            bulunan = list()
+            for tk_ad, (att, yed, mac_s) in el_veri.items():
+                kelimeler = [k for k in tk_ad.split() if len(k) >= 4 and k not in ("BASKETBALL", "CLUB", "ISTANBUL", "BELGRADE", "MOZZART", "KOSNER", "VITORIA")]
+                if any(k in ust_s for k in kelimeler):
+                    bulunan.append((tk_ad, att, yed, mac_s))
+            if len(bulunan) >= 2:
+                ev_t, dep_t = bulunan[0], bulunan[1]
+                bek = round(((ev_t[1] + dep_t[2]) / 2.0) + ((dep_t[1] + ev_t[2]) / 2.0), 1)
+                toplam_beklenti += bek
+                detay_maddeler.append(f"**{ev_t[0]} vs {dep_t[0]}:** {ev_t[0]} maç başı **{ev_t[1]}** atıp **{ev_t[2]}** yiyor ({ev_t[3]} maç); {dep_t[0]} maç başı **{dep_t[1]}** atıp **{dep_t[2]}** yiyor ({dep_t[3]} maç) → **Gerçek Beklenti: {bek} sayı**")
+            else:
+                toplam_beklenti += 164.5
+                detay_maddeler.append(f"**{s.split('|')[0].strip()}:** Resmi puan durumu eşleşmedi → **Lig Ortalaması: 164.5 sayı**")
+        elif any(x in ust_s for x in ("SOCCER", "LİG", "PREMIER", "LIGA", "SERIE", "BUNDESLIGA", "ŞAMPİYONLAR")):
+            toplam_beklenti += 2.65
+            detay_maddeler.append(f"**{s.split('|')[0].strip()}:** Futbol lig ortalaması → **2.65 gol**")
+        else:
+            toplam_beklenti += 224.0
+            detay_maddeler.append(f"**{s.split('|')[0].strip()}:** Basketbol ortalaması → **224.0 sayı**")
 
-    prompt = (
-        f"Sen profesyonel bir spor veri analisti ve bahis yorumcususun. Aşağıda her maç için sistem verisi ve canlı web tarama sonuçları verilmiştir.\n"
-        f"Bu verileri kullanarak her takımın gücünü, güncel formunu, sakatlık/kadro durumunu ve skor/gol ortalamasını değerlendir ve mutlaka net sayısal tahmin üret.\n"
-        f"Havuz: {len(mac_gercek_verileri)} Maç | Hedef Barem: {hedef} {tercih} | Büro Oranı: {oran} (Başabaş Eşiği: %{basabas_yz})\n\n"
-        + "\n\n".join(zengin_veriler) + "\n\n"
-        f"ZORUNLU ÇIKTI FORMATI (İlk 2 satırı mutlaka sadece rakamla doldur, asla parantez veya açıklama yazma):\n"
-        f"BEKLENTI_TOPLAM: 498.5\n"
-        f"GELME_IHTIMALI: 54\n"
-        f"ANALIZ_METNI:\n"
-        f"1) MAÇ MAÇ ANALİZ: Her maçtaki takımların güncel formunu, hücum/savunma temposunu ve web taramasından gelen haber/eksik bilgilerini tek tek yorumla.\n"
-        f"2) HAVUZ HESABI & KARAR: {hedef} {tercih} baremine göre toplam beklenti kaç çıkıyor, {oran} oran (%{basabas_yz} eşiği) değerli mi riskli mi net karar ver."
-    )
-
-    yanit = str(ai_sor_fonk(prompt, max_tokens=850))
-    toplam_beklenti = hedef
-    suzulen_yz = 50
-    rapor_satir = list()
-    rapor_basladi = False
-
-    for satir in yanit.splitlines():
-        s = satir.strip()
-        if s.upper().startswith("BEKLENTI_TOPLAM:"):
-            rak = "".join(c for c in s.split(":", 1)[1] if c.isdigit() or c == ".")
-            if rak:
-                toplam_beklenti = round(float(rak), 1)
-        elif s.upper().startswith("GELME_IHTIMALI:"):
-            rak = "".join(c for c in s.split(":", 1)[1] if c.isdigit())
-            if rak:
-                suzulen_yz = max(8, min(92, int(rak)))
-        elif s.upper().startswith("ANALIZ_METNI:"):
-            rapor_basladi = True
-        elif rapor_basladi and s:
-            rapor_satir.append(s)
-
+    toplam_beklenti = round(toplam_beklenti, 1)
+    fark = round(toplam_beklenti - hedef, 1) if tercih == "ÜST" else round(hedef - toplam_beklenti, 1)
+    sapma = max(2.0, hedef * 0.075)
+    suzulen_yz = max(8, min(90, 50 + int(round((fark / sapma) * 26))))
     deger_etiket = "DEĞERLİ FIRSAT (Oran Eşiği Üstü)" if suzulen_yz > basabas_yz else "RİSKLİ / DEĞERSİZ (Oran Eşiği Altı)"
-    temiz_rapor = "\n".join(rapor_satir) if rapor_satir else yanit
-    return suzulen_yz, toplam_beklenti, deger_etiket, temiz_rapor
+
+    rapor = (
+        f"1) **SABİT İSTATİSTİKSEL ÖZET:** Gerçek sezon ortalamalarına göre toplam beklenti **{toplam_beklenti}**, hedef **{hedef} {tercih}** (Fark: **{fark:+.1f}**). "
+        f"Hesaplanan sabit ihtimal **%{suzulen_yz}** (Büro oranı {oran} için başabaş eşiği **%{basabas_yz}**).\n"
+        f"2) **MAÇ BAZLI GERÇEK ORTALAMALAR:**\n" + "\n".join(f"- {m}" for m in detay_maddeler)
+    )
+    return suzulen_yz, toplam_beklenti, deger_etiket, rapor
+
+def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_sor_fonk):
+    mac_anahtari = " || ".join(str(x) for x in mac_gercek_verileri)
+    return _kilitli_analiz_hesapla(mac_anahtari, float(barem), str(tercih), float(oran))
 
 def kasa_panosu_ciz(anlik_toplam, hedef_barem, tercih, oran, hepsi_bitti):
     depo = kasa_gecmisi_deposu()
