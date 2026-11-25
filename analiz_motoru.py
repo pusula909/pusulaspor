@@ -350,12 +350,17 @@ class PusulaAnalizBeyni:
             pass
             return "\n".join(bulgular[:7]) if bulgular else "Canli web aramasinda ek son dakika kadro/ilk 11 haberi bulunamadi."
 
-    def ai_karar_ve_onay(self, spor_turu, lig_adi, ev_ad, dep_ad, analiz_ozeti, saha_verisi=""):
+    def ai_karar_ve_onay(self, spor_turu, lig_adi, ev_ad, dep_ad, analiz_ozeti, saha_verisi="", yol="", event_id=""):
         hafiza = self._evrim_hafizasi_oku()
         ogrenilenler = hafiza.get("ogrenilen_kurallar", list())[-5:]
         kural_metni = "\n".join(ogrenilenler) if ogrenilenler else "Henuz ek ozel kural yok."
         karne_dersi = self._karne_oz_ogrenme_ozeti(lig_adi)
-        web_istihbarat = self.canli_web_istihbarati(ev_ad, dep_ad, spor_turu)
+        hakem_bilgi = ""
+        try:
+            import hakem_analiz as _hk_ana
+            hakem_bilgi = _hk_ana.mac_hakem_verisi_cek("https://espn.com", yol, event_id, {"User-Agent": "Mozilla/5.0"})
+        except Exception:
+            pass
 
         oran_metni = "Bu mac icin canli piyasa orani cekilemedi."
         try:
@@ -376,7 +381,8 @@ class PusulaAnalizBeyni:
             f"Mac Durumu & Ozet: {analiz_ozeti}\n"
             f"Saha & Skor Verisi: {saha_verisi}\n"
             f"Karne Dersi: {karne_dersi}\n"
-            f"Resmi Ilk 11, Yedekler, Sakatlik, Hakem & Hava Istihbarati:\n{web_istihbarat}\n"
+            f"Resmi Hakem & Istihbarat Verisi:\n{hakem_bilgi}\n{web_istihbarat}\n"
+            f"HAKEM KURALI: Yukarida resmi hakem ismi varsa o hakemin duduk sikligi, faul/serbest atis veya kart/tempo karakterini mutlaka analiz et; hakem ismi yoksa ASLA hakem ismi uydurma.\n"
             f"Kurallar:\n{kural_metni}\n"
             "Piyasa verilerinin hem mac oncesi hem canli olarak gosterdigi yukaridaki GERCEK SECENEKLERI VE DEGERLERI (MS 1/X/2, acilan barem, ust/alt ve handikap) "
             "macin mevcut skoru, dakikasi, resmi ilk 11/ilk 5, sakatlik ve karne dersleriyle tek tek suzerek "
