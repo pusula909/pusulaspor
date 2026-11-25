@@ -1,4 +1,5 @@
 import streamlit as st
+import requests
 
 @st.cache_resource
 def kasa_gecmisi_deposu():
@@ -26,29 +27,37 @@ def kalan_ortalama_bilgisi(objeler, skor_fonk, hedef_barem, tercih):
         return f"Kalan {kalan_mac} maçta maç başı en fazla **{ort_gerek}** sayı/gol payın var."
 
 def _mac_web_istihbarat_cek(mac_metni):
+    parca_ilk = mac_metni.split("|")[0]
+    for etiket in ("[EuroLeague]", "[Şampiyonlar Ligi]", "[Süper Lig]", "[Premier Lig]", "[La Liga]", "[Serie A]", "[Bundesliga]", "[NBA]"):
+        parca_ilk = parca_ilk.replace(etiket, "")
+    temiz_ad = parca_ilk.strip()
+    parcalar = temiz_ad.split("vs") if "vs" in temiz_ad else temiz_ad.split("-")
+    t1 = parcalar[0].strip() if len(parcalar) >= 1 else temiz_ad
+    t2 = parcalar[1].strip() if len(parcalar) >= 2 else ""
+
+    notlar = list()
     try:
         try:
             from ddgs import DDGS
         except Exception:
             from duckduckgo_search import DDGS
-        temiz_ad = mac_metni.split("|").replace("[EuroLeague]", "").replace("[Şampiyonlar Ligi]", "").strip()
-        parcalar = temiz_ad.split("vs")
-        t1 = parcalar.strip() if len(parcalar) >= 1 else temiz_ad
-        t2 = parcalar.strip() if len(parcalar) >= 2 else ""
-        notlar = list()
         with DDGS() as ddgs:
             sorgular = [
-                f"{t1} {t2} stats average points goals injuries",
-                f"{t1} {t2} son maçlar sakatlar istatistik"
+                f"{t1} {t2} stats score average",
+                f"{t1} {t2} injury news form"
             ]
             for q in sorgular:
-                for s in list(ddgs.text(q, max_results=2)):
-                    oz = (s.get("title", "") + ": " + s.get("body", ""))[:220].replace("\n", " ")
+                sonuclar = list(ddgs.text(q, max_results=3))
+                for s in sonuclar:
+                    baslik = str(s.get("title", "")).strip()
+                    govde = str(s.get("body", "")).strip()
+                    oz = f"{baslik}: {govde}"[:240].replace("\n", " ")
                     if oz.strip():
                         notlar.append(oz)
-        return " // ".join(notlar[:3]) if notlar else "Web aramasında ek haber bulunamadı."
-    except Exception:
-        return "Web araması geçici olarak yanıt vermedi."
+    except Exception as e:
+        notlar.append(f"Arama notu: {e}")
+
+    return " // ".join(notlar[:4]) if notlar else "Ek web haberi bulunamadı."
 
 def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_sor_fonk):
     hedef = float(barem)
@@ -58,22 +67,22 @@ def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_s
     for satir in mac_gercek_verileri:
         s_str = str(satir)
         web_bilgi = _mac_web_istihbarat_cek(s_str)
-        zengin_veriler.append(f"MAÇ: {s_str}\nWEB İSTİHBARAT & İSTATİSTİK: {web_bilgi}")
+        zengin_veriler.append(f"MAÇ VERİSİ: {s_str}\nCANLI WEB TARAMA SONUÇLARI: {web_bilgi}")
 
     prompt = (
-        f"Sen profesyonel bir spor veri analisti ve bahis yorumcususun. HİÇBİR SABİT VARSAYILAN KULLANMA.\n"
-        f"Aşağıdaki her maç için verilen sistem istatistiklerini VE canlı web istihbaratını (takımların kendi attığı/yediği sayı-gol ortalamalarını, formunu ve eksiklerini) ayrı ayrı analiz et.\n"
+        f"Sen profesyonel bir spor veri analisti ve bahis yorumcususun. Aşağıda her maç için sistem verisi ve canlı web tarama sonuçları verilmiştir.\n"
+        f"Bu verileri kullanarak her takımın gücünü, güncel formunu, sakatlık/kadro durumunu ve skor/gol ortalamasını değerlendir ve mutlaka net sayısal tahmin üret.\n"
         f"Havuz: {len(mac_gercek_verileri)} Maç | Hedef Barem: {hedef} {tercih} | Büro Oranı: {oran} (Başabaş Eşiği: %{basabas_yz})\n\n"
         + "\n\n".join(zengin_veriler) + "\n\n"
-        f"ZORUNLU ÇIKTI FORMATI (İlk 2 satırı mutlaka bu formatta ver):\n"
-        f"BEKLENTI_TOPLAM: [Her maçın kendi gerçek ortalamalarını toplayıp tek bir sayı yaz, örn: 498.5]\n"
-        f"GELME_IHTIMALI: [10 ile 90 arası gerçekçi tam sayı yüzde, örn: 54]\n"
+        f"ZORUNLU ÇIKTI FORMATI (İlk 2 satırı mutlaka sadece rakamla doldur, asla parantez veya açıklama yazma):\n"
+        f"BEKLENTI_TOPLAM: 498.5\n"
+        f"GELME_IHTIMALI: 54\n"
         f"ANALIZ_METNI:\n"
-        f"1) MAÇ MAÇ GERÇEK ANALİZ: Her maçtaki iki takımın kendi gerçek sayı/gol ortalamalarını, temposunu ve web istihbaratındaki sakatlık/form durumunu tek tek yaz (her maça aynı sayıyı verme!).\n"
-        f"2) HAVUZ HESABI & KARAR: {hedef} {tercih} baremine göre toplam beklenti kaç çıkıyor, {oran} oran (%{basabas_yz} eşiği) değerli mi riskli mi?"
+        f"1) MAÇ MAÇ ANALİZ: Her maçtaki takımların güncel formunu, hücum/savunma temposunu ve web taramasından gelen haber/eksik bilgilerini tek tek yorumla.\n"
+        f"2) HAVUZ HESABI & KARAR: {hedef} {tercih} baremine göre toplam beklenti kaç çıkıyor, {oran} oran (%{basabas_yz} eşiği) değerli mi riskli mi net karar ver."
     )
 
-    yanit = str(ai_sor_fonk(prompt, max_tokens=800))
+    yanit = str(ai_sor_fonk(prompt, max_tokens=850))
     toplam_beklenti = hedef
     suzulen_yz = 50
     rapor_satir = list()
@@ -82,11 +91,11 @@ def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_s
     for satir in yanit.splitlines():
         s = satir.strip()
         if s.upper().startswith("BEKLENTI_TOPLAM:"):
-            rak = "".join(c for c in s.split(":", 1) if c.isdigit() or c == ".")
+            rak = "".join(c for c in s.split(":", 1)[1] if c.isdigit() or c == ".")
             if rak:
                 toplam_beklenti = round(float(rak), 1)
         elif s.upper().startswith("GELME_IHTIMALI:"):
-            rak = "".join(c for c in s.split(":", 1) if c.isdigit())
+            rak = "".join(c for c in s.split(":", 1)[1] if c.isdigit())
             if rak:
                 suzulen_yz = max(8, min(92, int(rak)))
         elif s.upper().startswith("ANALIZ_METNI:"):
