@@ -1224,7 +1224,7 @@ if gorunum == "Canli Kupon Takip":
         try:
             _y_h = mac_obj.get("yol", "")
             _id_h = str(mac_obj.get("id", ""))
-            _dt_ref = datetime.strptime(tarih, "%Y%m%d")
+            _dt_ref = datetime.strptime(str(tarih).replace("-", "")[:8], "%Y%m%d")
             _tar_liste = [(_dt_ref - timedelta(days=1)).strftime("%Y%m%d"), tarih, (_dt_ref + timedelta(days=1)).strftime("%Y%m%d")]
             _tum_evler = list()
             for _tg_x in _tar_liste:
