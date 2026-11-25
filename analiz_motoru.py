@@ -297,6 +297,7 @@ class PusulaAnalizBeyni:
         }
 
     def _karne_oz_ogrenme_ozeti(self, lig_adi):
+    web_istihbarat = self._canli_web_istihbarati(ev_ad, dep_ad)
         try:
             if not os.path.exists("haftalik_arsiv.json"):
                 return "Henuz yeterli gecmis karne verisi yok."
