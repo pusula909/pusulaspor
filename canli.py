@@ -1381,6 +1381,12 @@ if gorunum == "Canli Kupon Takip":
                                 _ai_yorum_kisa = _ln_s.split(":", 1)[1].strip()
                 except Exception:
                     pass
+            try:
+                import havuz_ekstra as _hx_yor
+                _mat_yuzde, _proj_top_b, _deg_etk, _yor_metin = _hx_yor.profesyonel_yorumcu_ve_suzgec(_secili_objeler, _hv_barem, _hv_tercih, _hv_oran, beyin._ai_sor)
+                _ai_yorum_kisa = f"[{_deg_etk}]\n{_yor_metin}"
+            except Exception:
+                pass
             _hv_dep["baslangic_ihtimal"] = _mat_yuzde
             _hv_dep["baslangic_proj"] = _proj_top_b
             _ai_hv_sonuc = (
