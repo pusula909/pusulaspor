@@ -361,12 +361,7 @@ class PusulaAnalizBeyni:
         ogrenilenler = hafiza.get("ogrenilen_kurallar", list())[-5:]
         kural_metni = "\n".join(ogrenilenler) if ogrenilenler else "Henuz ek ozel kural yok."
         karne_dersi = self._karne_oz_ogrenme_ozeti(lig_adi)
-        hakem_bilgi = ""
-        try:
-            import hakem_analiz as _hk_ana
-            hakem_bilgi = _hk_ana.mac_hakem_verisi_cek("https://espn.com", yol, event_id, {"User-Agent": "Mozilla/5.0"})
-        except Exception:
-            pass
+       
 
         oran_metni = "Bu mac icin canli piyasa orani cekilemedi."
         try:
