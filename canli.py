@@ -299,7 +299,7 @@ yol = "" if lig == "Tumu (Butun Ligler)" else TUM_LIGLER[spor][lig]
 yol = "" if lig == "Tumu (Butun Ligler)" else TUM_LIGLER[spor][lig]
 durum_filtre = st.sidebar.radio("Mac Durumu", ["Tumu", "Sadece Canli Maclar", "Oynanacak Maclar", "Biten Maclar"])
 favori = st.sidebar.text_input("Favori Takim", "").strip().lower()
-otomatik_yenile = st.sidebar.checkbox("Canli Otomatik Yenileme & Alarm (30 sn)", value=False)
+otomatik_yenile = st.sidebar.checkbox("Canli Otomatik Yenileme & Alarm (30 sn)", value=True)
 
 yol = "" if lig == "Tumu (Butun Ligler)" else TUM_LIGLER[spor][lig]
 YILDIZ_LISTESI = (
