@@ -1277,17 +1277,35 @@ if gorunum == "Canli Kupon Takip":
                 try:
                     _y_oz = str(_mo.get("yol", ""))
                     _id_oz = str(_mo.get("id", ""))
-                    if _y_oz and _y_oz != "euroleague_resmi" and _id_oz:
+                    if _y_oz == "euroleague_resmi":
+                        _el_st = requests.get("https://euroleague.net", timeout=4).json()
+                        _el_not = list()
+                        for _grp in (_el_st.get("standings") or _el_st.get("teams") or list()):
+                            _tm_el = ((_grp.get("club") or _grp.get("team") or {}).get("name") or "").lower()
+                            if _tm_el and (_tm_el in _mo.get("ev", "").lower() or _tm_el in _mo.get("dep", "").lower()):
+                                _gp = max(1, int(_grp.get("gamesPlayed") or _grp.get("played") or 1))
+                                _pf = round(float(_grp.get("pointsFor") or 0) / _gp, 1)
+                                _pa = round(float(_grp.get("pointsAgainst") or 0) / _gp, 1)
+                                if _pf > 0:
+                                    _el_not.append(f"{_tm_el.title()} Attığı:{_pf} Yediği:{_pa}")
+                        if _el_not:
+                            _gercek_veri_not = f" | EL Sezon Ort: {', '.join(_el_not)}"
+                    elif _y_oz and _id_oz:
                         _sum_j = requests.get(f"{url_basi}{_y_oz}/summary?event={_id_oz}", headers=basliklar, timeout=5).json()
-                        _box_t = (_sum_j.get("boxscore") or {}).get("teams", list())
                         _st_oz = list()
-                        for _bt in _box_t:
+                        for _bt in ((_sum_j.get("boxscore") or {}).get("teams") or list()):
                             _t_nm = (_bt.get("team") or {}).get("abbreviation", "")
                             _ppg = next((s.get("displayValue") for s in _bt.get("statistics", list()) if s.get("name") in ("avgPoints", "points", "goalsFor")), "")
                             if _t_nm and _ppg:
                                 _st_oz.append(f"{_t_nm} Ort:{_ppg}")
+                        for _fm in (_sum_j.get("form") or list()):
+                            _f_tm = (_fm.get("team") or {}).get("abbreviation", "")
+                            _evs = _fm.get("events", list())[:5]
+                            if _f_tm and _evs:
+                                _gol_top = sum(int(str(e.get("homeTeamScore", 0))) + int(str(e.get("awayTeamScore", 0))) for e in _evs if str(e.get("homeTeamScore", "")).isdigit())
+                                _st_oz.append(f"{_f_tm} Son{len(_evs)}MacOrt:{round(_gol_top/len(_evs), 2)}")
                         _inj_list = list()
-                        for _ij_grp in _sum_j.get("injuries", list()):
+                        for _ij_grp in (_sum_j.get("injuries") or list()):
                             _ij_tm = (_ij_grp.get("team") or {}).get("abbreviation", "")
                             for _ij_p in _ij_grp.get("injuries", list())[:3]:
                                 _ath = (_ij_p.get("athlete") or {}).get("shortName", "")
@@ -1295,7 +1313,7 @@ if gorunum == "Canli Kupon Takip":
                                 if _ath:
                                     _inj_list.append(f"{_ij_tm}:{_ath}({_ist})")
                         if _st_oz or _inj_list:
-                            _gercek_veri_not = f" | İstatistik: {', '.join(_st_oz)} | Eksikler: {', '.join(_inj_list) if _inj_list else 'Tam kadro'}"
+                            _gercek_veri_not = f" | Gerçek Veri: {', '.join(_st_oz)} | Eksikler: {', '.join(_inj_list) if _inj_list else 'Tam kadro'}"
                 except Exception:
                     pass
                 _mac_detay_list.append(f"{_mo.get('etiket')} (Skor: {_sy}, Durum: {_dt}{_gercek_veri_not})")
