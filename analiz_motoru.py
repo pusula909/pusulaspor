@@ -394,4 +394,4 @@ class PusulaAnalizBeyni:
             "🕵️ İSTİHBARAT & ORAN SÜZME ANALİZİ: (Acilan oranlar/baremler neden bu secenege elendi + ilk 11/sakatlik/skor kaniti - 1-2 cumle)\n"
             "⚠️ KRİTİK RİSK: (En somut tehlike)"
         )
-        return self._ai_sor(prompt, max_tokens=450)
+        return f"⚖️ HAKEM DURUMU: {hakem_bilgi}\n\n" + str(self._ai_sor(prompt, max_tokens=450))
