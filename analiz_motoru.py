@@ -357,12 +357,7 @@ class PusulaAnalizBeyni:
             hakem_bilgi = _hk_ana.mac_hakem_verisi_cek("https://espn.com", yol, event_id, {"User-Agent": "Mozilla/5.0"})
         except Exception:
             pass
-        hakem_bilgi = ""
-        try:
-            import hakem_analiz as _hk_ana
-            hakem_bilgi = _hk_ana.mac_hakem_verisi_cek("https://espn.com", yol, event_id, {"User-Agent": "Mozilla/5.0"})
-        except Exception:
-            pass
+       
         hafiza = self._evrim_hafizasi_oku()
         ogrenilenler = hafiza.get("ogrenilen_kurallar", list())[-5:]
         kural_metni = "\n".join(ogrenilenler) if ogrenilenler else "Henuz ek ozel kural yok."
