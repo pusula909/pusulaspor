@@ -1261,10 +1261,8 @@ if gorunum == "Canli Kupon Takip":
                     else:
                         _sure_bilgi = f"{_det_h}" + (f" [{_clk_h}]" if (_clk_h and _clk_h not in _det_h) else "") + _lin_str
                     return _sk_yazi, _s_top, (_st_h == "post"), _sure_bilgi
-        except Exception:
-            pass
-        return "0 - 0", 0, False, "Bekliyor"
-
+        except Exception as _ex_hv:
+            return "0 - 0", 0, False, f"Hata: {str(_ex_hv)[:45]}"
     _hb1, _hb2 = st.columns(2)
     if _hb1.button("🔍 AI İhtimal Analizi Yap & Canlı Takibi Başlat", use_container_width=True):
         if len(_hv_secilen_maclar) < 2:
