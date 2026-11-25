@@ -13,10 +13,12 @@ def mac_hakem_verisi_cek(url_basi, yol, event_id, basliklar):
                 pos = ((off.get("position") or {}).get("displayName") or "").strip()
                 if ad:
                     isimler.append(f"{ad} ({pos})" if pos else ad)
-            comp = (((veri.get("header") or {}).get("competitions") or [{}])[0].get("competitors") or list())
-            if len(comp) >= 2:
-                ev_ad = ((comp[0].get("team") or {}).get("displayName") or "")
-                dep_ad = ((comp[1].get("team") or {}).get("displayName") or "")
+            comps = ((veri.get("header") or {}).get("competitions") or list())
+            if comps:
+                tlist = (comps[0].get("competitors") or list())
+                if len(tlist) >= 2:
+                    ev_ad = ((tlist[0].get("team") or {}).get("displayName") or "")
+                    dep_ad = ((tlist[1].get("team") or {}).get("displayName") or "")
         except Exception:
             pass
 
@@ -28,7 +30,7 @@ def mac_hakem_verisi_cek(url_basi, yol, event_id, basliklar):
             from duckduckgo_search import DDGS
             notlar = list()
             with DDGS() as ddgs:
-                for q in [f"{ev_ad} {dep_ad} referee", f"{ev_ad} {dep_ad} hakemi"]:
+                for q in [f"{ev_ad} {dep_ad} referee", f"{ev_ad} {dep_ad} hakem"]:
                     for s in list(ddgs.text(q, max_results=2)):
                         oz = (s.get("title", "") + " - " + s.get("body", ""))[:180]
                         if oz.strip():
