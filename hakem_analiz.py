@@ -23,16 +23,14 @@ def mac_hakem_verisi_cek(url_basi, yol, event_id, basliklar, ev_takim="", dep_ta
                 from ddgs import DDGS
             except Exception:
                 from duckduckgo_search import DDGS
-            notlar = list()
             with DDGS() as ddgs:
-                for q in [f"{ev_takim} {dep_takim} referee", f"{ev_takim} {dep_takim} hakemi"]:
-                    for s in list(ddgs.text(q, max_results=2)):
-                        oz = (s.get("title", "") + " - " + s.get("body", ""))[:180]
-                        if oz.strip():
-                            notlar.append(oz)
-            if notlar:
-                return f"Resmi Atama Kaydı: {' // '.join(notlar[:2])}"
+                for q in [f'"{ev_takim}" "{dep_takim}" referee', f'"{ev_takim}" "{dep_takim}" hakemi']:
+                    for s in list(ddgs.text(q, max_results=3)):
+                        metin = (s.get("title", "") + " " + s.get("body", ""))
+                        if any(k in metin.lower() for k in ("referee", "official", "hakem", "uefa")):
+                            temiz = metin[:140].replace("\n", " ").strip()
+                            return f"Atama Kaydı: {temiz}"
         except Exception:
             pass
 
-    return "Henüz resmi hakem ataması yayınlanmadı"
+    return "Henüz resmi hakem bilgisi düşmedi"
