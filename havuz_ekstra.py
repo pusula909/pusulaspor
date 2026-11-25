@@ -28,23 +28,25 @@ def kalan_ortalama_bilgisi(objeler, skor_fonk, hedef_barem, tercih):
 
 def _el_takim_ortalamalari():
     try:
-        r = requests.get("https://euroleague.net", timeout=5)
-        if r.status_code != 200:
-            r = requests.get("https://euroleague.net", timeout=5)
-        veri = r.json()
-        sozluk = dict()
-        gruplar = veri if isinstance(veri, list) else veri.get("standings", list())
-        for grup in gruplar:
-            satirlar = grup.get("teams", grup) if isinstance(grup, dict) else list()
-            for t in (satirlar if isinstance(satirlar, list) else list()):
-                club = t.get("club") or t.get("team") or dict()
-                ad = (club.get("name") or club.get("editorialName") or "").upper()
-                gp = float(t.get("gamesPlayed") or t.get("played") or 0)
-                pf = float(t.get("pointsFor") or t.get("scored") or 0)
-                pa = float(t.get("pointsAgainst") or t.get("conceded") or 0)
-                if ad and gp > 0 and pf > 0:
-                    sozluk[ad] = (round(pf / gp, 1), round(pa / gp, 1))
-        return sozluk
+        for sezon in ("E2026", "E2025", "E2024"):
+            r = requests.get(f"https://euroleague.net{sezon}/seasons/{sezon}/standings", timeout=5)
+            if r.status_code == 200:
+                veri = r.json()
+                sozluk = dict()
+                gruplar = veri if isinstance(veri, list) else veri.get("standings", list())
+                for grup in gruplar:
+                    satirlar = grup.get("teams", grup) if isinstance(grup, dict) else list()
+                    for t in (satirlar if isinstance(satirlar, list) else list()):
+                        club = t.get("club") or t.get("team") or dict()
+                        ad = (club.get("name") or club.get("editorialName") or "").upper()
+                        gp = float(t.get("gamesPlayed") or t.get("played") or 0)
+                        pf = float(t.get("pointsFor") or t.get("scored") or 0)
+                        pa = float(t.get("pointsAgainst") or t.get("conceded") or 0)
+                        if ad and gp > 0 and pf > 0:
+                            sozluk[ad] = (round(pf / gp, 1), round(pa / gp, 1))
+                if sozluk:
+                    return sozluk
+        return dict()
     except Exception:
         return dict()
 
@@ -62,7 +64,8 @@ def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_s
                 if any(k in s_str.upper() for k in kelimeler):
                     eslesen.append((tk_ad, degerler, degerler))
             if len(eslesen) >= 2:
-                t1, t2 = eslesen, eslesen
+                t1 = eslesen
+                t2 = eslesen
                 m_bek = round(((t1 + t2) / 2.0) + ((t1 + t2) / 2.0), 1)
                 toplam_beklenti += m_bek
                 analiz_satirlari.append(f"{s_str} | Gerçek Sezon Ort: {t1} ({t1} atıyor/{t1} yiyor) vs {t2} ({t2} atıyor/{t2} yiyor) -> Maç Beklentisi: {m_bek}")
@@ -90,12 +93,12 @@ def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_s
         f"Havuz: {len(mac_gercek_verileri)} Maç | Barem: {hedef} {tercih} | Büro Oranı: {oran} (Başabaş Eşiği: %{basabas_yz})\n"
         f"Sabit Matematiksel Beklenti: {toplam_beklenti} | Sabit İhtimal: %{suzulen_yz} ({deger_etiket})\n"
         f"Veriler:\n" + "\n".join(analiz_satirlari) + "\n\n"
-        f"3 kısa madde yaz (uydurma bilgi kesinlikle yasak):\n"
+        f"3 kısa madde yaz (uydurma bilgi kesinlikle yasak, tüm maçları eksiksiz yaz):\n"
         f"1) MATEMATİKSEL ÖZET: {toplam_beklenti} beklenti ile {hedef} {tercih} baremi arasındaki {fark:+.1f} farkı ve %{suzulen_yz} ihtimali yorumla.\n"
-        f"2) MAÇ BAZLI VERİLER: Sadece yukarıdaki gerçek ortalamaları tek tek özetle.\n"
+        f"2) MAÇ BAZLI VERİLER: Listedeki {len(mac_gercek_verileri)} maçın tamamının gerçek sayı ortalamalarını kısa ve net özetle.\n"
         f"3) RİSK KARARI: {oran} oran için başabaş eşiği %{basabas_yz} iken %{suzulen_yz} ihtimalle bu bahis mantıklı mı?"
     )
-    yorum = str(ai_sor_fonk(prompt, max_tokens=450))
+    yorum = str(ai_sor_fonk(prompt, max_tokens=750))
     return suzulen_yz, toplam_beklenti, deger_etiket, yorum
 
 def kasa_panosu_ciz(anlik_toplam, hedef_barem, tercih, oran, hepsi_bitti):
