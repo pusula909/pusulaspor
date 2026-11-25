@@ -1474,6 +1474,8 @@ if gorunum == "Canli Kupon Takip":
                 + (f"• **AI DEĞERLENDİRME:** {_ai_kisa_not}" if _ai_kisa_not else "")
             )
             st.dataframe(pd.DataFrame(_hv_tablo_satir), use_container_width=True, hide_index=True)
+            import havuz_ekstra as _hx
+            st.caption(_hx.kalan_ortalama_bilgisi(_hv_dep["objeler"], _havuz_canli_skor_cek, _hv_dep["barem"], _hv_dep["tercih"]))
                 
             
             _hedef_b = float(_hv_dep["barem"])
