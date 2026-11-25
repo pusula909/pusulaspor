@@ -1382,11 +1382,12 @@ if gorunum == "Canli Kupon Takip":
                 except Exception:
                     pass
             try:
-                import havuz_ekstra as _hx_yor
-                _mat_yuzde, _proj_top_b, _deg_etk, _yor_metin = _hx_yor.profesyonel_yorumcu_ve_suzgec(_mat_yuzde, _proj_top_b, _deg_etk, _yor_metin = _hx_yor.profesyonel_yorumcu_ve_suzgec(_mac_detay_list, _hv_barem, _hv_tercih, _hv_oran, beyin._ai_sor))
+                import importlib, havuz_ekstra as _hx_yor
+                importlib.reload(_hx_yor)
+                _mat_yuzde, _proj_top_b, _deg_etk, _yor_metin = _hx_yor.profesyonel_yorumcu_ve_suzgec(_mac_detay_list, _hv_barem, _hv_tercih, _hv_oran, beyin._ai_sor)
                 _ai_yorum_kisa = f"[{_deg_etk}]\n{_yor_metin}"
-            except Exception:
-                pass
+            except Exception as _hx_hata:
+                _ai_yorum_kisa = f"Modül Uyarı: {_hx_hata}"
             _hv_dep["baslangic_ihtimal"] = _mat_yuzde
             _hv_dep["baslangic_proj"] = _proj_top_b
             _ai_hv_sonuc = (
