@@ -1250,7 +1250,7 @@ if gorunum == "Canli Kupon Takip":
                         pass
                     _lin_list = list()
                     if len(_t_h) >= 2:
-                        _l1 = _t_h.get("linescores", list())
+                        _l1 = _t_h[0].get("linescores", list())
                         _l2 = _t_h[1].get("linescores", list())
                         _lin_list = [f"{int(float(a.get('value',0)))}-{int(float(b.get('value',0)))}" for a, b in zip(_l1, _l2)]
                     _lin_str = f" | Periyotlar: {', '.join(_lin_list)}" if _lin_list else ""
