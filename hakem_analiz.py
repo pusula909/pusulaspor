@@ -23,21 +23,21 @@ def mac_hakem_verisi_cek(url_basi, yol, event_id, basliklar):
             pass
 
     if isimler:
-        return f" | Resmi Hakemler: {', '.join(isimler)}"
+        return f"Resmi Hakemler: {', '.join(isimler)}"
 
     if ev_ad and dep_ad:
         try:
             from duckduckgo_search import DDGS
             notlar = list()
             with DDGS() as ddgs:
-                for q in [f"{ev_ad} {dep_ad} referee", f"{ev_ad} {dep_ad} hakem"]:
+                for q in [f"{ev_ad} {dep_ad} referee", f"{ev_ad} {dep_ad} hakemi"]:
                     for s in list(ddgs.text(q, max_results=2)):
                         oz = (s.get("title", "") + " - " + s.get("body", ""))[:180]
                         if oz.strip():
                             notlar.append(oz)
             if notlar:
-                return f" | Web Resmi Hakem İstihbaratı: {' // '.join(notlar[:2])}"
+                return f"Web Resmi Hakem Kaydı: {' // '.join(notlar[:2])}"
         except Exception:
             pass
 
-    return " | Resmi Hakemler: Henüz resmi atama açıklanmadı (isim uydurma)"
+    return "Henüz resmi hakem ataması yayınlanmadı"
