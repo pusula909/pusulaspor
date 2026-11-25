@@ -1530,6 +1530,8 @@ if gorunum == "Canli Kupon Takip":
                 _doluluk = int(min(100, round((_anlik_toplam / max(1.0, _hedef_b)) * 100)))
                 st.info(f"📊 **Anlık Havuz Toplamı: {_anlik_toplam} / {_hedef_b} {_sec_t}** | Kalan Pay: **{_kalan_fark}** | Biten Maç: **{_biten_havuz_mac}/{len(_hv_dep['maclar'])}**")
                 st.progress(_doluluk)
+            import havuz_ekstra as _hx2
+        _hx2.kasa_panosu_ciz(_anlik_toplam, _hedef_b, _sec_t, _hv_dep.get("oran", 1.5), _tamam_mi)    
 elif gorunum == "AI Dogruluk Karnesi":
     st.subheader("📊 AI Dogruluk Karnesi & Lig Bazli Basari Analizi")
     import json, os
