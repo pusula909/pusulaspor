@@ -189,3 +189,4 @@ def kasa_panosu_ciz(anlik_toplam, hedef_barem, tercih, oran, hepsi_bitti):
         m2.metric("Başarı Oranı", f"%{basari_yz}")
         m3.metric("Net Kasa Durumu", f"{net_kasa:+.2f} TL")
     else:
+        st.caption("Henüz kaydedilmiş havuz geçmişi yok. Sonuçlanan havuzları yukarıdaki butonlarla kasaya işleyebilirsiniz.")
