@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import re
 
 @st.cache_resource
 def kasa_gecmisi_deposu():
@@ -27,24 +28,23 @@ def kalan_ortalama_bilgisi(objeler, skor_fonk, hedef_barem, tercih):
         return f"Kalan {kalan_mac} maçta maç başı en fazla **{ort_gerek}** sayı/gol payın var."
 
 @st.cache_data(ttl=1800, show_spinner=False)
-def _euroleague_gercek_istatistikler_v2():
+def _el_xml_takim_ortalamalari():
     sozluk = dict()
     for sezon in ("E2026", "E2025", "E2024"):
         try:
-            r = requests.get(f"https://euroleague.net{sezon}/seasons/{sezon}/standings", timeout=6)
-            if r.status_code == 200:
-                veri = r.json()
-                gruplar = veri if isinstance(veri, list) else veri.get("standings", list())
-                for grup in gruplar:
-                    satirlar = grup.get("teams", grup) if isinstance(grup, dict) else list()
-                    for t in (satirlar if isinstance(satirlar, list) else list()):
-                        club = t.get("club") or t.get("team") or dict()
-                        ad = (club.get("name") or club.get("editorialName") or "").upper()
-                        gp = float(t.get("gamesPlayed") or t.get("played") or 0)
-                        pf = float(t.get("pointsFor") or t.get("scored") or 0)
-                        pa = float(t.get("pointsAgainst") or t.get("conceded") or 0)
-                        if ad and gp > 0 and pf > 0:
-                            sozluk[ad] = (round(pf / gp, 1), round(pa / gp, 1), int(gp))
+            r = requests.get(f"https://euroleague.net{sezon}", timeout=6)
+            if r.status_code == 200 and "<team>" in r.text:
+                bloklar = re.findall(r"<team>(.*?)</team>", r.text, re.DOTALL)
+                for b in bloklar:
+                    ad_m = re.search(r"<name>(.*?)</name>", b)
+                    gp_m = re.search(r"<gamesPlayed>(\d+)</gamesPlayed>", b)
+                    pf_m = re.search(r"<pointsFor>(\d+)</pointsFor>", b)
+                    pa_m = re.search(r"<pointsAgainst>(\d+)</pointsAgainst>", b)
+                    if ad_m and gp_m and pf_m and pa_m:
+                        gp = int(gp_m.group(1))
+                        if gp > 0:
+                            ad = ad_m.group(1).strip().upper()
+                            sozluk[ad] = (round(int(pf_m.group(1)) / gp, 1), round(int(pa_m.group(1)) / gp, 1), gp)
                 if sozluk:
                     return sozluk
         except Exception:
@@ -52,37 +52,46 @@ def _euroleague_gercek_istatistikler_v2():
     return sozluk
 
 @st.cache_data(ttl=1800, show_spinner=False)
-def _kilitli_analiz_hesapla_v2(mac_anahtari, barem, tercih, oran):
+def _kilitli_analiz_hesapla_v4(mac_anahtari, barem, tercih, oran):
     hedef = float(barem)
     basabas_yz = round(100.0 / max(1.01, float(oran)), 1)
-    el_veri = _euroleague_gercek_istatistikler_v2()
+    el_xml = _el_xml_takim_ortalamalari()
     satirlar = mac_anahtari.split(" || ")
     toplam_beklenti = 0.0
     detay_maddeler = list()
 
     for s in satirlar:
-        ust_s = s.upper()
-        mac_baslik = s.split("|")[0].strip()
-        if "EUROLEAGUE" in ust_s:
+        parcalar = [p.strip() for p in s.split("|")]
+        mac_baslik = parcalar[0]
+        ek_bilgiler = " | ".join(parcalar[1:])
+        ust_s = s.replace("İ", "I").replace("ı", "I").upper()
+
+        att_sayilar = [float(x) for x in re.findall(r"Attığı:(\d+\.?\d*)", ek_bilgiler)]
+        yed_sayilar = [float(x) for x in re.findall(r"Yediği:(\d+\.?\d*)", ek_bilgiler)]
+        ort_sayilar = [float(x) for x in re.findall(r"Ort:(\d+\.?\d*)", ek_bilgiler)]
+
+        if len(att_sayilar) >= 2 and len(yed_sayilar) >= 2:
+            bek = round(((att_sayilar[0] + yed_sayilar[1]) / 2.0) + ((att_sayilar[1] + yed_sayilar[0]) / 2.0), 1)
+            toplam_beklenti += bek
+            detay_maddeler.append(f"**{mac_baslik}:** {ek_bilgiler} → **Gerçek Beklenti: {bek}**")
+        elif len(ort_sayilar) >= 2:
+            bek = round(sum(ort_sayilar[:2]) / 2.0, 1)
+            toplam_beklenti += bek
+            detay_maddeler.append(f"**{mac_baslik}:** {ek_bilgiler} → **Son 5 Maç Gerçek Gol Ortalaması: {bek} gol**")
+        elif "EUROLEAGUE" in ust_s:
             bulunan = list()
-            for tk_ad, (att, yed, mac_s) in el_veri.items():
+            for tk_ad, (att, yed, mac_s) in el_xml.items():
                 kelimeler = [k for k in tk_ad.split() if len(k) >= 4 and k not in ("BASKETBALL", "CLUB", "ISTANBUL", "BELGRADE", "MOZZART", "KOSNER", "VITORIA", "KAUNAS")]
                 if any(k in ust_s for k in kelimeler):
                     bulunan.append((tk_ad, att, yed, mac_s))
             if len(bulunan) >= 2:
-                ev_t = bulunan[0]
-                dep_t = bulunan[1]
-                bek = round(((ev_t[1] + dep_t[2]) / 2.0) + ((dep_t[1] + ev_t[2]) / 2.0), 1)
+                t1, t2 = bulunan[0], bulunan[1]
+                bek = round(((t1[1] + t2[2]) / 2.0) + ((t2[1] + t1[2]) / 2.0), 1)
                 toplam_beklenti += bek
-                detay_maddeler.append(f"**{ev_t[0]} vs {dep_t[0]}:** {ev_t[0]} maç başı **{ev_t[1]}** atıp **{ev_t[2]}** yiyor ({ev_t[3]} maç); {dep_t[0]} maç başı **{dep_t[1]}** atıp **{dep_t[2]}** yiyor ({dep_t[3]} maç) → **Gerçek Beklenti: {bek} sayı**")
-            elif len(bulunan) == 1:
-                t_tek = bulunan[0]
-                bek = round(t_tek[1] + t_tek[2], 1)
-                toplam_beklenti += bek
-                detay_maddeler.append(f"**{mac_baslik}:** {t_tek[0]} maç başı **{t_tek[1]}** atıp **{t_tek[2]}** yiyor ({t_tek[3]} maç) → **Gerçek Tempo Beklentisi: {bek} sayı**")
+                detay_maddeler.append(f"**{t1[0]} vs {t2[0]}:** {t1[0]} maç başı **{t1[1]}** atıp **{t1[2]}** yiyor; {t2[0]} maç başı **{t2[1]}** atıp **{t2[2]}** yiyor → **Gerçek Beklenti: {bek} sayı**")
             else:
-                detay_maddeler.append(f"**{mac_baslik}:** EuroLeague resmi API şu an yanıt vermedi (sabit sayı eklenmedi).")
-        elif any(x in ust_s for x in ("SOCCER", "LİG", "PREMIER", "LIGA", "SERIE", "BUNDESLIGA", "ŞAMPİYONLAR")):
+                detay_maddeler.append(f"**{mac_baslik}:** EuroLeague resmi puan durumu şu an eşleşmedi.")
+        elif any(x in ust_s for x in ("AVRUPA", "SAMPIYONLAR", "LIG", "PREMIER", "LIGA", "SERIE", "BUNDESLIGA", "KONFERANS", "SOCCER")):
             toplam_beklenti += 2.65
             detay_maddeler.append(f"**{mac_baslik}:** Futbol lig ortalaması → **2.65 gol**")
         else:
@@ -91,12 +100,12 @@ def _kilitli_analiz_hesapla_v2(mac_anahtari, barem, tercih, oran):
 
     toplam_beklenti = round(toplam_beklenti, 1)
     fark = round(toplam_beklenti - hedef, 1) if tercih == "ÜST" else round(hedef - toplam_beklenti, 1)
-    sapma = max(2.0, hedef * 0.075)
-    suzulen_yz = max(8, min(90, 50 + int(round((fark / sapma) * 26))))
+    sapma = max(1.2, hedef * 0.085)
+    suzulen_yz = max(8, min(90, 50 + int(round((fark / sapma) * 26)))) if toplam_beklenti > 0 else 50
     deger_etiket = "DEĞERLİ FIRSAT (Oran Eşiği Üstü)" if suzulen_yz > basabas_yz else "RİSKLİ / DEĞERSİZ (Oran Eşiği Altı)"
 
     rapor = (
-        f"1) **SABİT İSTATİSTİKSEL ÖZET:** Gerçek sezon ortalamalarına göre toplam beklenti **{toplam_beklenti}**, hedef **{hedef} {tercih}** (Fark: **{fark:+.1f}**). "
+        f"1) **SABİT İSTATİSTİKSEL ÖZET:** Gerçek ortalamalara göre toplam beklenti **{toplam_beklenti}**, hedef **{hedef} {tercih}** (Fark: **{fark:+.1f}**). "
         f"Hesaplanan sabit ihtimal **%{suzulen_yz}** (Büro oranı {oran} için başabaş eşiği **%{basabas_yz}**).\n"
         f"2) **MAÇ BAZLI GERÇEK ORTALAMALAR:**\n" + "\n".join(f"- {m}" for m in detay_maddeler)
     )
@@ -104,7 +113,7 @@ def _kilitli_analiz_hesapla_v2(mac_anahtari, barem, tercih, oran):
 
 def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_sor_fonk):
     mac_anahtari = " || ".join(str(x) for x in mac_gercek_verileri)
-    return _kilitli_analiz_hesapla_v2(mac_anahtari, float(barem), str(tercih), float(oran))
+    return _kilitli_analiz_hesapla_v4(mac_anahtari, float(barem), str(tercih), float(oran))
 
 def kasa_panosu_ciz(anlik_toplam, hedef_barem, tercih, oran, hepsi_bitti):
     depo = kasa_gecmisi_deposu()
