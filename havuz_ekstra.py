@@ -30,11 +30,11 @@ def kalan_ortalama_bilgisi(objeler, skor_fonk, hedef_barem, tercih):
 @st.cache_data(ttl=1800, show_spinner=False)
 def _espn_takim_gercek_ortalamalari():
     sozluk = dict()
-    yollar = [
+    yollar = (
         "soccer/uefa.europa", "soccer/uefa.champions", "soccer/uefa.europa.conf",
         "soccer/tur.1", "soccer/eng.1", "soccer/esp.1", "soccer/ita.1", "soccer/ger.1", "soccer/fra.1",
         "basketball/nba"
-    ]
+    )
     hdr = {"User-Agent": "Mozilla/5.0"}
     for y in yollar:
         try:
@@ -48,7 +48,7 @@ def _espn_takim_gercek_ortalamalari():
                         sj = requests.get(f"https://espn.com{y}/summary?event={ev_id}", headers=hdr, timeout=4).json()
                         for fm in (sj.get("form") or list()):
                             f_ad = ((fm.get("team") or {}).get("displayName") or "").upper()
-                            evs = (fm.get("events") or list())[:5]
+                            evs = tuple(fm.get("events") or list())[:5]
                             if f_ad and evs:
                                 top_g = sum(int(str(e.get("homeTeamScore", 0))) + int(str(e.get("awayTeamScore", 0))) for e in evs)
                                 sozluk[f_ad] = (round(top_g / len(evs), 2), len(evs))
@@ -61,9 +61,11 @@ def _espn_takim_gercek_ortalamalari():
                             for rec in (t.get("records") or list()):
                                 sum_v = str(rec.get("summary") or "")
                                 if "-" in sum_v:
-                                    p = [int(x) for x in sum_v.split("-") if x.isdigit()]
+                                    p = tuple(int(x) for x in sum_v.split("-") if x.isdigit())
                                     if sum(p) > 0:
-                                        sozluk[ad] = (round(2.1 + (p / max(1, sum(p))) * 1.1, 2) if "soccer" in y else 224.0, sum(p))
+                                        galibiyet = next(iter(p), 0)
+                                        ort_val = round(2.15 + (galibiyet / max(1, sum(p))) * 1.05, 2) if "soccer" in y else 224.0
+                                        sozluk[ad] = (ort_val, sum(p))
                                         break
         except Exception:
             continue
@@ -94,7 +96,7 @@ def _el_xml_takim_ortalamalari():
     return sozluk
 
 @st.cache_data(ttl=1800, show_spinner=False)
-def _kilitli_analiz_hesapla_v6(mac_anahtari, barem, tercih, oran):
+def _kilitli_analiz_hesapla_v7(mac_anahtari, barem, tercih, oran):
     hedef = float(barem)
     basabas_yz = round(100.0 / max(1.01, float(oran)), 1)
     espn_veri = _espn_takim_gercek_ortalamalari()
@@ -104,39 +106,44 @@ def _kilitli_analiz_hesapla_v6(mac_anahtari, barem, tercih, oran):
     detay_maddeler = list()
 
     for s in satirlar:
-        parca_liste = s.split("|")
-        mac_baslik = parca_liste.strip()
-        ust_s = s.replace("İ", "I").replace("ı", "I").upper()
+        mac_baslik, _, _ = str(s).partition("|")
+        mac_baslik = mac_baslik.strip()
+        ust_s = str(s).replace("İ", "I").replace("ı", "I").upper()
         temiz_isim = re.sub(r"\[.*?\]|\(.*?\)", "", mac_baslik).strip()
-        parcalar = temiz_isim.split(" vs ") if " vs " in temiz_isim else temiz_isim.split(" - ")
-        ev_ad = parcalar.strip().upper() if len(parcalar) >= 1 else ""
-        dep_ad = parcalar.strip().upper() if len(parcalar) >= 2 else ""
+        ayirac = " vs " if " vs " in temiz_isim else " - "
+        ev_ham, _, dep_ham = temiz_isim.partition(ayirac)
+        ev_ad = ev_ham.strip().upper()
+        dep_ad = dep_ham.strip().upper()
 
         if "EUROLEAGUE" in ust_s:
             bulunan = list()
-            for tk_ad, (att, yed, mac_s) in el_xml.items():
-                kelimeler = [k for k in tk_ad.split() if len(k) >= 4 and k not in ("BASKETBALL", "CLUB", "ISTANBUL", "BELGRADE", "MOZZART", "KOSNER", "VITORIA", "KAUNAS")]
+            for tk_ad, degerler in el_xml.items():
+                att, yed, mac_s = degerler
+                kelimeler = tuple(k for k in tk_ad.split() if len(k) >= 4 and k not in ("BASKETBALL", "CLUB", "ISTANBUL", "BELGRADE", "MOZZART", "KOSNER", "VITORIA", "KAUNAS"))
                 if any(k in ust_s for k in kelimeler):
                     bulunan.append((tk_ad, att, yed, mac_s))
             if len(bulunan) >= 2:
-                t1 = bulunan
-                t2 = bulunan
-                bek = round(((t1 + t2) / 2.0) + ((t2 + t1) / 2.0), 1)
+                it = iter(bulunan)
+                t1_ad, t1_att, t1_yed, _ = next(it)
+                t2_ad, t2_att, t2_yed, _ = next(it)
+                bek = round(((t1_att + t2_yed) / 2.0) + ((t2_att + t1_yed) / 2.0), 1)
                 toplam_beklenti += bek
-                detay_maddeler.append(f"**{t1} vs {t2}:** {t1} ({t1}/{t1}) vs {t2} ({t2}/{t2}) → **Gerçek Beklenti: {bek} sayı**")
+                detay_maddeler.append(f"**{t1_ad} vs {t2_ad}:** {t1_ad} ({t1_att}/{t1_yed}) vs {t2_ad} ({t2_att}/{t2_yed}) → **Gerçek Beklenti: {bek} sayı**")
             else:
                 detay_maddeler.append(f"**{mac_baslik}:** EuroLeague resmi puan durumu şu an eşleşmedi.")
         else:
             ev_ort = next((v for k, v in espn_veri.items() if ev_ad and (ev_ad in k or k in ev_ad)), None)
             dep_ort = next((v for k, v in espn_veri.items() if dep_ad and (dep_ad in k or k in dep_ad)), None)
             if ev_ort and dep_ort:
-                bek = round((ev_ort + dep_ort) / 2.0, 2)
+                ev_val, ev_say = ev_ort
+                dep_val, dep_say = dep_ort
+                bek = round((ev_val + dep_val) / 2.0, 2)
                 toplam_beklenti += bek
-                detay_maddeler.append(f"**{mac_baslik}:** {ev_ad.title()} son {ev_ort} maç ort. **{ev_ort}**, {dep_ad.title()} son {dep_ort} maç ort. **{dep_ort}** → **Gerçek Beklenti: {bek}**")
+                detay_maddeler.append(f"**{mac_baslik}:** {ev_ad.title()} son {ev_say} maç ort. **{ev_val}**, {dep_ad.title()} son {dep_say} maç ort. **{dep_val}** → **Gerçek Beklenti: {bek}**")
             elif ev_ort or dep_ort:
-                tek = ev_ort or dep_ort
-                toplam_beklenti += tek
-                detay_maddeler.append(f"**{mac_baslik}:** Mevcut takım son {tek} maç gerçek ortalaması → **Gerçek Beklenti: {tek}**")
+                tek_val, tek_say = ev_ort or dep_ort
+                toplam_beklenti += tek_val
+                detay_maddeler.append(f"**{mac_baslik}:** Mevcut takım son {tek_say} maç gerçek ortalaması → **Gerçek Beklenti: {tek_val}**")
             else:
                 detay_maddeler.append(f"**{mac_baslik}:** Bu maç için ESPN son maç istatistiği henüz yayınlanmamış.")
 
@@ -155,7 +162,7 @@ def _kilitli_analiz_hesapla_v6(mac_anahtari, barem, tercih, oran):
 
 def profesyonel_yorumcu_ve_suzgec(mac_gercek_verileri, barem, tercih, oran, ai_sor_fonk):
     mac_anahtari = " || ".join(str(x) for x in mac_gercek_verileri)
-    return _kilitli_analiz_hesapla_v6(mac_anahtari, float(barem), str(tercih), float(oran))
+    return _kilitli_analiz_hesapla_v7(mac_anahtari, float(barem), str(tercih), float(oran))
 
 def kasa_panosu_ciz(anlik_toplam, hedef_barem, tercih, oran, hepsi_bitti):
     depo = kasa_gecmisi_deposu()
@@ -182,4 +189,3 @@ def kasa_panosu_ciz(anlik_toplam, hedef_barem, tercih, oran, hepsi_bitti):
         m2.metric("Başarı Oranı", f"%{basari_yz}")
         m3.metric("Net Kasa Durumu", f"{net_kasa:+.2f} TL")
     else:
-        st.caption("Henüz kaydedilmiş havuz geçmişi yok. Sonuçlanan havuzları yukarıdaki butonlarla kasaya işleyebilirsiniz.")
