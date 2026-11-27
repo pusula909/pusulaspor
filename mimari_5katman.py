@@ -170,8 +170,16 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
 
         if state == "in":
             canli_hat = (ev_skor + dep_skor) + 0.5
-            barem_tercih = f"Canli {canli_hat} UST (Beklenti: {bek_gol})"
-            barem_guven = min(84, max(54, yz_ust))
+            _kalan_gol = round(bek_gol * _kalan, 2)
+            _p_bir_gol = 1.0 - math.exp(-_kalan_gol)
+            _yz_canli_u = int(round(_p_bir_gol * 100))
+            _canli_proj = round((ev_skor + dep_skor) + _kalan_gol, 2)
+            if _yz_canli_u >= 58:
+                barem_tercih, barem_guven = f"Canli {canli_hat} UST (Proj: {_canli_proj})", _yz_canli_u
+            elif (100 - _yz_canli_u) >= 58:
+                barem_tercih, barem_guven = f"Canli {canli_hat} ALT (Proj: {_canli_proj})", (100 - _yz_canli_u)
+            else:
+                barem_tercih, barem_guven = f"Canli Barem Pas Gec (Proj: {_canli_proj})", max(_yz_canli_u, 100 - _yz_canli_u)
         elif yz_ust >= 58:
             barem_tercih = f"2.5 UST (Beklenti: {bek_gol} gol)"
             barem_guven = yz_ust
