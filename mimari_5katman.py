@@ -202,19 +202,20 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
             ana_tercih, guven, b_oran = f"PAS GEC (MS1:%{yz1} MS2:%{yz2})", max(yz1, yz2), 0.0
 
         piyasa_hat = float(piyasa.get("barem") or 0.0)
+        aktif_hat = piyasa_hat if piyasa_hat > 0 else (round(bek_top - 3.5) + 0.5 if bek_top >= (231.0 if is_nba else 168.0) else (round(bek_top + 3.5) + 0.5 if bek_top <= (221.0 if is_nba else 158.0) else 0.0))
         if state == "in" and (ev_skor + dep_skor) > 0:
             canli_hat = round(bek_top) - 0.5
             barem_tercih = f"Canli {canli_hat} (Projeksiyon: {bek_top})"
             barem_guven = 66
-        elif piyasa_hat > 0:
-            p_ust = 1.0 - _normal_cdf(piyasa_hat, bek_top, sigma_top)
+        elif aktif_hat > 0:
+            p_ust = 1.0 - _normal_cdf(aktif_hat, bek_top, sigma_top)
             yz_u = int(round(p_ust * 100))
-            if yz_u >= 57:
-                barem_tercih, barem_guven = f"{piyasa_hat} UST (Proj: {bek_top})", yz_u
-            elif (100 - yz_u) >= 57:
-                barem_tercih, barem_guven = f"{piyasa_hat} ALT (Proj: {bek_top})", (100 - yz_u)
+            if yz_u >= 56:
+                barem_tercih, barem_guven = f"{aktif_hat} UST (Proj: {bek_top})", yz_u
+            elif (100 - yz_u) >= 56:
+                barem_tercih, barem_guven = f"{aktif_hat} ALT (Proj: {bek_top})", (100 - yz_u)
             else:
-                barem_tercih, barem_guven = f"Barem Pas Gec ({piyasa_hat} | Proj: {bek_top})", max(yz_u, 100 - yz_u)
+                barem_tercih, barem_guven = f"Barem Pas Gec ({aktif_hat} | Proj: {bek_top})", max(yz_u, 100 - yz_u)
         else:
             barem_tercih = f"Barem Pas Gec (Projeksiyon: {bek_top} sayi)"
             barem_guven = 50
