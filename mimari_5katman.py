@@ -96,7 +96,38 @@ def _kayit_orani(kayit_str):
         return 0.50
     gal = next(iter(parcalar), 0)
     return max(0.15, min(0.88, gal / sum(parcalar)))
-
+@st.cache_data(ttl=45, show_spinner=False)
+def _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str):
+    hdr = {"User-Agent": "Mozilla/5.0"}
+    u_kok = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
+    yol = _LIG_ESLESME.get(lig_adi, "")
+    if not yol or "soccer" not in yol:
+        return None
+    try:
+        r = requests.get(f"{u_kok}{yol}/scoreboard?dates={tarih_str}", headers=hdr, timeout=4)
+        if r.status_code != 200:
+            return None
+        ev_u, dep_u = str(ev_ad or "").upper(), str(dep_ad or "").upper()
+        for ev in (r.json().get("events") or list()):
+            ad = str(ev.get("name") or "").upper()
+            if (ev_u[:6] in ad) and (dep_u[:6] in ad):
+                ev_id = str(ev.get("id") or "")
+                sj = requests.get(f"{u_kok}{yol}/summary?event={ev_id}", headers=hdr, timeout=4).json()
+                t_list = ((sj.get("boxscore") or dict()).get("teams") or list())
+                if len(t_list) >= 2:
+                    s_ev = {str(x.get("name") or ""): float(x.get("displayValue") or 0) for x in (t_list[0].get("statistics") or list()) if str(x.get("displayValue") or "").replace(".", "").isdigit()}
+                    s_dep = {str(x.get("name") or ""): float(x.get("displayValue") or 0) for x in (t_list[1].get("statistics") or list()) if str(x.get("displayValue") or "").replace(".", "").isdigit()}
+                    return {
+                        "ev_isabet": s_ev.get("shotsOnTarget", s_ev.get("totalShots", 0.0)),
+                        "dep_isabet": s_dep.get("shotsOnTarget", s_dep.get("totalShots", 0.0)),
+                        "ev_korner": s_ev.get("wonCorners", 0.0),
+                        "dep_korner": s_dep.get("wonCorners", 0.0),
+                        "ev_kirmizi": s_ev.get("redCards", 0.0),
+                        "dep_kirmizi": s_dep.get("redCards", 0.0),
+                    }
+    except Exception:
+        pass
+    return None
 def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre", ev_skor=0, dep_skor=0, durum_detay="", odds_api_key=""):
     tarih_str = datetime.now().strftime("%Y%m%d")
     takim_stats = _espn_takim_hucum_savunma(tarih_str)
@@ -123,7 +154,25 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
             lam_ev = max(0.45, min(2.6, 1.05 + (ev_guc - dep_guc) * 1.15 + 0.15))
             lam_dep = max(0.40, min(2.4, 1.00 + (dep_guc - ev_guc) * 1.10))
             veri_kaynagi = "Poisson + Form Modeli"
-
+        _baski_etiket = ""
+        if state == "in":
+            _sb = _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str)
+            if _sb:
+                _ev_guc = 1.0 + min(0.35, (_sb["ev_isabet"] * 0.04) + (_sb["ev_korner"] * 0.015))
+                _dep_guc = 1.0 + min(0.35, (_sb["dep_isabet"] * 0.04) + (_sb["dep_korner"] * 0.015))
+                if (_sb["ev_isabet"] + _sb["dep_isabet"]) <= 2:
+                    _ev_guc *= 0.80
+                    _dep_guc *= 0.80
+                if _sb["ev_kirmizi"] > 0:
+                    _ev_guc *= 0.65
+                    _dep_guc *= 1.25
+                if _sb["dep_kirmizi"] > 0:
+                    _dep_guc *= 0.65
+                    _ev_guc *= 1.25
+                lam_ev = round(lam_ev * _ev_guc, 2)
+                lam_dep = round(lam_dep * _dep_guc, 2)
+                bek_gol = round(lam_ev + lam_dep, 2)
+                _baski_etiket = f" | Şut:{int(_sb['ev_isabet'])}-{int(_sb['dep_isabet'])} K:{int(_sb['ev_korner'])}-{int(_sb['dep_korner'])}"
         import re as _re
         _dm_str = str(durum_detay or "")
         _dk_m = _re.search("([0-9]+)", _dm_str)
