@@ -1184,7 +1184,9 @@ if gorunum == "Canli Kupon Takip":
             _g_hdr = {"User-Agent": "Mozilla/5.0"}
             _g_kok = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
             _t_g = tarih.strftime("%Y%m%d") if hasattr(tarih, "strftime") else str(tarih).replace("-", "")
-            for _g_sp, _g_yol in (("Futbol - Dünya Geneli", "soccer/all"), ("Basketbol - Dünya Geneli", "basketball/all")):
+            _dunya_ligleri = ("soccer/all", "soccer/pol.1", "soccer/tur.2", "soccer/eng.2", "soccer/eng.3", "soccer/ger.2", "soccer/ita.2", "soccer/esp.2", "soccer/fra.2", "soccer/sco.1", "soccer/sui.1", "soccer/gre.1", "soccer/den.1", "soccer/swe.1", "soccer/nor.1", "soccer/bra.1", "soccer/arg.1", "soccer/usa.1", "soccer/sau.1", "soccer/jpn.1", "basketball/all", "basketball/mens-college-basketball")
+            for _g_yol in _dunya_ligleri:
+                _g_sp = "Futbol - Dünya Geneli" if "soccer" in _g_yol else "Basketbol - Dünya Geneli"
                 _gr = requests.get(f"{_g_kok}{_g_yol}/scoreboard?dates={_t_g}&limit=300", headers=_g_hdr, timeout=5)
                 if _gr.status_code != 200:
                     continue
