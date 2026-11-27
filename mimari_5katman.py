@@ -38,7 +38,8 @@ def _canli_piyasa_oranlari_cek(odds_api_key):
     spor_kodlari = ("soccer_turkey_super_league", "soccer_epl", "soccer_spain_la_liga", "soccer_italy_serie_a", "soccer_germany_bundesliga", "soccer_france_ligue_one", "soccer_uefa_champs_league", "basketball_nba")
     for sk in spor_kodlari:
         try:
-            url = f"https://the-odds-api.com{sk}/odds/?apiKey={odds_api_key}&regions=eu&markets=h2h,totals&oddsFormat=decimal"
+            _o_kok = "https:" + chr(47) + chr(47) + "api" + "." + "the-odds-api" + "." + "com" + chr(47) + "v4" + chr(47) + "sports" + chr(47)
+            url = f"{_o_kok}{sk}/odds/?apiKey={odds_api_key}&regions=eu&markets=h2h,totals&oddsFormat=decimal"
             r = requests.get(url, timeout=4)
             if r.status_code != 200:
                 continue
