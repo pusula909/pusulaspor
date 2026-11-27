@@ -1716,7 +1716,7 @@ else:
                     st.session_state.eski_skorlar[mac_id] = skor_gosterim
                 iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
                 ozet_tahmin = ""  
-                if state == "pre":
+                if state in ("pre", "in"):
                     deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
                     try:
                         import mimari_5katman as _m5
