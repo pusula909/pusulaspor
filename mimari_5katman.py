@@ -72,14 +72,14 @@ def _espn_takim_hucum_savunma(tarih_str):
     veri = dict()
     hdr = {"User-Agent": "Mozilla/5.0"}
     for y in _LIG_ESLESME.values():
-        r = requests.get(f"https://espn.com{y}/scoreboard?dates={tarih_str}", headers=hdr, timeout=4)
+        r = requests.get("https://site.api." + f"://espn.com{y}/scoreboard?dates={tarih_str}", headers=hdr, timeout=4)
         if r.status_code != 200:
             continue
         for ev in (r.json().get("events") or list()):
             ev_id = str(ev.get("id") or "")
             if not ev_id:
                 continue
-            sj = requests.get(f"https://espn.com{y}/summary?event={ev_id}", headers=hdr, timeout=4).json()
+            sj = requests.get("https://site.api." + f"://espn.com{y}/summary?event={ev_id}", headers=hdr, timeout=4).json()
             for fm in (sj.get("form") or list()):
                 tm = fm.get("team") or dict()
                 f_ad = str(tm.get("displayName") or "").upper()
