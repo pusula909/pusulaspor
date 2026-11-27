@@ -69,8 +69,8 @@ def _canli_piyasa_oranlari_cek(odds_api_key):
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def _espn_takim_hucum_savunma(tarih_str):
-        return dict()
-  def _kayit_orani(kayit_str):
+    return dict()
+def _kayit_orani(kayit_str):
     parcalar = tuple(int(x) for x in str(kayit_str or "").split("-") if x.isdigit())
     if not parcalar or sum(parcalar) == 0:
         return 0.50
