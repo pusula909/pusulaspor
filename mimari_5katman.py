@@ -97,7 +97,7 @@ def _kayit_orani(kayit_str):
     gal = next(iter(parcalar), 0)
     return max(0.15, min(0.88, gal / sum(parcalar)))
 
-def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre", ev_skor=0, dep_skor=0, detay_sure="", odds_api_key=""):
+def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre", ev_skor=0, dep_skor=0, durum_detay="", odds_api_key=""):
     tarih_str = datetime.now().strftime("%Y%m%d")
     takim_stats = _espn_takim_hucum_savunma(tarih_str)
     piyasa_map = _canli_piyasa_oranlari_cek(odds_api_key)
@@ -125,7 +125,7 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
             veri_kaynagi = "Poisson + Form Modeli"
 
         import re as _re
-        _dm_str = str(locals().get("durum_metni") or locals().get("dakika") or "")
+        _dm_str = str(durum_detay or "")
         _dk_m = _re.search("([0-9]+)", _dm_str)
         _dk = int(_dk_m.group(1)) if _dk_m else (45 if "HT" in _dm_str.upper() else 30)
         _kalan = max(0.08, min(0.95, (90.0 - min(88, _dk)) / 90.0)) if state == "in" else 1.0
