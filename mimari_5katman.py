@@ -35,7 +35,7 @@ def _canli_piyasa_oranlari_cek(odds_api_key):
     if not odds_api_key:
         return dict()
     sozluk = dict()
-    spor_kodlari = ("soccer_turkey_super_league", "soccer_epl", "soccer_spain_la_liga", "soccer_italy_serie_a", "soccer_germany_bundesliga", "soccer_france_ligue_one", "soccer_uefa_champs_league", "basketball_nba")
+    spor_kodlari = ("soccer_turkey_super_league", "soccer_epl", "soccer_spain_la_liga", "soccer_spain_segunda_division", "soccer_italy_serie_a", "soccer_germany_bundesliga", "soccer_france_ligue_one", "soccer_netherlands_eredivisie", "soccer_belgium_first_div", "soccer_portugal_primeira_liga", "soccer_uefa_champs_league", "soccer_uefa_europa_league", "basketball_nba", "basketball_euroleague")
     for sk in spor_kodlari:
         try:
             _o_kok = "https:" + chr(47) + chr(47) + "api" + "." + "the-odds-api" + "." + "com" + chr(47) + "v4" + chr(47) + "sports" + chr(47)
@@ -152,8 +152,12 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
             ana_tercih, guven, b_oran = f"{dep_ad} Kazanir (MS 2)", yz2, piyasa.get("ms2", 0.0)
         elif (yz1 + yzx) >= 74 and yz1 >= 40:
             ana_tercih, guven, b_oran = f"{ev_ad} Yenilmez (1X)", min(82, yz1 + yzx), 0.0
+        elif (yz1 + yzx) >= 74 and yz1 >= 40:
+            _cs1x = round(1.0 / ((1.0 / piyasa["ms1"]) + (1.0 / piyasa["msx"])), 2) if piyasa.get("ms1", 0) > 1 and piyasa.get("msx", 0) > 1 else 0.0
+            ana_tercih, guven, b_oran = f"{ev_ad} Yenilmez (1X)", min(82, yz1 + yzx), _cs1x
         elif (yz2 + yzx) >= 74 and yz2 >= 40:
-            ana_tercih, guven, b_oran = f"{dep_ad} Yenilmez (X2)", min(82, yz2 + yzx), 0.0
+            _csx2 = round(1.0 / ((1.0 / piyasa["ms2"]) + (1.0 / piyasa["msx"])), 2) if piyasa.get("ms2", 0) > 1 and piyasa.get("msx", 0) > 1 else 0.0
+            ana_tercih, guven, b_oran = f"{dep_ad} Yenilmez (X2)", min(82, yz2 + yzx), _csx2
         else:
             ana_tercih, guven, b_oran = f"PAS GEC (MS1:%{yz1} X:%{yzx} MS2:%{yz2})", max(yz1, yzx, yz2), 0.0
 
