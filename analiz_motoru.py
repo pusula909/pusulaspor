@@ -188,56 +188,71 @@ class PusulaAnalizBeyni:
 
         guc_farki = ev_net - dep_net
         abs_fark = abs(guc_farki)
+        piyasa_var = bool(piyasa_barem and float(piyasa_barem) > 0)
 
         tuzak_notu = ""
         if spor_turu == "Futbol":
-            if guc_farki >= 0.16:
+            if guc_farki >= 0.24:
                 ana_tercih = f"{ev_ad} Kazanir (MS 1)"
-                ham_guven = int(56 + abs_fark * 48)
-            elif guc_farki <= -0.16:
+                ham_guven = int(60 + abs_fark * 42)
+            elif guc_farki <= -0.24:
                 ana_tercih = f"{dep_ad} Kazanir (MS 2)"
-                ham_guven = int(55 + abs_fark * 48)
-            else:
-                ana_tercih = "Cifte Sans 1X / Dengeli Mac"
-                ham_guven = int(62 + (0.16 - abs_fark) * 35)
-                tuzak_notu = "Taraf bahsi riskli, iki takim birbirine cok yakin."
-        else:
-            if guc_farki >= 0.14:
-                ana_tercih = f"{ev_ad} Kazanir (MS 1)"
-                ham_guven = int(57 + abs_fark * 50)
+                ham_guven = int(59 + abs_fark * 42)
+            elif guc_farki >= 0.14:
+                ana_tercih = f"{ev_ad} Yenilmez (1X)"
+                ham_guven = int(56 + abs_fark * 30)
             elif guc_farki <= -0.14:
-                ana_tercih = f"{dep_ad} Kazanir (MS 2)"
-                ham_guven = int(56 + abs_fark * 50)
+                ana_tercih = f"{dep_ad} Yenilmez (X2)"
+                ham_guven = int(55 + abs_fark * 30)
             else:
-                ana_tercih = "Taraf Riskli -> Toplam Sayi / Handikap Odakli"
-                ham_guven = 64
-                tuzak_notu = "Kafa kafaya mac; taraf yerine barem degerlendirilmeli."
+                ana_tercih = "PAS GEC (Dengeli Mac)"
+                ham_guven = 48
+                tuzak_notu = "Iki takim gucu birbirine cok yakin, taraf bahsi elendi."
+        else:
+            if guc_farki >= 0.22:
+                ana_tercih = f"{ev_ad} Kazanir (MS 1)"
+                ham_guven = int(61 + abs_fark * 45)
+            elif guc_farki <= -0.22:
+                ana_tercih = f"{dep_ad} Kazanir (MS 2)"
+                ham_guven = int(60 + abs_fark * 45)
+            else:
+                ana_tercih = "PAS GEC (Dengeli / Riskli)"
+                ham_guven = 48
+                tuzak_notu = "Guc farki yetersiz, surpriz riski nedeniyle taraf elendi."
 
-        guven = max(48, min(90, ham_guven + kalibrasyon_puani))
+        if not piyasa_var and state != "in" and ham_guven > 68:
+            ham_guven = 68
+
+        guven = max(45, min(88, ham_guven + kalibrasyon_puani))
         if kalibrasyon_puani <= -8 and not tuzak_notu:
-            tuzak_notu = f"Oto-Evrim (v{versiyon}.0): Bu ligde son donemde dusuk isabet nedeniyle risk kirildi."
+            tuzak_notu = f"Oto-Evrim(v{versiyon}.0): Bu ligde son donemde dusuk isabet nedeniyle risk kirildi."
         if piyasa_tuzak_notu:
-            tuzak_notu = f"🚨 PIYASA TUZAGI: {piyasa_tuzak_notu}"
-        elif ev_yorgun and guc_farki > 0:
-            tuzak_notu = f"⚠️ YORGUNLUK ALARMI: {ev_ad} dun mac yapti (Back-to-Back), surpriz riski yuksek!"
+            tuzak_notu = f"PIYASA TUZAGI: {piyasa_tuzak_notu}"
+        if ev_yorgun and guc_farki > 0:
+            tuzak_notu = f"YORGUNLUK ALARMI: {ev_ad} dun mac yapti (Back-to-Back), surpriz riski yuksek!"
+            guven = max(45, guven - 8)
         elif dep_yorgun and guc_farki < 0:
-            tuzak_notu = f"⚠️ YORGUNLUK ALARMI: {dep_ad} dun mac yapti (Deplasman Back-to-Back), riskli!"
+            tuzak_notu = f"YORGUNLUK ALARMI: {dep_ad} dun mac yapti (Deplasman Back-to-Back), riskli!"
+            guven = max(45, guven - 8)
         elif kotu_hava and spor_turu == "Futbol":
-            tuzak_notu = "🌧️ HAVA & ZEMIN UYARISI: Kotu hava kosullari nedeniyle UST yerine ALT odaklanilmali."
+            tuzak_notu = "HAVA & ZEMIN UYARISI: Kotu hava kosullari nedeniyle UST yerine ALT odaklanilmali."
 
         toplam_skor = ev_skor + dep_skor
         if spor_turu == "Futbol":
             if state == "in":
-                barem_tercih = f"Canli {toplam_skor + 0.5} UST"
+                barem_tercih = f"Canli (toplam_skor + 0.5) UST"
                 barem_guven = min(82, int(60 + (ev_net + dep_net) * 14))
-            elif ev_net >= 0.52 and dep_net >= 0.48:
+            elif ev_net >= 0.58 and dep_net >= 0.54 and not kotu_hava:
                 barem_tercih = "Toplam 2.5 UST"
-                barem_guven = min(80, int(58 + (ev_net + dep_net) * 15))
+                barem_guven = min(76, int(56 + (ev_net + dep_net) * 14))
+            elif ev_net <= 0.42 and dep_net <= 0.42:
+                barem_tercih = "Toplam 2.5 ALT"
+                barem_guven = 68
             else:
-                barem_tercih = "Toplam 1.5 UST / 3.5 ALT"
-                barem_guven = 74
+                barem_tercih = "Barem Pas Gec (Gol Temposu Belirsiz)"
+                barem_guven = 50
         else:
-            ref_barem = float(piyasa_barem) if piyasa_barem and float(piyasa_barem) > 0 else (224.0 if "NBA" in lig_adi else 162.0)
+            ref_barem = float(piyasa_barem) if piyasa_var else (224.0 if "NBA" in lig_adi else 165.0)
             if state == "in" and toplam_skor > 0:
                 top_dk = 48.0 if "NBA" in lig_adi else 40.0
                 per_dk = 12.0 if "NBA" in lig_adi else 10.0
@@ -246,7 +261,7 @@ class PusulaAnalizBeyni:
                 try:
                     kalan_p_dk = 0.0
                     if ":" in s_alt:
-                        parca = s_alt.split("-")[0].strip() if "-" in s_alt else s_alt.split(" ")[0].strip()
+                        parca = s_alt.split("-").strip() if "-" in s_alt else s_alt.split("").strip()
                         if ":" in parca:
                             dak, san = parca.split(":")[:2]
                             kalan_p_dk = float(dak) + (float(san) / 60.0)
@@ -278,12 +293,17 @@ class PusulaAnalizBeyni:
                 else:
                     yon_txt = "UST" if projeksiyon >= canli_hat else "ALT"
                     barem_tercih = f"Canli {canli_hat} {yon_txt} (Projeksiyon: {projeksiyon})"
-                    barem_guven = 68
-            else:
+                    barem_guven = 66
+            elif piyasa_var:
                 barem_tercih = f"Piyasa Baremi: {ref_barem}"
-                barem_guven = 70
+                barem_guven = 67
+            else:
+                barem_tercih = "Barem Pas Gec (Acilis Baremi Yok)"
+                barem_guven = 50
 
-        deger_puani = round(min(9.8, max(4.2, (guven / 10.0) - (0.6 if tuzak_notu else 0.0))), 1)
+        pas_mi = "PAS GEC" in ana_tercih
+        ham_puan = (guven / 10.0) - (0.8 if tuzak_notu else 0.0) - (1.8 if pas_mi else 0.0)
+        deger_puani = round(min(9.5, max(3.5, ham_puan)), 1)
 
         return {
             "ana_tercih": ana_tercih,
@@ -295,7 +315,6 @@ class PusulaAnalizBeyni:
             "ev_guc_yuzde": int(ev_net * 100),
             "dep_guc_yuzde": int(dep_net * 100),
         }
-
     def _karne_oz_ogrenme_ozeti(self, lig_adi):
     
         try:
