@@ -125,8 +125,9 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
             veri_kaynagi = "Poisson + Form Modeli"
 
         import re as _re
-        _dk_m = _re.search("([0-9]+)", str(durum_detay or ""))
-        _dk = int(_dk_m.group(1)) if _dk_m else (45 if "HT" in str(durum_detay or "").upper() else 30)
+        _dm_str = str(locals().get("durum_metni") or locals().get("dakika") or "")
+        _dk_m = _re.search("([0-9]+)", _dm_str)
+        _dk = int(_dk_m.group(1)) if _dk_m else (45 if "HT" in _dm_str.upper() else 30)
         _kalan = max(0.08, min(0.95, (90.0 - min(88, _dk)) / 90.0)) if state == "in" else 1.0
         _c_ev = ev_skor if state == "in" else 0
         _c_dep = dep_skor if state == "in" else 0
