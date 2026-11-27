@@ -1178,25 +1178,36 @@ if gorunum == "Canli Kupon Takip":
         ["Tümü (Bütün Maçlar)", "Basketbol - NBA", "Basketbol - EuroLeague & Diğer", "Futbol - Avrupa Kupaları", "Futbol - Normal Sezon Ligleri"],
         key="hv_kat_filtre"
     )
-    _hv_arama = _hf2.text_input("🔎 Takım veya Maç Ara (Dünyadaki Tüm Ligler - Örn: Galatasaray, Wrexham, Boca, Lakers...)", "").strip().lower()
+    def _tr_norm(metin):
+        s = str(metin or "").lower()
+        for a, b in (("ó", "o"), ("ą", "a"), ("ć", "c"), ("ę", "e"), ("ł", "l"), ("ń", "n"), ("ś", "s"), ("ź", "z"), ("ż", "z"), ("ç", "c"), ("ğ", "g"), ("ı", "i"), ("ö", "o"), ("ş", "s"), ("ü", "u"), ("é", "e"), ("á", "a"), ("í", "i"), ("ú", "u"), ("ñ", "n")):
+            s = s.replace(a, b)
+        return s
+
+    _hv_arama = _tr_norm(_hf2.text_input("🔎 Takım veya Maç Ara (Dünyadaki Tüm Ligler - Örn: Rakow, Galatasaray, Boca, Lakers...)", "").strip())
     if len(_hv_arama) >= 3:
         try:
             _g_hdr = {"User-Agent": "Mozilla/5.0"}
             _g_kok = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
-            _t_g = tarih.strftime("%Y%m%d") if hasattr(tarih, "strftime") else str(tarih).replace("-", "")
-            _dunya_ligleri = ("soccer/all", "soccer/pol.1", "soccer/tur.2", "soccer/eng.2", "soccer/eng.3", "soccer/ger.2", "soccer/ita.2", "soccer/esp.2", "soccer/fra.2", "soccer/sco.1", "soccer/sui.1", "soccer/gre.1", "soccer/den.1", "soccer/swe.1", "soccer/nor.1", "soccer/bra.1", "soccer/arg.1", "soccer/usa.1", "soccer/sau.1", "soccer/jpn.1", "basketball/all", "basketball/mens-college-basketball")
-            for _g_yol in _dunya_ligleri:
-                _g_sp = "Futbol - Dünya Geneli" if "soccer" in _g_yol else "Basketbol - Dünya Geneli"
-                _gr = requests.get(f"{_g_kok}{_g_yol}/scoreboard?dates={_t_g}&limit=300", headers=_g_hdr, timeout=5)
-                if _gr.status_code != 200:
-                    continue
-                for _gev in (_gr.json().get("events") or list()):
-                    _g_ad = str(_gev.get("name") or "")
-                    if _hv_arama in _g_ad.lower():
-                        _glig = str((_gev.get("league") or dict()).get("abbreviation") or _g_sp)
-                        _getk = f"[{_glig}] {_g_ad}"
-                        if _getk not in _hv_map:
-                            _hv_map[_getk] = {"id": str(_gev.get("id") or ""), "yol": _g_yol, "spor": "Futbol" if "soccer" in _g_yol else "Basketbol", "kat": _g_sp, "tarih_g": tarih}
+            _u_ara = "https:" + chr(47) + chr(47) + "site" + "." + "web" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "common" + chr(47) + "v3" + chr(47) + "search"
+            _ar = requests.get(_u_ara, params={"query": _hv_arama, "limit": 8, "type": "team"}, headers=_g_hdr, timeout=5)
+            if _ar.status_code == 200:
+                for _aitem in (_ar.json().get("items") or list()):
+                    _t_id = str(_aitem.get("id") or "")
+                    _sp_slug = str(_aitem.get("sport") or "soccer")
+                    _lg_slug = str(_aitem.get("league") or "all")
+                    if _t_id:
+                        _tr = requests.get(f"{_g_kok}{_sp_slug}/{_lg_slug}/teams/{_t_id}/schedule", headers=_g_hdr, timeout=5)
+                        if _tr.status_code == 200:
+                            for _tev in (_tr.json().get("events") or list()):
+                                _st_name = str((((_tev.get("competitions") or [dict()])[0].get("status") or dict()).get("type") or dict()).get("state") or "")
+                                if _st_name in ("pre", "in"):
+                                    _t_ad = str(_tev.get("name") or "")
+                                    _t_tar = str(_tev.get("date") or "")[:10]
+                                    _getk = f"[{_lg_slug.upper()} | {_t_tar}] {_t_ad}"
+                                    if _t_ad and _getk not in _hv_map:
+                                        _hv_map[_getk] = {"id": str(_tev.get("id") or ""), "yol": f"{_sp_slug}/{_lg_slug}", "spor": "Futbol" if _sp_slug == "soccer" else "Basketbol", "kat": "Dünya Geneli", "tarih_g": _t_tar}
+                                    break
         except Exception:
             pass
 
