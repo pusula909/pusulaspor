@@ -1,36 +1,47 @@
 import requests
 
+_TUM_ESPN_YOLLARI = (
+    "basketball/nba",
+    "soccer/tur.1",
+    "soccer/eng.1",
+    "soccer/esp.1",
+    "soccer/ger.1",
+    "soccer/ita.1",
+    "soccer/fra.1",
+    "soccer/ned.1",
+    "soccer/bel.1",
+    "soccer/por.1",
+    "soccer/uefa.champions",
+    "soccer/uefa.europa",
+    "soccer/uefa.europa.conf",
+)
+
 def mac_hakem_verisi_cek(url_basi, yol, event_id, basliklar, ev_takim="", dep_takim=""):
-    isimler = list()
-    if yol and yol != "euroleague_resmi" and event_id:
+    eid = str(event_id or "").strip()
+    if not eid or str(yol) == "euroleague_resmi":
+        return "Henüz resmi hakem bilgisi düşmedi"
+
+    aday_yollar = [yol] if (yol and "/" in str(yol)) else list(_TUM_ESPN_YOLLARI)
+    for y in aday_yollar:
         try:
-            veri = requests.get(f"{url_basi}{yol}/summary?event={event_id}", headers=basliklar, timeout=5).json()
+            r = requests.get(f"{url_basi}{y}/summary?event={eid}", headers=basliklar, timeout=4)
+            if r.status_code != 200:
+                continue
+            veri = r.json()
+            header_comps = ((veri.get("header") or {}).get("competitions") or list())
+            if not header_comps:
+                continue
             officials = ((veri.get("gameInfo") or {}).get("officials") or list())
-            for off in officials[:3]:
+            isimler = list()
+            for off in officials[:4]:
                 ad = (off.get("displayName") or off.get("fullName") or "").strip()
                 pos = ((off.get("position") or {}).get("displayName") or "").strip()
                 if ad:
                     isimler.append(f"{ad} ({pos})" if pos else ad)
+            if isimler:
+                return f"Resmi Hakemler: {', '.join(isimler)}"
+            return "Henüz resmi hakem ataması açıklanmadı (ESPN resmi maç özeti)"
         except Exception:
-            pass
+            continue
 
-    if isimler:
-        return f"Resmi Hakemler: {', '.join(isimler)}"
-
-    if ev_takim and dep_takim:
-        try:
-            try:
-                from ddgs import DDGS
-            except Exception:
-                from duckduckgo_search import DDGS
-            with DDGS() as ddgs:
-                for q in [f'"{ev_takim}" "{dep_takim}" referee', f'"{ev_takim}" "{dep_takim}" hakemi']:
-                    for s in list(ddgs.text(q, max_results=3)):
-                        metin = (s.get("title", "") + " " + s.get("body", ""))
-                        if any(k in metin.lower() for k in ("referee", "official", "hakem", "uefa")):
-                            temiz = metin[:140].replace("\n", " ").strip()
-                            return f"Atama Kaydı: {temiz}"
-        except Exception:
-            pass
-
-    return "Henüz resmi hakem bilgisi düşmedi"
+    return "Henüz resmi hakem ataması açıklanmadı"
