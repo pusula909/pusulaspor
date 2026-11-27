@@ -1715,9 +1715,10 @@ else:
                         st.toast(f"SKOR DEGISTI! {ev_ad} {skor_gosterim} {dep_ad}")
                     st.session_state.eski_skorlar[mac_id] = skor_gosterim
                 iy_ceyrek_str = periyot_ve_iy_cikar(ev_t, dep_t, spor, state)
-                _, ozet_tahmin, en_guclu = coklu_tahmin_motoru(ev_ad, dep_ad, ev_rec, dep_rec, spor, aktif_lig_ad, 0, 0, state, ev_s_int, dep_s_int)
+                
                 if state == "pre":
                  deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
+                 ozet_tahmin = f"{deger_rapor['ana_tercih']} (%{deger_rapor['guven']}) | {deger_rapor['barem_tercih']} (%{deger_rapor['barem_guven']})"
                  if not deger_rapor["tuzak_notu"]:
                      banko_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "lig": aktif_lig_ad, "ev": ev_ad, "dep": dep_ad, "ozet": f"{deger_rapor['ana_tercih']} | {deger_rapor['barem_tercih']} | Deger: {deger_rapor['deger_puani']}/10", "guven": f"%{deger_rapor['guven']} | Deger: {deger_rapor['deger_puani']}/10", "guven_int": deger_rapor["deger_puani"]})
                     
