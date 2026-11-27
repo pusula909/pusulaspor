@@ -1178,11 +1178,29 @@ if gorunum == "Canli Kupon Takip":
         ["Tümü (Bütün Maçlar)", "Basketbol - NBA", "Basketbol - EuroLeague & Diğer", "Futbol - Avrupa Kupaları", "Futbol - Normal Sezon Ligleri"],
         key="hv_kat_filtre"
     )
-    _hv_arama = _hf2.text_input("🔎 Takım veya Maç Ara (Örn: Galatasaray, Real Madrid, Lakers...)", value="", key="hv_arama_kutusu").strip().lower()
+    _hv_arama = _hf2.text_input("🔎 Takım veya Maç Ara (Dünyadaki Tüm Ligler - Örn: Galatasaray, Wrexham, Boca, Lakers...)", "").strip().lower()
+    if len(_hv_arama) >= 3:
+        try:
+            _g_hdr = {"User-Agent": "Mozilla/5.0"}
+            _g_kok = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
+            _t_g = tarih.strftime("%Y%m%d") if hasattr(tarih, "strftime") else str(tarih).replace("-", "")
+            for _g_sp, _g_yol in (("Futbol - Dünya Geneli", "soccer/all"), ("Basketbol - Dünya Geneli", "basketball/all")):
+                _gr = requests.get(f"{_g_kok}{_g_yol}/scoreboard?dates={_t_g}&limit=300", headers=_g_hdr, timeout=5)
+                if _gr.status_code != 200:
+                    continue
+                for _gev in (_gr.json().get("events") or list()):
+                    _g_ad = str(_gev.get("name") or "")
+                    if _hv_arama in _g_ad.lower():
+                        _glig = str((_gev.get("league") or dict()).get("abbreviation") or _g_sp)
+                        _getk = f"[{_glig}] {_g_ad}"
+                        if _getk not in _hv_map:
+                            _hv_map[_getk] = {"id": str(_gev.get("id") or ""), "yol": _g_yol, "spor": "Futbol" if "soccer" in _g_yol else "Basketbol", "kat": _g_sp, "tarih_g": tarih}
+        except Exception:
+            pass
 
     _tum_mac_secenekleri = list()
     for _etk_item, _obj_item in _hv_map.items():
-        if _hv_kat_sec != "Tümü (Bütün Maçlar)" and _obj_item.get("kat") != _hv_kat_sec:
+        if _hv_kat_sec != "Tümü (Bütün Maçlar)" and _obj_item.get("kat") != _hv_kat_sec and len(_hv_arama) < 3:
             continue
         if _hv_arama and _hv_arama not in _etk_item.lower():
             continue
