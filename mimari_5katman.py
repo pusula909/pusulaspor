@@ -72,7 +72,7 @@ def _espn_takim_hucum_savunma(tarih_str):
     veri = dict()
     hdr = {"User-Agent": "Mozilla/5.0"}
     for y in _LIG_ESLESME.values():
-        u_kok = "https:" + chr(47) + chr(47) + "://espn.com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
+        u_kok = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
         r = requests.get(f"{u_kok}{y}/scoreboard?dates={tarih_str}", headers=hdr, timeout=4)
         if r.status_code != 200:
             continue
