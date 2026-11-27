@@ -1,0 +1,258 @@
+import math
+import requests
+import streamlit as st
+from datetime import datetime
+
+_LIG_ESLESME = {
+    "Trendyol Super Lig": "soccer/tur.1",
+    "Ingiltere Premier Lig": "soccer/eng.1",
+    "Ispanya La Liga": "soccer/esp.1",
+    "Italya Serie A": "soccer/ita.1",
+    "Almanya Bundesliga": "soccer/ger.1",
+    "Fransa Ligue 1": "soccer/fra.1",
+    "Hollanda Eredivisie": "soccer/ned.1",
+    "Belcika Pro League": "soccer/bel.1",
+    "Portekiz Primeira Liga": "soccer/por.1",
+    "Avusturya Bundesliga": "soccer/aut.1",
+    "UEFA Sampiyonlar Ligi": "soccer/uefa.champions",
+    "UEFA Avrupa Ligi": "soccer/uefa.europa",
+    "UEFA Konferans Ligi": "soccer/uefa.europa.conf",
+    "NBA": "basketball/nba",
+}
+
+def _poisson_olasilik(lam, k):
+    if lam <= 0:
+        return 1.0 if k == 0 else 0.0
+    return (math.exp(-lam) * (lam ** k)) / math.factorial(k)
+
+def _normal_cdf(x, mu, sigma):
+    if sigma <= 0:
+        return 1.0 if x >= mu else 0.0
+    return 0.5 * (1.0 + math.erf((x - mu) / (sigma * math.sqrt(2.0))))
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def _canli_piyasa_oranlari_cek(odds_api_key):
+    if not odds_api_key:
+        return dict()
+    sozluk = dict()
+    spor_kodlari = ("soccer_turkey_super_league", "soccer_epl", "soccer_spain_la_liga", "soccer_italy_serie_a", "soccer_germany_bundesliga", "soccer_france_ligue_one", "soccer_uefa_champs_league", "basketball_nba")
+    for sk in spor_kodlari:
+        try:
+            url = f"https://the-odds-api.com{sk}/odds/?apiKey={odds_api_key}&regions=eu&markets=h2h,totals&oddsFormat=decimal"
+            r = requests.get(url, timeout=4)
+            if r.status_code != 200:
+                continue
+            for mac in r.json():
+                ev = str(mac.get("home_team") or "").upper()
+                dep = str(mac.get("away_team") or "").upper()
+                bm = next(iter(mac.get("bookmakers") or list()), None)
+                if not bm:
+                    continue
+                h2h_oran = dict()
+                tot_hat, tot_ust, tot_alt = 0.0, 0.0, 0.0
+                for mk in (bm.get("markets") or list()):
+                    if mk.get("key") == "h2h":
+                        for out in (mk.get("outcomes") or list()):
+                            h2h_oran[str(out.get("name") or "").upper()] = float(out.get("price") or 0)
+                    elif mk.get("key") == "totals":
+                        for out in (mk.get("outcomes") or list()):
+                            tot_hat = float(out.get("point") or 0)
+                            if str(out.get("name") or "").lower() == "over":
+                                tot_ust = float(out.get("price") or 0)
+                            elif str(out.get("name") or "").lower() == "under":
+                                tot_alt = float(out.get("price") or 0)
+                if ev and dep:
+                    sozluk[(ev, dep)] = {"ms1": h2h_oran.get(ev, 0.0), "msx": h2h_oran.get("DRAW", 0.0), "ms2": h2h_oran.get(dep, 0.0), "barem": tot_hat, "ust": tot_ust, "alt": tot_alt}
+        except Exception:
+            continue
+    return sozluk
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def _espn_takim_hucum_savunma(tarih_str):
+    veri = dict()
+    hdr = {"User-Agent": "Mozilla/5.0"}
+    for y in _LIG_ESLESME.values():
+        try:
+            r = requests.get(f"https://espn.com{y}/scoreboard?dates={tarih_str}", headers=hdr, timeout=4)
+            if r.status_code != 200:
+                continue
+            for ev in (r.json().get("events") or list()):
+                ev_id = str(ev.get("id") or "")
+                if not ev_id:
+                    continue
+                try:
+                    sj = requests.get(f"https://espn.com{y}/summary?event={ev_id}", headers=hdr, timeout=4).json()
+                    for fm in (sj.get("form") or list()):
+                        tm = fm.get("team") or dict()
+                        f_ad = str(tm.get("displayName") or "").upper()
+                        tid = str(tm.get("id") or "")
+                        evs = tuple(fm.get("events") or list())[:6]
+                        if f_ad and evs:
+                            att_top, yed_top, say = 0.0, 0.0, 0
+                            for e in evs:
+                                h_id = str(e.get("homeTeamId") or "")
+                                hs = float(e.get("homeTeamScore") or 0)
+                                as_ = float(e.get("awayTeamScore") or 0)
+                                if tid and h_id == tid:
+                                    att_top += hs
+                                    yed_top += as_
+                                else:
+                                    att_top += as_
+                                    yed_top += hs
+                                say += 1
+                            if say > 0:
+                                veri[f_ad] = (round(att_top / say, 2), round(yed_top / say, 2), say)
+                except Exception:
+                    pass
+        except Exception:
+            continue
+    return veri
+  def _kayit_orani(kayit_str):
+    parcalar = tuple(int(x) for x in str(kayit_str or "").split("-") if x.isdigit())
+    if not parcalar or sum(parcalar) == 0:
+        return 0.50
+    gal = next(iter(parcalar), 0)
+    return max(0.15, min(0.88, gal / sum(parcalar)))
+
+def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre", ev_skor=0, dep_skor=0, detay_sure="", odds_api_key=""):
+    tarih_str = datetime.now().strftime("%Y%m%d")
+    takim_stats = _espn_takim_hucum_savunma(tarih_str)
+    piyasa_map = _canli_piyasa_oranlari_cek(odds_api_key)
+
+    ev_u = str(ev_ad).upper()
+    dep_u = str(dep_ad).upper()
+    ev_st = next((v for k, v in takim_stats.items() if ev_u and (ev_u in k or k in ev_u)), None)
+    dep_st = next((v for k, v in takim_stats.items() if dep_u and (dep_u in k or k in dep_u)), None)
+    piyasa = next((v for (pe, pd), v in piyasa_map.items() if (ev_u in pe or pe in ev_u) and (dep_u in pd or pd in dep_u)), dict())
+
+    ev_guc = _kayit_orani(ev_rec)
+    dep_guc = _kayit_orani(dep_rec)
+
+    if spor == "Futbol":
+        lig_ort_gol = 1.35
+        if ev_st and dep_st:
+            ev_att, ev_yed, _ = ev_st
+            dep_att, dep_yed, _ = dep_st
+            lam_ev = max(0.35, min(3.4, ((ev_att / lig_ort_gol) * (dep_yed / lig_ort_gol) * lig_ort_gol) * 1.06))
+            lam_dep = max(0.30, min(3.1, ((dep_att / lig_ort_gol) * (ev_yed / lig_ort_gol) * lig_ort_gol) * 0.94))
+            veri_kaynagi = "Poisson + Son 6 Mac Gol"
+        else:
+            lam_ev = max(0.45, min(2.6, 1.05 + (ev_guc - dep_guc) * 1.15 + 0.15))
+            lam_dep = max(0.40, min(2.4, 1.00 + (dep_guc - ev_guc) * 1.10))
+            veri_kaynagi = "Poisson + Form Modeli"
+
+        p1, px, p2, p_ust25 = 0.0, 0.0, 0.0, 0.0
+        for g_ev in range(6):
+            pe = _poisson_olasilik(lam_ev, g_ev)
+            for g_dep in range(6):
+                pd_ = _poisson_olasilik(lam_dep, g_dep)
+                olas = pe * pd_
+                if g_ev > g_dep:
+                    p1 += olas
+                elif g_ev == g_dep:
+                    px += olas
+                else:
+                    p2 += olas
+                if (g_ev + g_dep) >= 3:
+                    p_ust25 += olas
+
+        yz1 = int(round(p1 * 100))
+        yzx = int(round(px * 100))
+        yz2 = int(round(p2 * 100))
+        yz_ust = int(round(p_ust25 * 100))
+        yz_alt = max(5, 100 - yz_ust)
+        bek_gol = round(lam_ev + lam_dep, 2)
+
+        if yz1 >= 56:
+            ana_tercih, guven, b_oran = f"{ev_ad} Kazanir (MS 1)", yz1, piyasa.get("ms1", 0.0)
+        elif yz2 >= 55:
+            ana_tercih, guven, b_oran = f"{dep_ad} Kazanir (MS 2)", yz2, piyasa.get("ms2", 0.0)
+        elif (yz1 + yzx) >= 74 and yz1 >= 40:
+            ana_tercih, guven, b_oran = f"{ev_ad} Yenilmez (1X)", min(82, yz1 + yzx), 0.0
+        elif (yz2 + yzx) >= 74 and yz2 >= 40:
+            ana_tercih, guven, b_oran = f"{dep_ad} Yenilmez (X2)", min(82, yz2 + yzx), 0.0
+        else:
+            ana_tercih, guven, b_oran = f"PAS GEC (MS1:%{yz1} X:%{yzx} MS2:%{yz2})", max(yz1, yzx, yz2), 0.0
+
+        if state == "in":
+            canli_hat = (ev_skor + dep_skor) + 0.5
+            barem_tercih = f"Canli {canli_hat} UST (Beklenti: {bek_gol})"
+            barem_guven = min(84, max(54, yz_ust))
+        elif yz_ust >= 58:
+            barem_tercih = f"2.5 UST (Beklenti: {bek_gol} gol)"
+            barem_guven = yz_ust
+        elif yz_alt >= 58:
+            barem_tercih = f"2.5 ALT (Beklenti: {bek_gol} gol)"
+            barem_guven = yz_alt
+        else:
+            barem_tercih = f"Barem Pas Gec (Beklenti: {bek_gol} gol)"
+            barem_guven = max(yz_ust, yz_alt)
+
+    else:
+        is_nba = "NBA" in str(lig_adi).upper()
+        lig_ort = 113.5 if is_nba else 82.5
+        sigma_fark = 11.5 if is_nba else 9.5
+        sigma_top = 14.5 if is_nba else 11.5
+
+        if ev_st and dep_st:
+            ev_att, ev_yed, _ = ev_st
+            dep_att, dep_yed, _ = dep_st
+            bek_ev = ((ev_att + dep_yed) / 2.0) + (2.5 if is_nba else 2.0)
+            bek_dep = ((dep_att + ev_yed) / 2.0) - (1.5 if is_nba else 1.0)
+            veri_kaynagi = "Normal Dagilim + Son 6 Mac"
+        else:
+            fark_puan = (ev_guc - dep_guc) * (18.0 if is_nba else 14.0) + (2.8 if is_nba else 2.2)
+            bek_ev = lig_ort + (fark_puan / 2.0)
+            bek_dep = lig_ort - (fark_puan / 2.0)
+            veri_kaynagi = "Normal Dagilim + Form Modeli"
+
+        bek_fark = bek_ev - bek_dep
+        bek_top = round(bek_ev + bek_dep, 1)
+        p1 = 1.0 - _normal_cdf(0.0, bek_fark, sigma_fark)
+        yz1 = int(round(p1 * 100))
+        yz2 = max(5, 100 - yz1)
+
+        if yz1 >= 60:
+            ana_tercih, guven, b_oran = f"{ev_ad} Kazanir (MS 1)", yz1, piyasa.get("ms1", 0.0)
+        elif yz2 >= 60:
+            ana_tercih, guven, b_oran = f"{dep_ad} Kazanir (MS 2)", yz2, piyasa.get("ms2", 0.0)
+        else:
+            ana_tercih, guven, b_oran = f"PAS GEC (MS1:%{yz1} MS2:%{yz2})", max(yz1, yz2), 0.0
+
+        piyasa_hat = float(piyasa.get("barem") or 0.0)
+        if state == "in" and (ev_skor + dep_skor) > 0:
+            canli_hat = round(bek_top) - 0.5
+            barem_tercih = f"Canli {canli_hat} (Projeksiyon: {bek_top})"
+            barem_guven = 66
+        elif piyasa_hat > 0:
+            p_ust = 1.0 - _normal_cdf(piyasa_hat, bek_top, sigma_top)
+            yz_u = int(round(p_ust * 100))
+            if yz_u >= 57:
+                barem_tercih, barem_guven = f"{piyasa_hat} UST (Proj: {bek_top})", yz_u
+            elif (100 - yz_u) >= 57:
+                barem_tercih, barem_guven = f"{piyasa_hat} ALT (Proj: {bek_top})", (100 - yz_u)
+            else:
+                barem_tercih, barem_guven = f"Barem Pas Gec ({piyasa_hat} | Proj: {bek_top})", max(yz_u, 100 - yz_u)
+        else:
+            barem_tercih = f"Barem Pas Gec (Projeksiyon: {bek_top} sayi)"
+            barem_guven = 50
+
+    adil_oran = round(100.0 / max(10, guven), 2)
+    if b_oran and b_oran > 1.01:
+        ev_yuzde = round(((guven / 100.0) * b_oran - 1.0) * 100, 1)
+        value_etiket = f" | Buro:{b_oran} (EV:{ev_yuzde:+.1f}%)"
+    else:
+        value_etiket = f" | Adil Oran:{adil_oran}"
+
+    pas_mi = "PAS GEC" in ana_tercih
+    deger_puani = round(min(9.6, max(3.5, (guven / 10.0) - (1.8 if pas_mi else 0.0))), 1)
+    ozet_satir = f"{ana_tercih} (%{guven}{value_etiket}) | {barem_tercih} (%{barem_guven}) [{veri_kaynagi}]"
+
+    return {
+        "ana_tercih": ana_tercih,
+        "guven": guven,
+        "barem_tercih": barem_tercih,
+        "barem_guven": barem_guven,
+        "deger_puani": deger_puani,
+        "ozet_satir": ozet_satir,
+    }
