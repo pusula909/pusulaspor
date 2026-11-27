@@ -102,7 +102,7 @@ def _espn_takim_hucum_savunma(tarih_str):
                                 say += 1
                             if say > 0:
                                 veri[f_ad] = (round(att_top / say, 2), round(yed_top / say, 2), say)
-        except Exception:
+         except Exception:
                      pass
         except Exception:
             continue
