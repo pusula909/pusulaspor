@@ -226,15 +226,22 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
             barem_guven = 50
 
     adil_oran = round(100.0 / max(10, guven), 2)
-    if b_oran and b_oran > 1.01:
-        ev_yuzde = round(((guven / 100.0) * b_oran - 1.0) * 100, 1)
-        value_etiket = f" | Buro:{b_oran} (EV:{ev_yuzde:+.1f}%)"
-    else:
-        value_etiket = f" | Adil Oran:{adil_oran}"
-
     pas_mi = "PAS GEC" in ana_tercih
+    ev_yuzde = round(((guven / 100.0) * b_oran - 1.0) * 100, 1) if (b_oran and b_oran > 1.01) else 0.0
+
+    if pas_mi:
+        karar_etiket = "⚪ PAS GEÇ (Dengeli)"
+    elif b_oran and b_oran > 1.01 and ev_yuzde >= 2.0:
+        karar_etiket = "🟢 DEĞERLİ FIRSAT"
+    elif b_oran and b_oran > 1.01 and ev_yuzde < 0:
+        karar_etiket = "🟡 FAVORİ (Oran Düşük)"
+    else:
+        karar_etiket = "🔵 İSTATİSTİK ÜSTÜN"
+
+    oran_sutun = f"%{guven} | Büro: {b_oran}" if (b_oran and b_oran > 1.01) else f"%{guven} | Adil: {adil_oran}"
+    ev_sutun = f"🔥 {ev_yuzde:+.1f}%" if ev_yuzde >= 2.0 else (f"⚠️ {ev_yuzde:+.1f}%" if (b_oran and b_oran > 1.01) else "—")
     deger_puani = round(min(9.6, max(3.5, (guven / 10.0) - (1.8 if pas_mi else 0.0))), 1)
-    ozet_satir = f"{ana_tercih} (%{guven}{value_etiket}) | {barem_tercih} (%{barem_guven}) [{veri_kaynagi}]"
+    ozet_satir = f"{karar_etiket} | {ana_tercih} ({oran_sutun})"
 
     return {
         "ana_tercih": ana_tercih,
@@ -243,4 +250,7 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
         "barem_guven": barem_guven,
         "deger_puani": deger_puani,
         "ozet_satir": ozet_satir,
+        "karar_etiket": karar_etiket,
+        "oran_sutun": oran_sutun,
+        "ev_sutun": ev_sutun,
     }
