@@ -1758,7 +1758,7 @@ else:
                     
                 maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": is_fav, "Dakika / Ceyrek": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Deplasman": dep_ad, "IY / Ceyrek Skorlari": iy_ceyrek_str, "Ev Form": ev_rec, "Dep Form": dep_rec, "Hizli AI Ozet": ozet_tahmin, "Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)})
                 if state in ("pre", "in") and isinstance(deger_rapor, dict):
-                maclar[-1].update({"🎯 Karar": deger_rapor.get("karar_etiket", "—"), "📌 Tercih": deger_rapor.get("ana_tercih", "—"), "📊 İhtimal & Oran": deger_rapor.get("oran_sutun", "—"), "💎 Değer (EV)": deger_rapor.get("ev_sutun", "—"), "⚖️ Alt / Üst Barem": f"{deger_rapor.get('barem_tercih', '—')} (%{deger_rapor.get('barem_guven', 0)})"})
+                    maclar[-1].update({"🎯 Karar": deger_rapor.get("karar_etiket", "—"), "📌 Tercih": deger_rapor.get("ana_tercih", "—"), "📊 İhtimal & Oran": deger_rapor.get("oran_sutun", "—"), "💎 Değer (EV)": deger_rapor.get("ev_sutun", "—"), "⚖️ Alt / Üst Barem": f"{deger_rapor.get('barem_tercih', '—')} (%{deger_rapor.get('barem_guven', 0)})"})
             except Exception:
                 continue
 
