@@ -1718,6 +1718,10 @@ else:
                 
                 if state == "pre":
                  deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
+                 import mimari_5katman as _m5
+                _m5_sonuc = _m5.bes_katman_analiz(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state, ev_s_int, dep_s_int, durum_detay, st.secrets.get("ODDS_API_KEY", ""))
+                deger_rapor.update(_m5_sonuc)
+                ozet_tahmin = _m5_sonuc["ozet_satir"]
                  ozet_tahmin = f"{deger_rapor['ana_tercih']} (%{deger_rapor['guven']}) | {deger_rapor['barem_tercih']} (%{deger_rapor['barem_guven']})"
                  if not deger_rapor["tuzak_notu"]:
                      banko_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "lig": aktif_lig_ad, "ev": ev_ad, "dep": dep_ad, "ozet": f"{deger_rapor['ana_tercih']} | {deger_rapor['barem_tercih']} | Deger: {deger_rapor['deger_puani']}/10", "guven": f"%{deger_rapor['guven']} | Deger: {deger_rapor['deger_puani']}/10", "guven_int": deger_rapor["deger_puani"]})
