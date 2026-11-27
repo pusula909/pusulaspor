@@ -1720,7 +1720,7 @@ else:
                     deger_rapor = beyin.mac_deger_analizi(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state=state)
                     try:
                         import mimari_5katman as _m5
-                        _m5_sonuc = _m5.bes_katman_analiz(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state, ev_s_int, dep_s_int, durum_detay, "")
+                        _m5_sonuc = _m5.bes_katman_analiz(spor, aktif_lig_ad, ev_ad, dep_ad, ev_rec, dep_rec, state, ev_s_int, dep_s_int, durum_detay, st.secrets.get("ODDS_API_KEY", ""))
                         deger_rapor.update(_m5_sonuc)
                         ozet_tahmin = _m5_sonuc["ozet_satir"]
                     except Exception as _m5_err:
