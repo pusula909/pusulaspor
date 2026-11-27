@@ -1,5 +1,6 @@
 import requests
 import re
+import urllib.parse
 from datetime import datetime
 
 _TUM_ESPN_YOLLARI = (
@@ -62,17 +63,15 @@ def mac_hakem_verisi_cek(url_basi, yol, event_id, basliklar, ev_takim="", dep_ta
 
     if ev_takim and dep_takim:
         try:
-            try:
-                from ddgs import DDGS
-            except Exception:
-                from duckduckgo_search import DDGS
-            with DDGS() as ddgs:
-                sorgu = f'"{ev_takim}" "{dep_takim}" (referee OR Schiedsrichter OR arbitro OR arbitre OR scheidsrechter OR hakem)'
-                for s in list(ddgs.text(sorgu, max_results=3)):
-                    metin = (s.get("title", "") + " - " + s.get("body", "")).replace("\n", " ")
-                    m = re.search(r"(?:referee|schiedsrichter|arbitro|arbitre|scheidsrechter|hakem)[:\s-]+([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜ][a-zçğıöşü]+){1,2})", metin, re.IGNORECASE)
+            q = urllib.parse.quote(f'"{ev_takim}" "{dep_takim}" (referee OR Schiedsrichter OR arbitro OR arbitre OR scheidsrechter OR hakem)')
+            rss_url = f"https://google.com{q}&hl=en-US&gl=US&ceid=US:en"
+            rr = requests.get(rss_url, headers=basliklar, timeout=5)
+            if rr.status_code == 200:
+                basliklar_xml = re.findall(r"<title>(.*?)</title>", rr.text)[1:6]
+                for b in basliklar_xml:
+                    m = re.search(r"(?:referee|schiedsrichter|arbitro|arbitre|scheidsrechter|hakem)[:\s-]+([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜ][a-zçğıöşü]+){1,2})", b, re.IGNORECASE)
                     if m:
-                        return f"Resmi Hakem: {m.group(1).strip()}"
+                        return f"Resmi Hakem (Haber Kaydı): {m.group(1).strip()}"
         except Exception:
             pass
 
