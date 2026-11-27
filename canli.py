@@ -1188,46 +1188,22 @@ if gorunum == "Canli Kupon Takip":
     if len(_hv_arama) >= 3:
         try:
             _g_hdr = {"User-Agent": "Mozilla/5.0"}
-            _g_kok = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
-            _u_ara = "https:" + chr(47) + chr(47) + "site" + "." + "web" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "common" + chr(47) + "v3" + chr(47) + "search"
-            _ar = requests.get(_u_ara, params={"query": _hv_arama, "limit": 10}, headers=_g_hdr, timeout=5)
-            if _ar.status_code == 200:
-                _aj = _ar.json()
-                _adaylar = list(_aj.get("items") or list())
-                for _rg in (_aj.get("results") or list()):
-                    _adaylar.extend(_rg.get("contents") or list())
-                for _aitem in _adaylar:
-                    _t_id = str(_aitem.get("id") or "")
-                    _sp_slug = str(_aitem.get("sport") or "soccer")
-                    _lg_slug = str(_aitem.get("league") or "all")
-                    if _t_id:
-                        _tr = requests.get(f"{_g_kok}{_sp_slug}/{_lg_slug}/teams/{_t_id}/schedule", headers=_g_hdr, timeout=4)
-                        if _tr.status_code == 200:
-                            for _tev in (_tr.json().get("events") or list()):
-                                _comp0 = next(iter(_tev.get("competitions") or list()), dict())
-                                _st_name = str(((_comp0.get("status") or dict()).get("type") or dict()).get("state") or "")
-                                if _st_name in ("pre", "in"):
-                                    _t_ad = str(_tev.get("name") or "")
-                                    _t_tar = str(_tev.get("date") or "")[:10]
-                                    _getk = f"[{_lg_slug.upper()} | {_t_tar}] {_t_ad}"
-                                    if _t_ad and _getk not in _hv_map:
-                                        _hv_map[_getk] = {"id": str(_tev.get("id") or ""), "yol": f"{_sp_slug}/{_lg_slug}", "spor": "Futbol" if _sp_slug == "soccer" else "Basketbol", "kat": "Dünya Geneli", "tarih_g": _t_tar}
-                                    break
-            from datetime import timedelta as _td
-            _bas_t = tarih if hasattr(tarih, "strftime") else datetime.now().date()
-            for _gun_f in range(0, 5):
-                _t_str = (_bas_t + _td(days=_gun_f)).strftime("%Y%m%d")
-                for _d_yol in ("soccer/pol.1", "soccer/tur.2", "soccer/eng.2", "soccer/ger.2", "soccer/ita.2", "soccer/esp.2", "soccer/fra.2", "soccer/sco.1", "soccer/sui.1", "soccer/gre.1", "soccer/den.1", "soccer/bra.1", "soccer/arg.1", "soccer/sau.1", "soccer/all", "basketball/all"):
-                    _dr = requests.get(f"{_g_kok}{_d_yol}/scoreboard?dates={_t_str}&limit=200", headers=_g_hdr, timeout=4)
-                    if _dr.status_code != 200:
-                        continue
-                    for _dev in (_dr.json().get("events") or list()):
-                        _d_ad = str(_dev.get("name") or "")
-                        if _hv_arama in _tr_norm(_d_ad):
-                            _d_tar = str(_dev.get("date") or "")[:10]
-                            _getk = f"[{_d_yol.split('/')[-1].upper()} | {_d_tar}] {_d_ad}"
-                            if _getk not in _hv_map:
-                                _hv_map[_getk] = {"id": str(_dev.get("id") or ""), "yol": _d_yol, "spor": "Futbol" if "soccer" in _d_yol else "Basketbol", "kat": "Dünya Geneli", "tarih_g": _d_tar}
+            _sdb = "https:" + chr(47) + chr(47) + "www" + "." + "thesportsdb" + "." + "com" + chr(47) + "api" + chr(47) + "v1" + chr(47) + "json" + chr(47) + "3" + chr(47)
+            _sr = requests.get(f"{_sdb}searchteams.php", params={"t": _hv_arama}, headers=_g_hdr, timeout=5)
+            if _sr.status_code == 200:
+                for _stm in (_sr.json().get("teams") or list())[:5]:
+                    _tid = str(_stm.get("idTeam") or "")
+                    _tspor = "Basketbol" if "basketball" in str(_stm.get("strSport") or "").lower() else "Futbol"
+                    _tlig = str(_stm.get("strLeague") or "Dunya Ligi")
+                    if _tid:
+                        _er = requests.get(f"{_sdb}eventsnext.php", params={"id": _tid}, headers=_g_hdr, timeout=5)
+                        if _er.status_code == 200:
+                            for _sev in (_er.json().get("events") or list())[:2]:
+                                _sev_ad = str(_sev.get("strEvent") or "")
+                                _sev_tar = str(_sev.get("dateEvent") or "")
+                                _getk = f"[{_tlig} | {_sev_tar}] {_sev_ad}"
+                                if _sev_ad and _getk not in _hv_map:
+                                    _hv_map[_getk] = {"id": str(_sev.get("idEvent") or ""), "yol": "sdb", "spor": _tspor, "kat": "Dünya Geneli", "tarih_g": _sev_tar}
         except Exception:
             pass
 
