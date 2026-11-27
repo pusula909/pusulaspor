@@ -1,4 +1,6 @@
 import requests
+import re
+from datetime import datetime
 
 _TUM_ESPN_YOLLARI = (
     "basketball/nba",
@@ -16,32 +18,62 @@ _TUM_ESPN_YOLLARI = (
     "soccer/uefa.europa.conf",
 )
 
-def mac_hakem_verisi_cek(url_basi, yol, event_id, basliklar, ev_takim="", dep_takim=""):
-    eid = str(event_id or "").strip()
-    if not eid or str(yol) == "euroleague_resmi":
-        return "Henüz resmi hakem bilgisi düşmedi"
-
-    aday_yollar = [yol] if (yol and "/" in str(yol)) else list(_TUM_ESPN_YOLLARI)
-    for y in aday_yollar:
+def _takimdan_espn_id_bul(url_basi, ev_ad, dep_ad, basliklar):
+    tarih = datetime.now().strftime("%Y%m%d")
+    ev_u = ev_ad.upper()
+    dep_u = dep_ad.upper()
+    for y in _TUM_ESPN_YOLLARI:
         try:
-            r = requests.get(f"{url_basi}{y}/summary?event={eid}", headers=basliklar, timeout=4)
+            r = requests.get(f"{url_basi}{y}/scoreboard?dates={tarih}", headers=basliklar, timeout=4)
             if r.status_code != 200:
                 continue
-            veri = r.json()
-            header_comps = ((veri.get("header") or {}).get("competitions") or list())
-            if not header_comps:
-                continue
-            officials = ((veri.get("gameInfo") or {}).get("officials") or list())
-            isimler = list()
-            for off in officials[:4]:
-                ad = (off.get("displayName") or off.get("fullName") or "").strip()
-                pos = ((off.get("position") or {}).get("displayName") or "").strip()
-                if ad:
-                    isimler.append(f"{ad} ({pos})" if pos else ad)
-            if isimler:
-                return f"Resmi Hakemler: {', '.join(isimler)}"
-            return "Henüz resmi hakem ataması açıklanmadı (ESPN resmi maç özeti)"
+            for ev in (r.json().get("events") or list()):
+                isim = (ev.get("name") or "").upper()
+                if (ev_u and ev_u in isim) or (dep_u and dep_u in isim):
+                    return y, str(ev.get("id") or "")
         except Exception:
             continue
+    return "", ""
+
+def mac_hakem_verisi_cek(url_basi, yol, event_id, basliklar, ev_takim="", dep_takim=""):
+    eid = str(event_id or "").strip()
+    aktif_yol = str(yol or "").strip()
+
+    if (not eid or "/" not in aktif_yol) and (ev_takim or dep_takim):
+        bul_yol, bul_id = _takimdan_espn_id_bul(url_basi, str(ev_takim), str(dep_takim), basliklar)
+        if bul_id:
+            aktif_yol, eid = bul_yol, bul_id
+
+    if eid and "/" in aktif_yol:
+        try:
+            r = requests.get(f"{url_basi}{aktif_yol}/summary?event={eid}", headers=basliklar, timeout=4)
+            if r.status_code == 200:
+                officials = ((r.json().get("gameInfo") or {}).get("officials") or list())
+                isimler = list()
+                for off in officials[:4]:
+                    ad = (off.get("displayName") or off.get("fullName") or "").strip()
+                    pos = ((off.get("position") or {}).get("displayName") or "").strip()
+                    if ad:
+                        isimler.append(f"{ad} ({pos})" if pos else ad)
+                if isimler:
+                    return f"Resmi Hakemler: {', '.join(isimler)}"
+        except Exception:
+            pass
+
+    if ev_takim and dep_takim:
+        try:
+            try:
+                from ddgs import DDGS
+            except Exception:
+                from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                sorgu = f'"{ev_takim}" "{dep_takim}" (referee OR Schiedsrichter OR arbitro OR arbitre OR scheidsrechter OR hakem)'
+                for s in list(ddgs.text(sorgu, max_results=3)):
+                    metin = (s.get("title", "") + " - " + s.get("body", "")).replace("\n", " ")
+                    m = re.search(r"(?:referee|schiedsrichter|arbitro|arbitre|scheidsrechter|hakem)[:\s-]+([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜ][a-zçğıöşü]+){1,2})", metin, re.IGNORECASE)
+                    if m:
+                        return f"Resmi Hakem: {m.group(1).strip()}"
+        except Exception:
+            pass
 
     return "Henüz resmi hakem ataması açıklanmadı"
