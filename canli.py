@@ -1811,9 +1811,10 @@ else:
         try:
             _ev_k = str(satir.get("Ev Sahibi", ""))
             _dep_k = str(satir.get("Deplasman", ""))
-            _ozet_k = str(satir.get("Hizli AI Ozet", ""))
-            _mb_tercih = "MS 1" if "MS 1" in _ozet_k else ("MS 2" if "MS 2" in _ozet_k else ("MS X" if "MS X" in _ozet_k else "1X / Dengeli"))
-            _mb_guv = int(satir.get("En Guclu Guven", 65) or 65)
+            _ozet_k = f"{satir.get('🎯 Karar', '')} | {satir.get('📌 Tercih', '')} | {satir.get('📊 İhtimal & Oran', '')} | EV: {satir.get('💎 Değer (EV)', '')} | Barem: {satir.get('⚖️ Alt / Üst Barem', '')}"
+            _tercih_ham = str(satir.get("📌 Tercih", _ozet_k))
+            _mb_tercih = "PAS GEC" if "PAS GEC" in _tercih_ham else ("1X" if "(1X)" in _tercih_ham else ("X2" if "(X2)" in _tercih_ham else ("MS 1" if "MS 1" in _tercih_ham else ("MS 2" if "MS 2" in _tercih_ham else "PAS GEC"))))
+            _mb_guv = int(satir.get("En Guclu Guven", 60) or 60)
 
             @st.cache_data(ttl=300, show_spinner=False)
             def _konsey_oyu_al(motor_adi, ev_isim, dep_isim, lig_isim, ozet_veri, piyasa_veri):
@@ -1847,7 +1848,7 @@ else:
                     ham = (_c_q.get("message") or {}).get("content", "")
                 if not ham:
                     return None
-                sec = "MS 1" if "MS 1" in ham else ("MS 2" if "MS 2" in ham else ("MS X" if "MS X" in ham else _mb_tercih))
+                sec = "PAS GEC" if "PAS" in ham.upper() else ("1X" if "1X" in ham else ("X2" if "X2" in ham else ("MS 1" if "MS 1" in ham else ("MS 2" if "MS 2" in ham else _mb_tercih))))
                 import re as _re_k
                 m_g = _re_k.search(r"GUVEN:\s*(\d{2})", ham)
                 g_val = max(50, min(88, int(m_g.group(1)))) if m_g else _mb_guv
