@@ -71,25 +71,23 @@ def _canli_piyasa_oranlari_cek(odds_api_key):
 def _espn_takim_hucum_savunma(tarih_str):
     veri = dict()
     hdr = {"User-Agent": "Mozilla/5.0"}
+    u_st = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
     for y in _LIG_ESLESME.values():
-        u_kok = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
-        r = requests.get(f"{u_kok}{y}/scoreboard?dates={tarih_str}", headers=hdr, timeout=4)
+        r = requests.get(f"{u_st}{y}/standings", headers=hdr, timeout=4)
         if r.status_code != 200:
             continue
-        for ev in (r.json().get("events") or list()):
-            ev_id = str(ev.get("id") or "")
-            if not ev_id:
-                continue
-            sj = requests.get(f"{u_kok}{y}/summary?event={ev_id}", headers=hdr, timeout=4).json()
-            for fm in (sj.get("form") or list()):
-                tm = fm.get("team") or dict()
-                f_ad = str(tm.get("displayName") or "").upper()
-                tid = str(tm.get("id") or "")
-                evs = tuple(fm.get("events") or list())[:6]
-                if f_ad and evs:
-                    att_top = sum(float(e.get("homeTeamScore") or 0) if str(e.get("homeTeamId") or "") == tid else float(e.get("awayTeamScore") or 0) for e in evs)
-                    yed_top = sum(float(e.get("awayTeamScore") or 0) if str(e.get("homeTeamId") or "") == tid else float(e.get("homeTeamScore") or 0) for e in evs)
-                    veri[f_ad] = (round(att_top / len(evs), 2), round(yed_top / len(evs), 2), len(evs))
+        gruplar = r.json().get("children") or [r.json()]
+        for grp in gruplar:
+            entries = ((grp.get("standings") or dict()).get("entries") or list())
+            for ent in entries:
+                tm = ent.get("team") or dict()
+                t_ad = str(tm.get("displayName") or "").upper()
+                st_map = {str(s.get("name") or ""): float(s.get("value") or 0) for s in (ent.get("stats") or list()) if s.get("value") is not None}
+                gp = st_map.get("gamesPlayed", 0.0)
+                att = st_map.get("pointsFor", st_map.get("goalsFor", 0.0))
+                yed = st_map.get("pointsAgainst", st_map.get("goalsAgainst", 0.0))
+                if t_ad and gp >= 2 and (att > 0 or yed > 0):
+                    veri[t_ad] = (round(att / gp, 2), round(yed / gp, 2), int(gp))
     return veri
 def _kayit_orani(kayit_str):
     parcalar = tuple(int(x) for x in str(kayit_str or "").split("-") if x.isdigit())
