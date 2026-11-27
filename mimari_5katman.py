@@ -124,19 +124,26 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
             lam_dep = max(0.40, min(2.4, 1.00 + (dep_guc - ev_guc) * 1.10))
             veri_kaynagi = "Poisson + Form Modeli"
 
+        import re as _re
+        _dk_m = _re.search(r"(\d+)", str(durum_detay or ""))
+        _dk = int(_dk_m.group(1)) if _dk_m else (45 if "HT" in str(durum_detay or "").upper() else 30)
+        _kalan = max(0.08, min(0.95, (90.0 - min(88, _dk)) / 90.0)) if state == "in" else 1.0
+        _c_ev = ev_skor if state == "in" else 0
+        _c_dep = dep_skor if state == "in" else 0
+
         p1, px, p2, p_ust25 = 0.0, 0.0, 0.0, 0.0
         for g_ev in range(6):
-            pe = _poisson_olasilik(lam_ev, g_ev)
+            pe = _poisson_olasilik(lam_ev * _kalan, g_ev)
             for g_dep in range(6):
-                pd_ = _poisson_olasilik(lam_dep, g_dep)
+                pd_ = _poisson_olasilik(lam_dep * _kalan, g_dep)
                 olas = pe * pd_
-                if g_ev > g_dep:
+                if (_c_ev + g_ev) > (_c_dep + g_dep):
                     p1 += olas
-                elif g_ev == g_dep:
+                elif (_c_ev + g_ev) == (_c_dep + g_dep):
                     px += olas
                 else:
                     p2 += olas
-                if (g_ev + g_dep) >= 3:
+                if (_c_ev + _c_dep + g_ev + g_dep) >= 3:
                     p_ust25 += olas
 
         yz1 = int(round(p1 * 100))
