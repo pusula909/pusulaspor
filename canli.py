@@ -1190,7 +1190,7 @@ if gorunum == "Canli Kupon Takip":
             _g_hdr = {"User-Agent": "Mozilla/5.0"}
             _g_kok = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
             _u_ara = "https:" + chr(47) + chr(47) + "site" + "." + "web" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "common" + chr(47) + "v3" + chr(47) + "search"
-            _ar = requests.get(_u_ara, params={"query": _hv_arama, "limit": 8, "type": "team"}, headers=_g_hdr, timeout=5)
+            _ar = requests.get(_u_ara, params={"query": _hv_arama, "limit": 10}, headers=_g_hdr, timeout=5)
             if _ar.status_code == 200:
                 for _aitem in (_ar.json().get("items") or list()):
                     _t_id = str(_aitem.get("id") or "")
@@ -1200,7 +1200,8 @@ if gorunum == "Canli Kupon Takip":
                         _tr = requests.get(f"{_g_kok}{_sp_slug}/{_lg_slug}/teams/{_t_id}/schedule", headers=_g_hdr, timeout=5)
                         if _tr.status_code == 200:
                             for _tev in (_tr.json().get("events") or list()):
-                                _st_name = str((((_tev.get("competitions") or [dict()])[0].get("status") or dict()).get("type") or dict()).get("state") or "")
+                                _comp0 = next(iter(_tev.get("competitions") or list()), dict())
+                                _st_name = str(((_comp0.get("status") or dict()).get("type") or dict()).get("state") or "")
                                 if _st_name in ("pre", "in"):
                                     _t_ad = str(_tev.get("name") or "")
                                     _t_tar = str(_tev.get("date") or "")[:10]
