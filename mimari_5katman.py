@@ -69,38 +69,7 @@ def _canli_piyasa_oranlari_cek(odds_api_key):
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def _espn_takim_hucum_savunma(tarih_str):
-    veri = dict()
-    hdr = {"User-Agent": "Mozilla/5.0"}
-    for y in _LIG_ESLESME.values():
-        r = requests.get(f"https://espn.com{y}/scoreboard?dates={tarih_str}", headers=hdr, timeout=4)
-        if r.status_code != 200:
-            continue
-        for ev in (r.json().get("events") or list()):
-            ev_id = str(ev.get("id") or "")
-            if not ev_id:
-                continue
-            sj = requests.get(f"https://espn.com{y}/summary?event={ev_id}", headers=hdr, timeout=4).json()
-            for fm in (sj.get("form") or list()):
-                tm = fm.get("team") or dict()
-                f_ad = str(tm.get("displayName") or "").upper()
-                tid = str(tm.get("id") or "")
-                evs = tuple(fm.get("events") or list())[:6]
-                if f_ad and evs:
-                    att_top, yed_top, say = 0.0, 0.0, 0
-                    for e in evs:
-                        h_id = str(e.get("homeTeamId") or "")
-                        hs = float(e.get("homeTeamScore") or 0)
-                        as_ = float(e.get("awayTeamScore") or 0)
-                        if tid and h_id == tid:
-                            att_top += hs
-                            yed_top += as_
-                        else:
-                            att_top += as_
-                            yed_top += hs
-                        say += 1
-                    if say > 0:
-                        veri[f_ad] = (round(att_top / say, 2), round(yed_top / say, 2), say)
-      return veri
+    return dict()
   def _kayit_orani(kayit_str):
     parcalar = tuple(int(x) for x in str(kayit_str or "").split("-") if x.isdigit())
     if not parcalar or sum(parcalar) == 0:
