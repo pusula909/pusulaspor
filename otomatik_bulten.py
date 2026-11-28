@@ -110,17 +110,23 @@ def _el_get(t):
 
 def en_guclu_tahmini_bul(ev_ad, dep_ad, ev_rec, dep_rec, spor_turu, lig_adi):
     try:
-        rapor = beyin.mac_deger_analizi(
-            spor_turu=spor_turu,
-            lig_adi=lig_adi,
-            ev_ad=ev_ad,
-            dep_ad=dep_ad,
-            ev_rec=ev_rec,
-            dep_rec=dep_rec,
-            state="pre"
-        )
+        from mimari_5katman import bes_katman_analiz
+        odds_k = os.environ.get("ODDS_API_KEY", "").strip()
+        r5 = bes_katman_analiz(spor_turu, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre", odds_api_key=odds_k)
+        if isinstance(r5, dict):
+            tercih = str(r5.get("ana_tercih") or "")
+            karar = str(r5.get("karar_etiket") or "")
+            if "PAS GEC" in tercih or "ASKIDA" in karar:
+                return tercih, 45, karar
+            guven = int(r5.get("guven") or 60)
+            etiket = f"{karar} | {r5.get('oran_sutun', '')} | {r5.get('ev_sutun', '')} | {r5.get('barem_tercih', '')}"
+            return tercih, guven, etiket
+    except Exception:
+        pass
+    try:
+        rapor = beyin.mac_deger_analizi(spor_turu=spor_turu, lig_adi=lig_adi, ev_ad=ev_ad, dep_ad=dep_ad, ev_rec=ev_rec, dep_rec=dep_rec, state="pre")
         guven = rapor["guven"] if not rapor["tuzak_notu"] else 55
-        etiket = f"💎 Deger: {rapor['deger_puani']}/10"
+        etiket = f"Deger: {rapor['deger_puani']}/10"
         return rapor["ana_tercih"], guven, etiket
     except Exception:
         return "Form Analizi", 55, ""
