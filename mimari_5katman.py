@@ -30,7 +30,7 @@ def _normal_cdf(x, mu, sigma):
         return 1.0 if x >= mu else 0.0
     return 0.5 * (1.0 + math.erf((x - mu) / (sigma * math.sqrt(2.0))))
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=45, show_spinner=False)
 def _canli_piyasa_oranlari_cek(odds_api_key):
     if not odds_api_key:
         return dict()
@@ -365,7 +365,7 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
         karar_etiket = "⚪ PAS GEÇ (Dengeli)"
     elif askida_mi:
         karar_etiket = "🟠 ORAN ASKIDA (Teyit Et)"
-    elif b_oran and b_oran > 1.01 and ev_yuzde >= 2.0:
+    elif b_oran and b_oran >= 1.35 and ev_yuzde >= 3.0:
         karar_etiket = "🟢 DEĞERLİ FIRSAT"
     elif b_oran and b_oran > 1.01 and ev_yuzde < 0:
         karar_etiket = "🟡 FAVORİ (Oran Düşük)"
