@@ -338,12 +338,25 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
             barem_tercih = f"Barem Pas Gec (Projeksiyon: {bek_top} sayi)"
             barem_guven = 50
 
+    if spor != "Futbol":
+        _baski_etiket = ""
+        _sb_b = _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str)
+        if _sb_b:
+            if state == "pre" and (_sb_b.get("ev_eksik", 0) > 0 or _sb_b.get("dep_eksik", 0) > 0):
+                _baski_etiket = f"🩺 Eksik: {_sb_b['ev_eksik']}-{_sb_b['dep_eksik']}"
+            elif state == "in":
+                _olay_b = f" | ⚡ {_sb_b['son_olay']}" if _sb_b.get("son_olay") else ""
+                _baski_etiket = f"FG: %{_sb_b.get('ev_fg', 0):.0f}-%{ _sb_b.get('dep_fg', 0):.0f}{_olay_b}"
+
     adil_oran = round(100.0 / max(10, guven), 2)
     pas_mi = "PAS GEC" in ana_tercih
     ev_yuzde = round(((guven / 100.0) * b_oran - 1.0) * 100, 1) if (b_oran and b_oran > 1.01) else 0.0
+    askida_mi = bool(b_oran and b_oran > 1.01 and ev_yuzde > 40.0)
 
     if pas_mi:
         karar_etiket = "⚪ PAS GEÇ (Dengeli)"
+    elif askida_mi:
+        karar_etiket = "🟠 ORAN ASKIDA (Teyit Et)"
     elif b_oran and b_oran > 1.01 and ev_yuzde >= 2.0:
         karar_etiket = "🟢 DEĞERLİ FIRSAT"
     elif b_oran and b_oran > 1.01 and ev_yuzde < 0:
@@ -352,14 +365,16 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
         karar_etiket = "🔵 İSTATİSTİK ÜSTÜN"
 
     oran_sutun = f"%{guven} | Büro: {b_oran}" if (b_oran and b_oran > 1.01) else f"%{guven} | Adil: {adil_oran}"
-    ev_sutun = f"🔥 {ev_yuzde:+.1f}%" if ev_yuzde >= 2.0 else (f"⚠️ {ev_yuzde:+.1f}%" if (b_oran and b_oran > 1.01) else "—")
+    ev_sutun = f"⚠️ Askıda ({ev_yuzde:+.1f}%)" if askida_mi else (f"🔥 {ev_yuzde:+.1f}%" if ev_yuzde >= 2.0 else (f"⚠️ {ev_yuzde:+.1f}%" if (b_oran and b_oran > 1.01) else "—"))
+    _saha_ek = f" | {_baski_etiket}" if "_baski_etiket" in locals() and _baski_etiket else ""
+    barem_tam = f"{barem_tercih}{_saha_ek}"
     deger_puani = round(min(9.6, max(3.5, (guven / 10.0) - (1.8 if pas_mi else 0.0))), 1)
-    ozet_satir = f"{karar_etiket} | {ana_tercih} ({oran_sutun})"
+    ozet_satir = f"{karar_etiket} | {ana_tercih} ({oran_sutun}){_saha_ek}"
 
     return {
         "ana_tercih": ana_tercih,
         "guven": guven,
-        "barem_tercih": barem_tercih,
+        "barem_tercih": barem_tam,
         "barem_guven": barem_guven,
         "deger_puani": deger_puani,
         "ozet_satir": ozet_satir,
