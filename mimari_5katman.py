@@ -30,7 +30,7 @@ def _normal_cdf(x, mu, sigma):
         return 1.0 if x >= mu else 0.0
     return 0.5 * (1.0 + math.erf((x - mu) / (sigma * math.sqrt(2.0))))
 
-@st.cache_data(ttl=45, show_spinner=False)
+@st.cache_data(ttl=900, show_spinner=False)
 def _canli_piyasa_oranlari_cek(odds_api_key):
     if not odds_api_key:
         return dict()
@@ -100,6 +100,12 @@ def _kayit_orani(kayit_str):
     gal = next(iter(parcalar), 0)
     return max(0.15, min(0.88, gal / sum(parcalar)))
 @st.cache_data(ttl=40, show_spinner=False)
+def _am_to_dec(ml):
+    try:
+        v = float(ml)
+        return round((v / 100.0) + 1.0, 2) if v > 0 else (round((100.0 / abs(v)) + 1.0, 2) if v < 0 else 0.0)
+    except Exception:
+        return 0.0
 def _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str):
     hdr = {"User-Agent": "Mozilla/5.0"}
     u_kok = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
@@ -155,6 +161,9 @@ def _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str):
                         "ev_as": ev_as,
                         "dep_as": dep_as,
                         "taktik": taktik,
+                        "gercek_ms1": _am_to_dec(((sj.get("pickcenter") or [{}])[0].get("homeTeamOdds") or {}).get("moneyLine")),
+                        "gercek_ms2": _am_to_dec(((sj.get("pickcenter") or [{}])[0].get("awayTeamOdds") or {}).get("moneyLine")),
+                        "gercek_barem": float(((sj.get("pickcenter") or [{}])[0].get("overUnder") or 0.0)),
                         "degisiklik": degisiklik,
                         "son_olay": son_olay,
                     }
@@ -171,7 +180,14 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
     ev_st = next((v for k, v in takim_stats.items() if ev_u and (ev_u in k or k in ev_u)), None)
     dep_st = next((v for k, v in takim_stats.items() if dep_u and (dep_u in k or k in dep_u)), None)
     piyasa = next((v for (pe, pd), v in piyasa_map.items() if (ev_u in pe or pe in ev_u) and (dep_u in pd or pd in dep_u)), dict())
-
+        _sb = _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str)
+        if _sb:
+            if not piyasa.get("ms1") and _sb.get("gercek_ms1", 0) > 1.01:
+                piyasa["ms1"] = _sb["gercek_ms1"]
+            if not piyasa.get("ms2") and _sb.get("gercek_ms2", 0) > 1.01:
+                piyasa["ms2"] = _sb["gercek_ms2"]
+            if not piyasa.get("barem") and _sb.get("gercek_barem", 0) > 0:
+                piyasa["barem"] = _sb["gercek_barem"]
     ev_guc = _kayit_orani(ev_rec)
     dep_guc = _kayit_orani(dep_rec)
 
