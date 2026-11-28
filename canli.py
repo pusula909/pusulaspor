@@ -1775,7 +1775,7 @@ else:
                  st.caption(f"Lig: {k['lig']} | {k['guven']}")
                  ai_rapor = beyin.ai_karar_ve_onay(spor, k["lig"], k["ev"], k["dep"], k["ozet"], k.get("saha", ""), yol=k.get("yol", ""))
                  _temiz_ai = str(ai_rapor or "")
-                 if not _temiz_ai or "rate limit" in _temiz_ai.lower() or "yanıt detayı" in _temiz_ai.lower() or "error" in _temiz_ai.lower() or "yardımcı olamıyorum" in _temiz_ai.lower():
+                 if not _temiz_ai or any(x in _temiz_ai.lower() for x in ("rate limit", "yanit detayi", "yanıt detayı", "chatcmpl", "chat.completion", "error", "yardimci olamiyorum", "yardımcı olamıyorum")):
                      _temiz_ai = f"📊 Sistem Analizi ({k['ev']} - {k['dep']}): {k['ozet']} — Canlı veri ve olasılık motoru bu karşılaşmayı günün öne çıkan istatistiksel fırsatları arasına aldı."
                  st.info(_temiz_ai)
 
