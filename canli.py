@@ -1779,10 +1779,10 @@ else:
                 continue
 
     if maclar:
-        _firsats = [x for x in banko_havuzu if "PAS GEC" not in str(x.get("ozet", ""))] or banko_havuzu
-        en_iyi_kartlar = sorted(_firsats, key=lambda x: x["guven_int"], reverse=True)[:3]
+        _firsats = [x for x in banko_havuzu if "PAS GEC" not in str(x.get("ozet", "")) and "ASKIDA" not in str(x.get("ozet", "")) and int(x.get("guven_int", 0)) >= 62]
+        en_iyi_kartlar = sorted(_firsats, key=lambda x: (1 if "DEĞERLİ FIRSAT" in str(x.get("ozet", "")) else 0, int(x.get("guven_int", 0))), reverse=True)[:3]
         if en_iyi_kartlar:
-            st.subheader(f"{lig} | AI Bas Analist & Canli Istihbarat Onerileri")
+            st.subheader(f"🎯 Günün En Keskin {len(en_iyi_kartlar)} Seçimi (Sniper Vitrini)")
             cols = st.columns(len(en_iyi_kartlar))
             for i, k in enumerate(en_iyi_kartlar):
                 with cols[i].container(border=True):
