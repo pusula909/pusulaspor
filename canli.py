@@ -1757,32 +1757,37 @@ else:
                         banko_havuzu.append({"mac": f"{ev_ad} - {dep_ad}", "lig": aktif_lig_ad, "ev": ev_ad, "dep": dep_ad, "ozet": f"{deger_rapor['ana_tercih']} | {deger_rapor['barem_tercih']} | Deger: {deger_rapor['deger_puani']}/10", "guven": f"%{deger_rapor['guven']} | Deger: {deger_rapor['deger_puani']}/10", "guven_int": deger_rapor["deger_puani"]})
                     
                 maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": is_fav, "Dakika / Ceyrek": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Deplasman": dep_ad, "IY / Ceyrek Skorlari": iy_ceyrek_str, "Ev Form": ev_rec, "Dep Form": dep_rec, "Hizli AI Ozet": ozet_tahmin, "Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)})
-                if state in ("pre", "in") and isinstance(deger_rapor, dict):
-                    maclar[-1].update({"🎯 Karar": deger_rapor.get("karar_etiket", ozet_tahmin or "—"), "📌 Tercih": deger_rapor.get("ana_tercih", "—"), "📊 İhtimal & Oran": deger_rapor.get("oran_sutun", "—"), "💎 Değer (EV)": deger_rapor.get("ev_sutun", "—"), "⚖️ Alt / Üst Barem": f"{deger_rapor.get('barem_tercih', '—')} (%{deger_rapor.get('barem_guven', 0)})"})
-                else:
-                    maclar[-1].update({"🎯 Karar": "🏁 Maç Bitti", "📌 Tercih": "—", "📊 İhtimal & Oran": "—", "💎 Değer (EV)": "—", "⚖️ Alt / Üst Barem": "—"})
-            except Exception:
-                continue
+                _mac_tek = f"{ev_ad} vs {dep_ad}"
+            if state in ("pre", "in") and isinstance(deger_rapor, dict):
+                _ev_v = deger_rapor.get("ev_sutun", "—")
+                _brm_v = deger_rapor.get("barem_tercih", "—")
+                _db_birlesik = f"{_ev_v} | {_brm_v}" if _ev_v != "—" else _brm_v
+                maclar[-1].update({"Maç": _mac_tek, "🎯 Karar": deger_rapor.get("karar_etiket", ozet_tahmin or "—"), "📌 Tercih": deger_rapor.get("ana_tercih", "—"), "📊 İhtimal & Oran": deger_rapor.get("oran_sutun", "—"), "💎 Değer & Barem": _db_birlesik})
+            else:
+                maclar[-1].update({"Maç": _mac_tek, "🎯 Karar": "🏁 Maç Bitti", "📌 Tercih": "—", "📊 İhtimal & Oran": "—", "💎 Değer & Barem": "—"})
+        except Exception:
+            continue
 
     if maclar:
-        en_iyi_kartlar = sorted(banko_havuzu, key=lambda x: x["guven_int"], reverse=True)[:3]
+        _firsats = [x for x in banko_havuzu if "PAS GEC" not in str(x.get("ozet", ""))] or banko_havuzu
+        en_iyi_kartlar = sorted(_firsats, key=lambda x: x["guven_int"], reverse=True)[:3]
         if en_iyi_kartlar:
-         st.subheader(f"{lig} | AI Bas Analist & Canli Istihbarat Onerileri")
-         cols = st.columns(len(en_iyi_kartlar))
-         for i, k in enumerate(en_iyi_kartlar):
-             with cols[i].container(border=True):
-                 st.markdown(f"**🏆 {k['mac']}**")
-                 st.caption(f"Lig: {k['lig']} | {k['guven']}")
-                 ai_rapor = beyin.ai_karar_ve_onay(spor, k["lig"], k["ev"], k["dep"], k["ozet"], k.get("saha", ""), yol=k.get("yol", ""))
-                 _temiz_ai = str(ai_rapor or "")
-                 if not _temiz_ai or any(x in _temiz_ai.lower() for x in ("rate limit", "yanit detayi", "yanıt detayı", "chatcmpl", "chat.completion", "error", "yardimci olamiyorum", "yardımcı olamıyorum")):
-                     _temiz_ai = f"📊 Sistem Analizi ({k['ev']} - {k['dep']}): {k['ozet']} — Canlı veri ve olasılık motoru bu karşılaşmayı günün öne çıkan istatistiksel fırsatları arasına aldı."
-                 st.info(_temiz_ai)
+            st.subheader(f"{lig} | AI Bas Analist & Canli Istihbarat Onerileri")
+            cols = st.columns(len(en_iyi_kartlar))
+            for i, k in enumerate(en_iyi_kartlar):
+                with cols[i].container(border=True):
+                    st.markdown(f"**🏆 {k['mac']}**")
+                    st.caption(f"Lig: {k['lig']} | {k['guven']}")
+                    ai_rapor = beyin.ai_karar_ve_onay(spor, k["lig"], k["ev"], k["dep"], k["ozet"], k.get("saha", ""), yol=k.get("yol", ""))
+                    _temiz_ai = str(ai_rapor or "")
+                    if not _temiz_ai or any(x in _temiz_ai.lower() for x in ("rate limit", "yanit detayi", "yanıt detayı", "chatcmpl", "chat.completion", "error", "yardimci olamiyorum", "yardımcı olamıyorum")):
+                        _temiz_ai = f"📊 Sistem Analizi ({k['ev']} - {k['dep']}): {k['ozet']} — Canlı veri ve olasılık motoru bu karşılaşmayı günün öne çıkan istatistiksel fırsatları arasına aldı."
+                    st.info(_temiz_ai)
 
         st.subheader(f"{lig} | Canli Skor, IY / Ceyrek Detaylari ve AI Analiz")
         df_ham = pd.DataFrame(maclar)
-        gizlenecek = ["ID", "LigYolu", "EvID", "DepID", "State", "EvSkorInt", "DepSkorInt", "MacSecim", "Hizli AI Ozet"]
-        gosterilecek_tablo = df_ham.drop(columns=list(gizlenecek))
+        _pro_sutunlar = [c for c in ["Dakika / Ceyrek", "Maç", "Canli Skor", "🎯 Karar", "📌 Tercih", "📊 İhtimal & Oran", "💎 Değer & Barem"] if c in df_ham.columns]
+        gosterilecek_tablo = df_ham[_pro_sutunlar]
         st.dataframe(gosterilecek_tablo, use_container_width=True, hide_index=True)
         st.download_button(
             "Bu Ligin Analiz Tablosunu Excel Indir",
