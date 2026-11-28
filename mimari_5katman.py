@@ -180,14 +180,14 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
     ev_st = next((v for k, v in takim_stats.items() if ev_u and (ev_u in k or k in ev_u)), None)
     dep_st = next((v for k, v in takim_stats.items() if dep_u and (dep_u in k or k in dep_u)), None)
     piyasa = next((v for (pe, pd), v in piyasa_map.items() if (ev_u in pe or pe in ev_u) and (dep_u in pd or pd in dep_u)), dict())
-        _sb = _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str)
-        if _sb:
-            if not piyasa.get("ms1") and _sb.get("gercek_ms1", 0) > 1.01:
-                piyasa["ms1"] = _sb["gercek_ms1"]
-            if not piyasa.get("ms2") and _sb.get("gercek_ms2", 0) > 1.01:
-                piyasa["ms2"] = _sb["gercek_ms2"]
-            if not piyasa.get("barem") and _sb.get("gercek_barem", 0) > 0:
-                piyasa["barem"] = _sb["gercek_barem"]
+    _sb = _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str)
+    if _sb:
+        if not piyasa.get("ms1") and _sb.get("gercek_ms1", 0) > 1.01:
+            piyasa["ms1"] = _sb["gercek_ms1"]
+        if not piyasa.get("ms2") and _sb.get("gercek_ms2", 0) > 1.01:
+            piyasa["ms2"] = _sb["gercek_ms2"]
+        if not piyasa.get("barem") and _sb.get("gercek_barem", 0) > 0:
+            piyasa["barem"] = _sb["gercek_barem"]
     ev_guc = _kayit_orani(ev_rec)
     dep_guc = _kayit_orani(dep_rec)
 
