@@ -394,12 +394,13 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
     else:
         karar_etiket = "🔵 İSTATİSTİK ÜSTÜN"
 
-    oran_sutun = f"%{guven} | Büro: {b_oran}" if (b_oran and b_oran > 1.01) else f"%{guven} | Adil: {adil_oran}"
-    ev_sutun = f"⚠️ Askıda ({ev_yuzde:+.1f}%)" if askida_mi else (f"🔥 {ev_yuzde:+.1f}%" if ev_yuzde >= 2.0 else (f"⚠️ {ev_yuzde:+.1f}%" if (b_oran and b_oran > 1.01) else "—"))
-    _saha_ek = f" | {_baski_etiket}" if "_baski_etiket" in locals() and _baski_etiket else ""
-    barem_tam = f"{barem_tercih}{_saha_ek}"
+    oran_sutun = f"%{guven} · {b_oran}" if (b_oran and b_oran > 1.01) else f"%{guven} · Adil {adil_oran}"
+    ev_sutun = "⚠️ Askıda" if askida_mi else (f"🔥 {ev_yuzde:+.1f}%" if ev_yuzde >= 2.0 else (f"{ev_yuzde:+.1f}%" if (b_oran and b_oran > 1.01) else "—"))
+    _kisa_brm = barem_tercih.replace(" (Beklenti:", " (").replace(" gol)", "g)").replace(" sayi)", "s)").replace("Barem Pas Gec", "Pas").replace("Canli Pas Gec", "Pas").replace("Canli ", "")
+    _kisa_saha = _baski_etiket.split(" | ⚡")[0].replace("Şut:", "Ş:").replace(" K:", " K:") if ("_baski_etiket" in locals() and _baski_etiket) else ""
+    barem_tam = f"{_kisa_brm} · {_kisa_saha}" if _kisa_saha else _kisa_brm
     deger_puani = round(min(9.6, max(3.5, (guven / 10.0) - (1.8 if pas_mi else 0.0))), 1)
-    ozet_satir = f"{karar_etiket} | {ana_tercih} ({oran_sutun}){_saha_ek}"
+    ozet_satir = f"{karar_etiket} | {ana_tercih} ({oran_sutun}) | {barem_tam}"
 
     return {
         "ana_tercih": ana_tercih,
