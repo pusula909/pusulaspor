@@ -1791,6 +1791,11 @@ else:
         _pro_sutunlar = [c for c in ["Dakika / Ceyrek", "Maç", "Canli Skor", "🎯 Karar", "📌 Tercih", "📊 İhtimal & Oran", "💎 Değer & Barem"] if c in df_ham.columns]
         gosterilecek_tablo = df_ham[_pro_sutunlar]
         st.dataframe(gosterilecek_tablo, use_container_width=True, hide_index=True)
+        if st.toggle("⚡ Canlı Otomatik Akış (30 Saniyede Bir Yenile)", value=True):
+            import time as _t_auto
+            st.caption("🔄 Canlı saha akışı, ilk 11 / kadro ve +EV oranları her 30 saniyede bir otomatik güncelleniyor...")
+            _t_auto.sleep(30)
+            st.rerun()
         st.download_button(
             "Bu Ligin Analiz Tablosunu Excel Indir",
             data=excel_dosyasi_olustur(gosterilecek_tablo),
