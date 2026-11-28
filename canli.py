@@ -1763,7 +1763,7 @@ else:
                     _brm_v = deger_rapor.get("barem_tercih", "—")
                     _db_birlesik = f"{_ev_v} | {_brm_v}" if _ev_v != "—" else _brm_v
                     maclar[-1].update({"Maç": _mac_tek, "🎯 Karar": deger_rapor.get("karar_etiket", ozet_tahmin or "—"), "📌 Tercih": deger_rapor.get("ana_tercih", "—"), "📊 İhtimal & Oran": deger_rapor.get("oran_sutun", "—"), "💎 Değer & Barem": _db_birlesik})
-                else:
+                    else:
                 maclar[-1].update({"Maç": _mac_tek, "🎯 Karar": "🏁 Maç Bitti", "📌 Tercih": "—", "📊 İhtimal & Oran": "—", "💎 Değer & Barem": "—"})
         except Exception:
             continue
