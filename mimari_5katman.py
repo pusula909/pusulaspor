@@ -265,9 +265,9 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
         _dep_eks = int((_sb or dict()).get("dep_eksik", 0))
         _denk_mac = (state == "pre" and abs(lam_ev - lam_dep) < 0.45)
 
-        if yz1 >= 70 and _ev_eks < 2 and not _denk_mac:
+        if yz1 >= 62 and _ev_eks < 2 and not _denk_mac:
             ana_tercih, guven, b_oran = f"{ev_ad} Kazanir (MS 1)", yz1, piyasa.get("ms1", 0.0)
-        elif yz2 >= 70 and _dep_eks < 2 and not _denk_mac:
+        elif yz2 >= 62 and _dep_eks < 2 and not _denk_mac:
             ana_tercih, guven, b_oran = f"{dep_ad} Kazanir (MS 2)", yz2, piyasa.get("ms2", 0.0)
         elif (yz1 + yzx) >= 75 and yz1 >= 42 and _ev_eks < 2 and not _denk_mac:
             _cs1x = round(1.0 / ((1.0 / piyasa["ms1"]) + (1.0 / piyasa["msx"])), 2) if piyasa.get("ms1", 0) > 1.01 and piyasa.get("msx", 0) > 1.01 else 0.0
