@@ -797,36 +797,45 @@ def excel_dosyasi_olustur(df):
 
 if gorunum == "Canli Kupon Takip":
     st.subheader("Canli Kombine Kupon Olusturucu & Anlik Takip")
-    c1, c2, c3 = st.columns(3)
-    k_spor = c1.selectbox("Spor", ("Basketbol", "Futbol"), key="k_spor")
-    k_lig = c2.selectbox("Lig", list(TUM_LIGLER[k_spor].keys()), key="k_lig")
-    k_yol = TUM_LIGLER[k_spor][k_lig]
+    c1, c2, c_ara, c3 = st.columns([1.2, 1.5, 1.5, 2.2])
+    k_spor = c1.selectbox("Spor", ("Tumu (Futbol + Basketbol)", "Basketbol", "Futbol"), key="k_spor")
+    _lig_secenekleri = ["Tumu (Butun Ligler)"] if k_spor.startswith("Tumu") else (["Tumu (Butun Ligler)"] + list(TUM_LIGLER[k_spor].keys()))
+    k_lig = c2.selectbox("Lig", _lig_secenekleri, key="k_lig")
+    k_arama = c_ara.text_input("🔍 Takım / Maç Ara", placeholder="Örn: Galatasaray, Lakers...", key="k_arama").strip().lower()
 
     k_maclar_veri = list()
-    try:
-        resp = (
-            _el_get(tarih)
-            if k_yol == "euroleague_resmi"
-            else requests.get(f"{url_basi}{k_yol}/scoreboard?dates={tarih}", headers=basliklar, timeout=6).json()
-        )
-        for ev in resp.get("events", list()):
-            comp = ev.get("competitions", list(({},))).pop(0)
-            takimlar = comp.get("competitors", list())
-            if len(takimlar) >= 2:
-                ev_t = next((t for t in takimlar if t.get("homeAway") == "home"), takimlar.pop(0))
-                dep_t = next((t for t in takimlar if t.get("homeAway") == "away"), takimlar.pop(0))
-                ev_ad = ev_t.get("team", {}).get("displayName", "Ev")
-                dep_ad = dep_t.get("team", {}).get("displayName", "Dep")
-                k_maclar_veri.append(
-                    {
+    _hedef_liste = []
+    for _sp_iter, _lg_sozluk in TUM_LIGLER.items():
+        if not k_spor.startswith("Tumu") and _sp_iter != k_spor:
+            continue
+        for _lg_ad_it, _lg_yol_it in _lg_sozluk.items():
+            if k_lig != "Tumu (Butun Ligler)" and _lg_ad_it != k_lig:
+                continue
+            _hedef_liste.append((_sp_iter, _lg_ad_it, _lg_yol_it))
+
+    for _sp_it, _lg_ad_it, k_yol in _hedef_liste:
+        try:
+            resp = _el_get(tarih) if k_yol == "euroleague_resmi" else requests.get(f"{url_basi}{k_yol}/scoreboard?dates={tarih}", headers=basliklar, timeout=5).json()
+            for ev in resp.get("events", list()):
+                comp = ev.get("competitions", list(())).pop(0)
+                takimlar = comp.get("competitors", list())
+                if len(takimlar) >= 2:
+                    ev_t = next((t for t in takimlar if t.get("homeAway") == "home"), takimlar.pop(0))
+                    dep_t = next((t for t in takimlar if t.get("homeAway") == "away"), takimlar.pop(0))
+                    ev_ad = ev_t.get("team", ()).get("displayName", "Ev")
+                    dep_ad = dep_t.get("team", ()).get("displayName", "Dep")
+                    if k_arama and (k_arama not in ev_ad.lower()) and (k_arama not in dep_ad.lower()) and (k_arama not in _lg_ad_it.lower()):
+                        continue
+                    k_maclar_veri.append({
                         "id": ev.get("id"),
                         "yol": k_yol,
-                        "spor": k_spor,
+                        "spor": _sp_it,
                         "ev": ev_ad,
                         "dep": dep_ad,
-                        "etiket": f"{ev_ad} vs {dep_ad}",
-                    }
-                )
+                        "etiket": f"[{_lg_ad_it}] {ev_ad} vs {dep_ad}" if k_lig == "Tumu (Butun Ligler)" else f"{ev_ad} vs {dep_ad}",
+                    })
+        except Exception:
+            continue
     except Exception:
         pass
 
