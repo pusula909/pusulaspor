@@ -1767,8 +1767,8 @@ else:
                 maclar[-1]["📌 Tercih"] = "—" if _bitti_mi else deger_rapor.get("ana_tercih", "—")
                 maclar[-1]["📊 İhtimal & Oran"] = "—" if _bitti_mi else deger_rapor.get("oran_sutun", "—")
                 maclar[-1]["💎 Değer & Barem"] = _db_birlesik
-        except Exception:
-            continue
+            except Exception:
+                continue
 
     if maclar:
         _firsats = [x for x in banko_havuzu if "PAS GEC" not in str(x.get("ozet", ""))] or banko_havuzu
