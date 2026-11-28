@@ -35,7 +35,7 @@ def _canli_piyasa_oranlari_cek(odds_api_key):
     if not odds_api_key:
         return dict()
     sozluk = dict()
-    spor_kodlari = ("soccer_turkey_super_league", "soccer_epl", "soccer_spain_la_liga", "soccer_spain_segunda_division", "soccer_italy_serie_a", "soccer_germany_bundesliga", "soccer_france_ligue_one", "soccer_netherlands_eredivisie", "soccer_belgium_first_div", "soccer_portugal_primeira_liga", "soccer_uefa_champs_league", "soccer_uefa_europa_league", "basketball_nba", "basketball_euroleague")
+    spor_kodlari = ("basketball_nba", "basketball_euroleague", "soccer_turkey_super_league", "soccer_epl", "soccer_spain_la_liga", "soccer_spain_segunda_division", "soccer_italy_serie_a", "soccer_germany_bundesliga", "soccer_france_ligue_one", "soccer_netherlands_eredivisie", "soccer_portugal_primeira_liga", "soccer_belgium_first_div")
     for sk in spor_kodlari:
         try:
             _o_kok = "https:" + chr(47) + chr(47) + "api" + "." + "the-odds-api" + "." + "com" + chr(47) + "v4" + chr(47) + "sports" + chr(47)
@@ -302,13 +302,19 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
         bek_fark = bek_ev - bek_dep
         bek_top = round(bek_ev + bek_dep, 1)
         _b_kalan = 1.0
-        if state == "in":
+        if state == "in" and (ev_skor + dep_skor) > 0:
             _dm_b = str(durum_detay or "").upper()
-            _b_kalan = 0.22 if ("4TH" in _dm_b or "Q4" in _dm_b or "4P" in _dm_b or "OT" in _dm_b) else (0.48 if ("3RD" in _dm_b or "Q3" in _dm_b or "3P" in _dm_b) else (0.50 if ("HT" in _dm_b or "HALF" in _dm_b) else (0.74 if ("2ND" in _dm_b or "Q2" in _dm_b or "2P" in _dm_b) else 0.85)))
-            bek_fark = (ev_skor - dep_skor) + (bek_fark * _b_kalan)
-            bek_top = round((ev_skor + dep_skor) + (bek_top * _b_kalan), 1)
-            sigma_fark = max(4.5, round(sigma_fark * math.sqrt(_b_kalan), 1))
-            sigma_top = max(5.5, round(sigma_top * math.sqrt(_b_kalan), 1))
+            _gecen_dk = 42.0 if ("4P" in _dm_b or "4TH" in _dm_b or "Q4" in _dm_b) else (30.0 if ("3P" in _dm_b or "3RD" in _dm_b or "Q3" in _dm_b) else (24.0 if ("HT" in _dm_b or "HALF" in _dm_b) else (18.0 if ("2P" in _dm_b or "2ND" in _dm_b or "Q2" in _dm_b) else 8.0)))
+            _toplam_sure = 48.0 if is_nba else 40.0
+            _kalan_dk = max(2.0, _toplam_sure - _gecen_dk)
+            _canli_hiz = (ev_skor + dep_skor) / _gecen_dk
+            _sezon_hiz = (bek_ev + bek_dep) / _toplam_sure
+            _karma_hiz = (_canli_hiz * 0.65) + (_sezon_hiz * 0.35)
+            bek_top = round((ev_skor + dep_skor) + (_karma_hiz * _kalan_dk), 1)
+            _b_kalan = _kalan_dk / _toplam_sure
+            bek_fark = (ev_skor - dep_skor) + ((bek_ev - bek_dep) * _b_kalan)
+            sigma_fark = max(4.0, round(sigma_fark * math.sqrt(_b_kalan), 1))
+            sigma_top = max(5.0, round(sigma_top * math.sqrt(_b_kalan), 1))
 
         p1 = 1.0 - _normal_cdf(0.0, bek_fark, sigma_fark)
         yz1 = int(round(p1 * 100))
@@ -324,7 +330,7 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
         piyasa_hat = float(piyasa.get("barem") or 0.0)
         aktif_hat = piyasa_hat if piyasa_hat > 0 else (round(bek_top - 3.5) + 0.5 if bek_top >= (231.0 if is_nba else 168.0) else (round(bek_top + 3.5) + 0.5 if bek_top <= (221.0 if is_nba else 158.0) else 0.0))
         if state == "in" and (ev_skor + dep_skor) > 0:
-            canli_hat = piyasa_hat if piyasa_hat > 0 else (round((ev_skor + dep_skor) + ((bek_ev + bek_dep) * _b_kalan)) - 0.5)
+            canli_hat = piyasa_hat if piyasa_hat > 0 else (round(bek_ev + bek_dep) - 0.5)
             _p_cu = 1.0 - _normal_cdf(canli_hat, bek_top, sigma_top)
             _yz_cu = int(round(_p_cu * 100))
             if _yz_cu >= 56:
