@@ -836,15 +836,14 @@ if gorunum == "Canli Kupon Takip":
                     })
         except Exception:
             continue
-    except Exception:
-        pass
+    
 
     if k_maclar_veri:
         secilen_k_etiket = c3.selectbox("Mac Sec", list(m["etiket"] for m in k_maclar_veri), key="k_mac")
         secilen_k_obj = next(m for m in k_maclar_veri if m["etiket"] == secilen_k_etiket)
         t_col1, t_col2 = st.columns(2)
 
-        if k_spor == "Futbol":
+        if secilen_k_obj["spor"] == "Futbol":
             secenekler = (
                 "MS 1",
                 "MS 0",
