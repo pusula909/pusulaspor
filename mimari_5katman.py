@@ -120,6 +120,9 @@ def _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str):
                 inj_list = (sj.get("injuries") or list())
                 ev_eksik = len((inj_list[0].get("injuries") or list())) if len(inj_list) >= 1 else 0
                 dep_eksik = len((inj_list[1].get("injuries") or list())) if len(inj_list) >= 2 else 0
+                r_list = (sj.get("rosters") or list())
+                ev_as = sum(1 for p in (r_list[0].get("roster") or list()) if p.get("starter")) if len(r_list) >= 1 else 0
+                dep_as = sum(1 for p in (r_list[1].get("roster") or list()) if p.get("starter")) if len(r_list) >= 2 else 0
 
                 if len(t_list) >= 2:
                     s_ev = {str(x.get("name") or ""): float(str(x.get("displayValue") or "0").replace("%", "")) for x in (t_list[0].get("statistics") or list()) if str(x.get("displayValue") or "0").replace("%", "").replace(".", "").replace("-", "").isdigit()}
@@ -134,6 +137,8 @@ def _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str):
                         txt_t = str(ke.get("shortText") or ke.get("text") or "")[:36]
                         if txt_t:
                             son_olay = f"{dk_t} {txt_t}".strip()
+                    top_ev = s_ev.get("possessionPct", 50.0)
+                    taktik = "⚡ Yüksek Pres" if (top_ev >= 57 or s_ev.get("fieldGoalPct", 45) >= 50) else ("🛡️ Savunma Kontra" if (top_ev <= 43 or s_dep.get("possessionPct", 50) >= 57) else "🎯 Dengeli Taktik")
                     return {
                         "ev_isabet": s_ev.get("shotsOnTarget", s_ev.get("totalShots", 0.0)),
                         "dep_isabet": s_dep.get("shotsOnTarget", s_dep.get("totalShots", 0.0)),
@@ -141,12 +146,15 @@ def _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str):
                         "dep_korner": s_dep.get("wonCorners", 0.0),
                         "ev_kirmizi": s_ev.get("redCards", 0.0),
                         "dep_kirmizi": s_dep.get("redCards", 0.0),
-                        "ev_top": s_ev.get("possessionPct", 50.0),
+                        "ev_top": top_ev,
                         "dep_top": s_dep.get("possessionPct", 50.0),
                         "ev_fg": s_ev.get("fieldGoalPct", 45.0),
                         "dep_fg": s_dep.get("fieldGoalPct", 45.0),
                         "ev_eksik": ev_eksik,
                         "dep_eksik": dep_eksik,
+                        "ev_as": ev_as,
+                        "dep_as": dep_as,
+                        "taktik": taktik,
                         "degisiklik": degisiklik,
                         "son_olay": son_olay,
                     }
