@@ -99,12 +99,12 @@ def _kayit_orani(kayit_str):
         return 0.50
     gal = next(iter(parcalar), 0)
     return max(0.15, min(0.88, gal / sum(parcalar)))
-@st.cache_data(ttl=45, show_spinner=False)
+@st.cache_data(ttl=40, show_spinner=False)
 def _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str):
     hdr = {"User-Agent": "Mozilla/5.0"}
     u_kok = "https:" + chr(47) + chr(47) + "site" + "." + "api" + "." + "espn" + "." + "com" + chr(47) + "apis" + chr(47) + "site" + chr(47) + "v2" + chr(47) + "sports" + chr(47)
     yol = _LIG_ESLESME.get(lig_adi, "")
-    if not yol or "soccer" not in yol:
+    if not yol:
         return None
     try:
         r = requests.get(f"{u_kok}{yol}/scoreboard?dates={tarih_str}", headers=hdr, timeout=4)
@@ -117,9 +117,23 @@ def _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str):
                 ev_id = str(ev.get("id") or "")
                 sj = requests.get(f"{u_kok}{yol}/summary?event={ev_id}", headers=hdr, timeout=4).json()
                 t_list = ((sj.get("boxscore") or dict()).get("teams") or list())
+                inj_list = (sj.get("injuries") or list())
+                ev_eksik = len((inj_list[0].get("injuries") or list())) if len(inj_list) >= 1 else 0
+                dep_eksik = len((inj_list[1].get("injuries") or list())) if len(inj_list) >= 2 else 0
+
                 if len(t_list) >= 2:
-                    s_ev = {str(x.get("name") or ""): float(x.get("displayValue") or 0) for x in (t_list[0].get("statistics") or list()) if str(x.get("displayValue") or "").replace(".", "").isdigit()}
-                    s_dep = {str(x.get("name") or ""): float(x.get("displayValue") or 0) for x in (t_list[1].get("statistics") or list()) if str(x.get("displayValue") or "").replace(".", "").isdigit()}
+                    s_ev = {str(x.get("name") or ""): float(str(x.get("displayValue") or "0").replace("%", "")) for x in (t_list[0].get("statistics") or list()) if str(x.get("displayValue") or "0").replace("%", "").replace(".", "").replace("-", "").isdigit()}
+                    s_dep = {str(x.get("name") or ""): float(str(x.get("displayValue") or "0").replace("%", "")) for x in (t_list[1].get("statistics") or list()) if str(x.get("displayValue") or "0").replace("%", "").replace(".", "").replace("-", "").isdigit()}
+                    degisiklik = 0
+                    son_olay = ""
+                    for ke in (sj.get("keyEvents") or list()):
+                        tip = str((ke.get("type") or dict()).get("text") or "").lower()
+                        if "sub" in tip:
+                            degisiklik += 1
+                        dk_t = str((ke.get("clock") or dict()).get("displayValue") or "")
+                        txt_t = str(ke.get("shortText") or ke.get("text") or "")[:36]
+                        if txt_t:
+                            son_olay = f"{dk_t} {txt_t}".strip()
                     return {
                         "ev_isabet": s_ev.get("shotsOnTarget", s_ev.get("totalShots", 0.0)),
                         "dep_isabet": s_dep.get("shotsOnTarget", s_dep.get("totalShots", 0.0)),
@@ -127,6 +141,14 @@ def _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str):
                         "dep_korner": s_dep.get("wonCorners", 0.0),
                         "ev_kirmizi": s_ev.get("redCards", 0.0),
                         "dep_kirmizi": s_dep.get("redCards", 0.0),
+                        "ev_top": s_ev.get("possessionPct", 50.0),
+                        "dep_top": s_dep.get("possessionPct", 50.0),
+                        "ev_fg": s_ev.get("fieldGoalPct", 45.0),
+                        "dep_fg": s_dep.get("fieldGoalPct", 45.0),
+                        "ev_eksik": ev_eksik,
+                        "dep_eksik": dep_eksik,
+                        "degisiklik": degisiklik,
+                        "son_olay": son_olay,
                     }
     except Exception:
         pass
