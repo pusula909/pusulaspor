@@ -1758,13 +1758,15 @@ else:
                     
                 maclar.append({"ID": mac_id, "Lig": aktif_lig_ad, "LigYolu": aktif_yol, "EvID": ev_id, "DepID": dep_id, "State": state, "EvSkorInt": ev_s_int, "DepSkorInt": dep_s_int, "MacSecim": f"{ev_ad} vs {dep_ad}", "Fav": is_fav, "Dakika / Ceyrek": durum_gosterim, "Ev Sahibi": ev_ad, "Canli Skor": skor_gosterim, "Deplasman": dep_ad, "IY / Ceyrek Skorlari": iy_ceyrek_str, "Ev Form": ev_rec, "Dep Form": dep_rec, "Hizli AI Ozet": ozet_tahmin, "Canli Firsat": canli_firsat_etiketi_uret(spor, state, durum_detay, ev_s_int, dep_s_int, ev_rec, dep_rec)})
                 _mac_tek = f"{ev_ad} vs {dep_ad}"
-                if state in ("pre", "in") and isinstance(deger_rapor, dict):
-                    _ev_v = deger_rapor.get("ev_sutun", "—")
-                    _brm_v = deger_rapor.get("barem_tercih", "—")
-                    _db_birlesik = f"{_ev_v} | {_brm_v}" if _ev_v != "—" else _brm_v
-                    maclar[-1].update({"Maç": _mac_tek, "🎯 Karar": deger_rapor.get("karar_etiket", ozet_tahmin or "—"), "📌 Tercih": deger_rapor.get("ana_tercih", "—"), "📊 İhtimal & Oran": deger_rapor.get("oran_sutun", "—"), "💎 Değer & Barem": _db_birlesik})
-                    else:
-                maclar[-1].update({"Maç": _mac_tek, "🎯 Karar": "🏁 Maç Bitti", "📌 Tercih": "—", "📊 İhtimal & Oran": "—", "💎 Değer & Barem": "—"})
+                _bitti_mi = state not in ("pre", "in") or not isinstance(deger_rapor, dict)
+                _ev_v = "—" if _bitti_mi else deger_rapor.get("ev_sutun", "—")
+                _brm_v = "—" if _bitti_mi else deger_rapor.get("barem_tercih", "—")
+                _db_birlesik = "—" if _bitti_mi else (f"{_ev_v} | {_brm_v}" if _ev_v != "—" else _brm_v)
+                maclar[-1]["Maç"] = _mac_tek
+                maclar[-1]["🎯 Karar"] = "🏁 Maç Bitti" if _bitti_mi else deger_rapor.get("karar_etiket", ozet_tahmin or "—")
+                maclar[-1]["📌 Tercih"] = "—" if _bitti_mi else deger_rapor.get("ana_tercih", "—")
+                maclar[-1]["📊 İhtimal & Oran"] = "—" if _bitti_mi else deger_rapor.get("oran_sutun", "—")
+                maclar[-1]["💎 Değer & Barem"] = _db_birlesik
         except Exception:
             continue
 
