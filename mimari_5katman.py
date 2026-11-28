@@ -85,10 +85,13 @@ def _espn_takim_hucum_savunma(tarih_str):
                 t_ad = str(tm.get("displayName") or "").upper()
                 st_map = {str(s.get("name") or ""): float(s.get("value") or 0) for s in (ent.get("stats") or list()) if s.get("value") is not None}
                 gp = st_map.get("gamesPlayed", 0.0)
-                att = st_map.get("pointsFor", st_map.get("goalsFor", 0.0))
-                yed = st_map.get("pointsAgainst", st_map.get("goalsAgainst", 0.0))
-                if t_ad and gp >= 2 and (att > 0 or yed > 0):
-                    veri[t_ad] = (round(att / gp, 2), round(yed / gp, 2), int(gp))
+                if "avgPointsFor" in st_map and "avgPointsAgainst" in st_map and st_map["avgPointsFor"] > 0:
+                    veri[t_ad] = (round(st_map["avgPointsFor"], 2), round(st_map["avgPointsAgainst"], 2), max(2, int(gp)))
+                else:
+                    att = st_map.get("pointsFor", st_map.get("goalsFor", 0.0))
+                    yed = st_map.get("pointsAgainst", st_map.get("goalsAgainst", 0.0))
+                    if t_ad and gp >= 2 and (att > 0 or yed > 0):
+                        veri[t_ad] = (round(att / gp, 2), round(yed / gp, 2), int(gp))
     return veri
 def _kayit_orani(kayit_str):
     parcalar = tuple(int(x) for x in str(kayit_str or "").split("-") if x.isdigit())
@@ -259,6 +262,15 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
 
         bek_fark = bek_ev - bek_dep
         bek_top = round(bek_ev + bek_dep, 1)
+        _b_kalan = 1.0
+        if state == "in":
+            _dm_b = str(durum_detay or "").upper()
+            _b_kalan = 0.22 if ("4TH" in _dm_b or "Q4" in _dm_b or "OT" in _dm_b) else (0.48 if ("3RD" in _dm_b or "Q3" in _dm_b) else (0.50 if "HT" in _dm_b else (0.74 if ("2ND" in _dm_b or "Q2" in _dm_b) else 0.85)))
+            bek_fark = (ev_skor - dep_skor) + (bek_fark * _b_kalan)
+            bek_top = round((ev_skor + dep_skor) + (bek_top * _b_kalan), 1)
+            sigma_fark = max(4.5, round(sigma_fark * math.sqrt(_b_kalan), 1))
+            sigma_top = max(5.5, round(sigma_top * math.sqrt(_b_kalan), 1))
+
         p1 = 1.0 - _normal_cdf(0.0, bek_fark, sigma_fark)
         yz1 = int(round(p1 * 100))
         yz2 = max(5, 100 - yz1)
@@ -273,9 +285,15 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
         piyasa_hat = float(piyasa.get("barem") or 0.0)
         aktif_hat = piyasa_hat if piyasa_hat > 0 else (round(bek_top - 3.5) + 0.5 if bek_top >= (231.0 if is_nba else 168.0) else (round(bek_top + 3.5) + 0.5 if bek_top <= (221.0 if is_nba else 158.0) else 0.0))
         if state == "in" and (ev_skor + dep_skor) > 0:
-            canli_hat = round(bek_top) - 0.5
-            barem_tercih = f"Canli {canli_hat} (Projeksiyon: {bek_top})"
-            barem_guven = 66
+            canli_hat = piyasa_hat if piyasa_hat > 0 else (round((ev_skor + dep_skor) + ((bek_ev + bek_dep) * _b_kalan)) - 0.5)
+            _p_cu = 1.0 - _normal_cdf(canli_hat, bek_top, sigma_top)
+            _yz_cu = int(round(_p_cu * 100))
+            if _yz_cu >= 56:
+                barem_tercih, barem_guven = f"Canli {canli_hat} UST (Proj: {bek_top})", _yz_cu
+            elif (100 - _yz_cu) >= 56:
+                barem_tercih, barem_guven = f"Canli {canli_hat} ALT (Proj: {bek_top})", (100 - _yz_cu)
+            else:
+                barem_tercih, barem_guven = f"Canli Pas Gec ({canli_hat} | Proj: {bek_top})", max(_yz_cu, 100 - _yz_cu)
         elif aktif_hat > 0:
             p_ust = 1.0 - _normal_cdf(aktif_hat, bek_top, sigma_top)
             yz_u = int(round(p_ust * 100))
