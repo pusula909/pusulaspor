@@ -261,20 +261,22 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
         yz_alt = max(5, 100 - yz_ust)
         bek_gol = round(lam_ev + lam_dep, 2)
 
-        if yz1 >= 56:
+        _ev_eks = int((_sb or dict()).get("ev_eksik", 0))
+        _dep_eks = int((_sb or dict()).get("dep_eksik", 0))
+        _denk_mac = (state == "pre" and abs(lam_ev - lam_dep) < 0.45)
+
+        if yz1 >= 70 and _ev_eks < 2 and not _denk_mac:
             ana_tercih, guven, b_oran = f"{ev_ad} Kazanir (MS 1)", yz1, piyasa.get("ms1", 0.0)
-        elif yz2 >= 55:
+        elif yz2 >= 70 and _dep_eks < 2 and not _denk_mac:
             ana_tercih, guven, b_oran = f"{dep_ad} Kazanir (MS 2)", yz2, piyasa.get("ms2", 0.0)
-        
-        elif (yz1 + yzx) >= 74 and yz1 >= 40:
-            _cs1x = round(1.0 / ((1.0 / piyasa["ms1"]) + (1.0 / piyasa["msx"])), 2) if piyasa.get("ms1", 0) > 1 and piyasa.get("msx", 0) > 1 else 0.0
-            ana_tercih, guven, b_oran = f"{ev_ad} Yenilmez (1X)", min(82, yz1 + yzx), _cs1x
-        elif (yz2 + yzx) >= 74 and yz2 >= 40:
-            _csx2 = round(1.0 / ((1.0 / piyasa["ms2"]) + (1.0 / piyasa["msx"])), 2) if piyasa.get("ms2", 0) > 1 and piyasa.get("msx", 0) > 1 else 0.0
-            ana_tercih, guven, b_oran = f"{dep_ad} Yenilmez (X2)", min(82, yz2 + yzx), _csx2
+        elif (yz1 + yzx) >= 75 and yz1 >= 42 and _ev_eks < 2 and not _denk_mac:
+            _cs1x = round(1.0 / ((1.0 / piyasa["ms1"]) + (1.0 / piyasa["msx"])), 2) if piyasa.get("ms1", 0) > 1.01 and piyasa.get("msx", 0) > 1.01 else 0.0
+            ana_tercih, guven, b_oran = f"{ev_ad} Yenilmez (1X)", min(84, yz1 + yzx), _cs1x
+        elif (yz2 + yzx) >= 75 and yz2 >= 42 and _dep_eks < 2 and not _denk_mac:
+            _cs2x = round(1.0 / ((1.0 / piyasa["ms2"]) + (1.0 / piyasa["msx"])), 2) if piyasa.get("ms2", 0) > 1.01 and piyasa.get("msx", 0) > 1.01 else 0.0
+            ana_tercih, guven, b_oran = f"{dep_ad} Yenilmez (X2)", min(84, yz2 + yzx), _cs2x
         else:
             ana_tercih, guven, b_oran = f"PAS GEC (MS1:%{yz1} X:%{yzx} MS2:%{yz2})", max(yz1, yzx, yz2), 0.0
-
         if state == "in":
             canli_hat = (ev_skor + dep_skor) + 0.5
             _kalan_gol = round(bek_gol * _kalan, 2)
