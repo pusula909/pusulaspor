@@ -242,7 +242,7 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
         p1, px, p2, p_ust25 = 0.0, 0.0, 0.0, 0.0
         for g_ev in range(9):
             pe = _poisson_olasilik(lam_ev * _kalan, g_ev)
-            for g_dep in range(6):
+            for g_dep in range(9):
                 pd_ = _poisson_olasilik(lam_dep * _kalan, g_dep)
                 olas = pe * pd_
                 if (_c_ev + g_ev) > (_c_dep + g_dep):
