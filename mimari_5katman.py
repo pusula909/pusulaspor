@@ -180,11 +180,18 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
             lam_dep = max(0.40, min(2.4, 1.00 + (dep_guc - ev_guc) * 1.10))
             veri_kaynagi = "Poisson + Form Modeli"
         _baski_etiket = ""
-        if state == "in":
-            _sb = _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str)
-            if _sb:
-                _ev_guc = 1.0 + min(0.35, (_sb["ev_isabet"] * 0.04) + (_sb["ev_korner"] * 0.015))
-                _dep_guc = 1.0 + min(0.35, (_sb["dep_isabet"] * 0.04) + (_sb["dep_korner"] * 0.015))
+        _sb = _canli_saha_baski_getir(lig_adi, ev_ad, dep_ad, tarih_str)
+        if _sb:
+            if _sb.get("ev_eksik", 0) > 0:
+                lam_ev = round(lam_ev * max(0.75, 1.0 - (_sb["ev_eksik"] * 0.04)), 2)
+            if _sb.get("dep_eksik", 0) > 0:
+                lam_dep = round(lam_dep * max(0.75, 1.0 - (_sb["dep_eksik"] * 0.04)), 2)
+            if state == "pre" and (_sb.get("ev_eksik", 0) > 0 or _sb.get("dep_eksik", 0) > 0):
+                _baski_etiket = f"🩺 Eksik: {_sb['ev_eksik']}-{_sb['dep_eksik']}"
+            elif state == "in":
+                _top_fark = (_sb.get("ev_top", 50.0) - 50.0) * 0.004
+                _ev_guc = 1.0 + min(0.38, (_sb["ev_isabet"] * 0.04) + (_sb["ev_korner"] * 0.015) + max(0.0, _top_fark))
+                _dep_guc = 1.0 + min(0.38, (_sb["dep_isabet"] * 0.04) + (_sb["dep_korner"] * 0.015) + max(0.0, -_top_fark))
                 if (_sb["ev_isabet"] + _sb["dep_isabet"]) <= 2:
                     _ev_guc *= 0.80
                     _dep_guc *= 0.80
@@ -196,8 +203,10 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
                     _ev_guc *= 1.25
                 lam_ev = round(lam_ev * _ev_guc, 2)
                 lam_dep = round(lam_dep * _dep_guc, 2)
-                bek_gol = round(lam_ev + lam_dep, 2)
-                _baski_etiket = f" | Şut:{int(_sb['ev_isabet'])}-{int(_sb['dep_isabet'])} K:{int(_sb['ev_korner'])}-{int(_sb['dep_korner'])}"
+                _olay_ek = f" | ⚡ {_sb['son_olay']}" if _sb.get("son_olay") else ""
+                _deg_ek = f" | 🔄 {_sb['degisiklik']} Değ." if _sb.get("degisiklik", 0) > 0 else ""
+                _baski_etiket = f"Şut:{int(_sb['ev_isabet'])}-{int(_sb['dep_isabet'])} K:{int(_sb['ev_korner'])}-{int(_sb['dep_korner'])}{_deg_ek}{_olay_ek}"
+        bek_gol = round(lam_ev + lam_dep, 2)
         import re as _re
         _dm_str = str(durum_detay or "")
         _dk_m = _re.search("([0-9]+)", _dm_str)
