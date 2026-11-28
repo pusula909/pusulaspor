@@ -304,7 +304,7 @@ def bes_katman_analiz(spor, lig_adi, ev_ad, dep_ad, ev_rec, dep_rec, state="pre"
         _b_kalan = 1.0
         if state == "in":
             _dm_b = str(durum_detay or "").upper()
-            _b_kalan = 0.22 if ("4TH" in _dm_b or "Q4" in _dm_b or "OT" in _dm_b) else (0.48 if ("3RD" in _dm_b or "Q3" in _dm_b) else (0.50 if "HT" in _dm_b else (0.74 if ("2ND" in _dm_b or "Q2" in _dm_b) else 0.85)))
+            _b_kalan = 0.22 if ("4TH" in _dm_b or "Q4" in _dm_b or "4P" in _dm_b or "OT" in _dm_b) else (0.48 if ("3RD" in _dm_b or "Q3" in _dm_b or "3P" in _dm_b) else (0.50 if ("HT" in _dm_b or "HALF" in _dm_b) else (0.74 if ("2ND" in _dm_b or "Q2" in _dm_b or "2P" in _dm_b) else 0.85)))
             bek_fark = (ev_skor - dep_skor) + (bek_fark * _b_kalan)
             bek_top = round((ev_skor + dep_skor) + (bek_top * _b_kalan), 1)
             sigma_fark = max(4.5, round(sigma_fark * math.sqrt(_b_kalan), 1))
